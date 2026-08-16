@@ -1,0 +1,2512 @@
+{
+  "struct_arg_base_01_macro": {
+    "macro": "struct_arg_base_01_macro",
+    "name": "Argon Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 14,
+      "energycells": 27,
+      "hullparts": 50
+    }
+  },
+  "struct_arg_base_02_macro": {
+    "macro": "struct_arg_base_02_macro",
+    "name": "Argon Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 17,
+      "energycells": 34,
+      "hullparts": 62
+    }
+  },
+  "struct_arg_base_03_macro": {
+    "macro": "struct_arg_base_03_macro",
+    "name": "Argon Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 18,
+      "energycells": 37,
+      "hullparts": 68
+    }
+  },
+  "struct_arg_cross_01_macro": {
+    "macro": "struct_arg_cross_01_macro",
+    "name": "Argon Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 12,
+      "energycells": 24,
+      "hullparts": 44
+    }
+  },
+  "struct_arg_vertical_01_macro": {
+    "macro": "struct_arg_vertical_01_macro",
+    "name": "Argon Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 10,
+      "energycells": 20,
+      "hullparts": 36
+    }
+  },
+  "struct_arg_vertical_02_macro": {
+    "macro": "struct_arg_vertical_02_macro",
+    "name": "Argon Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 13,
+      "energycells": 26,
+      "hullparts": 48
+    }
+  },
+  "defence_arg_claim_01_macro": {
+    "macro": "defence_arg_claim_01_macro",
+    "name": "Argon Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 137,
+      "energycells": 274,
+      "hullparts": 501
+    }
+  },
+  "defence_arg_disc_01_macro": {
+    "macro": "defence_arg_disc_01_macro",
+    "name": "Argon Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 98,
+      "energycells": 196,
+      "hullparts": 359
+    }
+  },
+  "defence_arg_tube_01_macro": {
+    "macro": "defence_arg_tube_01_macro",
+    "name": "Argon Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 85,
+      "energycells": 170,
+      "hullparts": 312
+    }
+  },
+  "dockarea_arg_m_station_01_macro": {
+    "macro": "dockarea_arg_m_station_01_macro",
+    "name": "1M6S Standard Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 54,
+      "energycells": 108,
+      "hullparts": 198
+    }
+  },
+  "dockarea_arg_m_station_01_hightech_macro": {
+    "macro": "dockarea_arg_m_station_01_hightech_macro",
+    "name": "1M6S Luxury Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 58,
+      "energycells": 116,
+      "hullparts": 212
+    }
+  },
+  "dockarea_arg_m_station_01_lowtech_macro": {
+    "macro": "dockarea_arg_m_station_01_lowtech_macro",
+    "name": "1M6S Basic Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 101,
+      "hullparts": 185
+    }
+  },
+  "dockarea_arg_m_station_02_macro": {
+    "macro": "dockarea_arg_m_station_02_macro",
+    "name": "3M6S Standard Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 78,
+      "energycells": 155,
+      "hullparts": 284
+    }
+  },
+  "dockarea_arg_m_station_02_hightech_macro": {
+    "macro": "dockarea_arg_m_station_02_hightech_macro",
+    "name": "3M6S Luxury Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 80,
+      "energycells": 161,
+      "hullparts": 294
+    }
+  },
+  "dockarea_arg_m_station_02_lowtech_macro": {
+    "macro": "dockarea_arg_m_station_02_lowtech_macro",
+    "name": "3M6S Basic Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 75,
+      "energycells": 150,
+      "hullparts": 274
+    }
+  },
+  "dockarea_arg_m_02_tradestation_01_macro": {
+    "macro": "dockarea_arg_m_02_tradestation_01_macro",
+    "name": "8M Standard Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 116,
+      "energycells": 232,
+      "hullparts": 424
+    }
+  },
+  "hab_arg_l_01_macro": {
+    "macro": "hab_arg_l_01_macro",
+    "name": "Argon L Habitat",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 191,
+      "energycells": 383,
+      "hullparts": 700
+    }
+  },
+  "hab_arg_m_01_macro": {
+    "macro": "hab_arg_m_01_macro",
+    "name": "Argon M Habitat",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 271,
+      "hullparts": 495
+    }
+  },
+  "hab_arg_s_01_macro": {
+    "macro": "hab_arg_s_01_macro",
+    "name": "Argon S Habitat",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 94,
+      "energycells": 188,
+      "hullparts": 343
+    }
+  },
+  "pier_arg_harbor_01_macro": {
+    "macro": "pier_arg_harbor_01_macro",
+    "name": "Argon 3-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 542,
+      "energycells": 1083,
+      "hullparts": 1980
+    }
+  },
+  "pier_arg_harbor_02_macro": {
+    "macro": "pier_arg_harbor_02_macro",
+    "name": "Argon 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 313,
+      "energycells": 625,
+      "hullparts": 1143
+    }
+  },
+  "pier_arg_harbor_03_macro": {
+    "macro": "pier_arg_harbor_03_macro",
+    "name": "Argon 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 625,
+      "energycells": 1250,
+      "hullparts": 2287
+    }
+  },
+  "prod_arg_foodrations_macro": {
+    "macro": "prod_arg_foodrations_macro",
+    "name": "Food Ration Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 262,
+      "energycells": 525,
+      "hullparts": 961
+    }
+  },
+  "prod_arg_meat_macro": {
+    "macro": "prod_arg_meat_macro",
+    "name": "Meat Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 248,
+      "energycells": 497,
+      "hullparts": 910
+    }
+  },
+  "prod_arg_medicalsupplies_macro": {
+    "macro": "prod_arg_medicalsupplies_macro",
+    "name": "Argon Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 225,
+      "energycells": 450,
+      "hullparts": 823
+    }
+  },
+  "prod_arg_spacefuel_macro": {
+    "macro": "prod_arg_spacefuel_macro",
+    "name": "Spacefuel Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 319,
+      "energycells": 638,
+      "hullparts": 1168
+    }
+  },
+  "prod_arg_wheat_macro": {
+    "macro": "prod_arg_wheat_macro",
+    "name": "Wheat Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 296,
+      "energycells": 592,
+      "hullparts": 1084
+    }
+  },
+  "storage_arg_l_container_01_macro": {
+    "macro": "storage_arg_l_container_01_macro",
+    "name": "Argon L Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 115,
+      "energycells": 230,
+      "hullparts": 421
+    }
+  },
+  "storage_arg_m_container_01_macro": {
+    "macro": "storage_arg_m_container_01_macro",
+    "name": "Argon M Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 82,
+      "energycells": 163,
+      "hullparts": 299
+    }
+  },
+  "storage_arg_s_container_01_macro": {
+    "macro": "storage_arg_s_container_01_macro",
+    "name": "Argon S Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 52,
+      "energycells": 103,
+      "hullparts": 189
+    }
+  },
+  "storage_arg_l_liquid_01_macro": {
+    "macro": "storage_arg_l_liquid_01_macro",
+    "name": "Argon L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 115,
+      "energycells": 230,
+      "hullparts": 421
+    }
+  },
+  "storage_arg_m_liquid_01_macro": {
+    "macro": "storage_arg_m_liquid_01_macro",
+    "name": "Argon M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 82,
+      "energycells": 163,
+      "hullparts": 299
+    }
+  },
+  "storage_arg_s_liquid_01_macro": {
+    "macro": "storage_arg_s_liquid_01_macro",
+    "name": "Argon S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 52,
+      "energycells": 103,
+      "hullparts": 189
+    }
+  },
+  "storage_arg_l_solid_01_macro": {
+    "macro": "storage_arg_l_solid_01_macro",
+    "name": "Argon L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 115,
+      "energycells": 230,
+      "hullparts": 421
+    }
+  },
+  "storage_arg_m_solid_01_macro": {
+    "macro": "storage_arg_m_solid_01_macro",
+    "name": "Argon M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 82,
+      "energycells": 163,
+      "hullparts": 299
+    }
+  },
+  "storage_arg_s_solid_01_macro": {
+    "macro": "storage_arg_s_solid_01_macro",
+    "name": "Argon S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 52,
+      "energycells": 103,
+      "hullparts": 189
+    }
+  },
+  "buildmodule_gen_ships_m_dockarea_01_macro": {
+    "macro": "buildmodule_gen_ships_m_dockarea_01_macro",
+    "name": "S/M Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 3312,
+      "energycells": 6620,
+      "hullparts": 12112
+    }
+  },
+  "buildmodule_gen_ships_l_macro": {
+    "macro": "buildmodule_gen_ships_l_macro",
+    "name": "L Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1866,
+      "energycells": 3731,
+      "hullparts": 6826
+    }
+  },
+  "buildmodule_gen_ships_xl_macro": {
+    "macro": "buildmodule_gen_ships_xl_macro",
+    "name": "XL Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 2434,
+      "energycells": 4866,
+      "hullparts": 8902
+    }
+  },
+  "buildmodule_gen_equip_m_dockarea_01_macro": {
+    "macro": "buildmodule_gen_equip_m_dockarea_01_macro",
+    "name": "S/M Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1604,
+      "energycells": 3312,
+      "hullparts": 6620
+    }
+  },
+  "buildmodule_gen_equip_l_macro": {
+    "macro": "buildmodule_gen_equip_l_macro",
+    "name": "L Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 931,
+      "energycells": 1866,
+      "hullparts": 3731
+    }
+  },
+  "buildmodule_gen_equip_xl_macro": {
+    "macro": "buildmodule_gen_equip_xl_macro",
+    "name": "XL Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1212,
+      "energycells": 2434,
+      "hullparts": 4866
+    }
+  },
+  "proc_gen_scrapworks_macro": {
+    "macro": "proc_gen_scrapworks_macro",
+    "name": "Scrap Processor",
+    "type": "processingmodule",
+    "cost": {
+      "claytronics": 178,
+      "energycells": 162,
+      "hullparts": 733
+    }
+  },
+  "prod_gen_advancedcomposites_macro": {
+    "macro": "prod_gen_advancedcomposites_macro",
+    "name": "Advanced Composite Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 648,
+      "energycells": 1296,
+      "hullparts": 2373
+    }
+  },
+  "prod_gen_advancedelectronics_macro": {
+    "macro": "prod_gen_advancedelectronics_macro",
+    "name": "Advanced Electronics Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 482,
+      "energycells": 965,
+      "hullparts": 1767
+    }
+  },
+  "prod_gen_antimattercells_macro": {
+    "macro": "prod_gen_antimattercells_macro",
+    "name": "Antimatter Cell Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 69,
+      "energycells": 138,
+      "hullparts": 253
+    }
+  },
+  "prod_gen_antimatterconverters_macro": {
+    "macro": "prod_gen_antimatterconverters_macro",
+    "name": "Antimatter Converter Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 1780,
+      "energycells": 3560,
+      "hullparts": 6516
+    }
+  },
+  "prod_gen_claytronics_macro": {
+    "macro": "prod_gen_claytronics_macro",
+    "name": "Claytronics Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 2822,
+      "energycells": 5642,
+      "hullparts": 10327
+    }
+  },
+  "prod_gen_dronecomponents_macro": {
+    "macro": "prod_gen_dronecomponents_macro",
+    "name": "Drone Component Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 1225,
+      "energycells": 2449,
+      "hullparts": 4483
+    }
+  },
+  "prod_gen_energycells_macro": {
+    "macro": "prod_gen_energycells_macro",
+    "name": "Energy Cell Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 260,
+      "energycells": 520,
+      "hullparts": 951
+    }
+  },
+  "prod_gen_engineparts_macro": {
+    "macro": "prod_gen_engineparts_macro",
+    "name": "Engine Part Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 389,
+      "energycells": 779,
+      "hullparts": 1426
+    }
+  },
+  "prod_gen_fieldcoils_macro": {
+    "macro": "prod_gen_fieldcoils_macro",
+    "name": "Field Coil Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 1735,
+      "energycells": 3470,
+      "hullparts": 6351
+    }
+  },
+  "prod_gen_graphene_macro": {
+    "macro": "prod_gen_graphene_macro",
+    "name": "Graphene Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 28,
+      "energycells": 57,
+      "hullparts": 104
+    }
+  },
+  "prod_gen_hullparts_macro": {
+    "macro": "prod_gen_hullparts_macro",
+    "name": "Hull Part Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 614,
+      "energycells": 1229,
+      "hullparts": 2249
+    }
+  },
+  "prod_gen_microchips_macro": {
+    "macro": "prod_gen_microchips_macro",
+    "name": "Microchip Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 758,
+      "energycells": 1516,
+      "hullparts": 2774
+    }
+  },
+  "prod_gen_missilecomponents_macro": {
+    "macro": "prod_gen_missilecomponents_macro",
+    "name": "Missile Component Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 35,
+      "energycells": 71,
+      "hullparts": 131
+    }
+  },
+  "prod_gen_plasmaconductors_macro": {
+    "macro": "prod_gen_plasmaconductors_macro",
+    "name": "Plasma Conductor Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 473,
+      "energycells": 946,
+      "hullparts": 1732
+    }
+  },
+  "prod_gen_quantumtubes_macro": {
+    "macro": "prod_gen_quantumtubes_macro",
+    "name": "Quantum Tube Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 380,
+      "energycells": 761,
+      "hullparts": 1394
+    }
+  },
+  "prod_gen_refinedmetals_macro": {
+    "macro": "prod_gen_refinedmetals_macro",
+    "name": "Refined Metal Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 36,
+      "energycells": 73,
+      "hullparts": 135
+    }
+  },
+  "prod_gen_scanningarrays_macro": {
+    "macro": "prod_gen_scanningarrays_macro",
+    "name": "Scanning Array Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 629,
+      "energycells": 1259,
+      "hullparts": 2305
+    }
+  },
+  "prod_gen_scrap_recycler_macro": {
+    "macro": "prod_gen_scrap_recycler_macro",
+    "name": "Scrap Recycler",
+    "type": "production",
+    "cost": {
+      "claytronics": 300,
+      "energycells": 600,
+      "hullparts": 1100
+    }
+  },
+  "prod_gen_shieldcomponents_macro": {
+    "macro": "prod_gen_shieldcomponents_macro",
+    "name": "Shield Component Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 432,
+      "energycells": 865,
+      "hullparts": 1583
+    }
+  },
+  "prod_gen_siliconwafers_macro": {
+    "macro": "prod_gen_siliconwafers_macro",
+    "name": "Silicon Wafer Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 74,
+      "energycells": 149,
+      "hullparts": 273
+    }
+  },
+  "prod_gen_smartchips_macro": {
+    "macro": "prod_gen_smartchips_macro",
+    "name": "Smart Chip Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 126,
+      "energycells": 253,
+      "hullparts": 464
+    }
+  },
+  "prod_gen_spices_macro": {
+    "macro": "prod_gen_spices_macro",
+    "name": "Spice Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 139,
+      "energycells": 278,
+      "hullparts": 510
+    }
+  },
+  "prod_gen_superfluidcoolant_macro": {
+    "macro": "prod_gen_superfluidcoolant_macro",
+    "name": "Superfluid Coolant Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 25,
+      "energycells": 51,
+      "hullparts": 94
+    }
+  },
+  "prod_gen_turretcomponents_macro": {
+    "macro": "prod_gen_turretcomponents_macro",
+    "name": "Turret Component Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 475,
+      "energycells": 951,
+      "hullparts": 1741
+    }
+  },
+  "prod_gen_water_macro": {
+    "macro": "prod_gen_water_macro",
+    "name": "Water Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 36,
+      "energycells": 72,
+      "hullparts": 132
+    }
+  },
+  "prod_gen_weaponcomponents_macro": {
+    "macro": "prod_gen_weaponcomponents_macro",
+    "name": "Weapon Component Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 396,
+      "energycells": 793,
+      "hullparts": 1452
+    }
+  },
+  "struct_par_base_01_macro": {
+    "macro": "struct_par_base_01_macro",
+    "name": "Paranid Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 12,
+      "energycells": 23,
+      "hullparts": 42
+    }
+  },
+  "struct_par_base_02_macro": {
+    "macro": "struct_par_base_02_macro",
+    "name": "Paranid Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 17,
+      "energycells": 34,
+      "hullparts": 61
+    }
+  },
+  "struct_par_base_03_macro": {
+    "macro": "struct_par_base_03_macro",
+    "name": "Paranid Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 21,
+      "energycells": 43,
+      "hullparts": 78
+    }
+  },
+  "struct_par_cross_01_macro": {
+    "macro": "struct_par_cross_01_macro",
+    "name": "Paranid Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 10,
+      "energycells": 21,
+      "hullparts": 38
+    }
+  },
+  "struct_par_cross_02_macro": {
+    "macro": "struct_par_cross_02_macro",
+    "name": "Paranid Cross Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 21,
+      "energycells": 43,
+      "hullparts": 78
+    }
+  },
+  "struct_par_cross_03_macro": {
+    "macro": "struct_par_cross_03_macro",
+    "name": "Paranid Cross Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 17,
+      "energycells": 34,
+      "hullparts": 61
+    }
+  },
+  "struct_par_vertical_01_macro": {
+    "macro": "struct_par_vertical_01_macro",
+    "name": "Paranid Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 10,
+      "energycells": 20,
+      "hullparts": 36
+    }
+  },
+  "struct_par_vertical_02_macro": {
+    "macro": "struct_par_vertical_02_macro",
+    "name": "Paranid Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 13,
+      "energycells": 26,
+      "hullparts": 48
+    }
+  },
+  "defence_par_claim_01_macro": {
+    "macro": "defence_par_claim_01_macro",
+    "name": "Paranid Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 140,
+      "energycells": 279,
+      "hullparts": 511
+    }
+  },
+  "defence_par_disc_01_macro": {
+    "macro": "defence_par_disc_01_macro",
+    "name": "Paranid Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 98,
+      "energycells": 196,
+      "hullparts": 359
+    }
+  },
+  "defence_par_tube_01_macro": {
+    "macro": "defence_par_tube_01_macro",
+    "name": "Paranid Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 85,
+      "energycells": 170,
+      "hullparts": 312
+    }
+  },
+  "hab_par_l_01_macro": {
+    "macro": "hab_par_l_01_macro",
+    "name": "Paranid L Dome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 210,
+      "energycells": 419,
+      "hullparts": 767
+    }
+  },
+  "hab_par_m_01_macro": {
+    "macro": "hab_par_m_01_macro",
+    "name": "Paranid M Dome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 271,
+      "hullparts": 495
+    }
+  },
+  "hab_par_s_01_macro": {
+    "macro": "hab_par_s_01_macro",
+    "name": "Paranid S Dome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 94,
+      "energycells": 188,
+      "hullparts": 343
+    }
+  },
+  "pier_par_harbor_01_macro": {
+    "macro": "pier_par_harbor_01_macro",
+    "name": "Paranid 3-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 563,
+      "energycells": 1125,
+      "hullparts": 2058
+    }
+  },
+  "pier_par_harbor_02_macro": {
+    "macro": "pier_par_harbor_02_macro",
+    "name": "Paranid 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 325,
+      "energycells": 650,
+      "hullparts": 1188
+    }
+  },
+  "pier_par_harbor_03_macro": {
+    "macro": "pier_par_harbor_03_macro",
+    "name": "Paranid 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 650,
+      "energycells": 1299,
+      "hullparts": 2377
+    }
+  },
+  "prod_par_majadust_macro": {
+    "macro": "prod_par_majadust_macro",
+    "name": "Maja Dust Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 373,
+      "energycells": 746,
+      "hullparts": 1366
+    }
+  },
+  "prod_par_majasnails_macro": {
+    "macro": "prod_par_majasnails_macro",
+    "name": "Maja Snail Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 248,
+      "energycells": 497,
+      "hullparts": 910
+    }
+  },
+  "prod_par_medicalsupplies_macro": {
+    "macro": "prod_par_medicalsupplies_macro",
+    "name": "Paranid Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 226,
+      "energycells": 451,
+      "hullparts": 827
+    }
+  },
+  "prod_par_sojabeans_macro": {
+    "macro": "prod_par_sojabeans_macro",
+    "name": "Soja Bean Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 296,
+      "energycells": 592,
+      "hullparts": 1084
+    }
+  },
+  "prod_par_sojahusk_macro": {
+    "macro": "prod_par_sojahusk_macro",
+    "name": "Soja Husk Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 316,
+      "energycells": 633,
+      "hullparts": 1159
+    }
+  },
+  "storage_par_l_container_01_macro": {
+    "macro": "storage_par_l_container_01_macro",
+    "name": "Paranid L Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 124,
+      "energycells": 247,
+      "hullparts": 453
+    }
+  },
+  "storage_par_m_container_01_macro": {
+    "macro": "storage_par_m_container_01_macro",
+    "name": "Paranid M Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 84,
+      "energycells": 169,
+      "hullparts": 309
+    }
+  },
+  "storage_par_s_container_01_macro": {
+    "macro": "storage_par_s_container_01_macro",
+    "name": "Paranid S Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 56,
+      "energycells": 112,
+      "hullparts": 204
+    }
+  },
+  "storage_par_l_liquid_01_macro": {
+    "macro": "storage_par_l_liquid_01_macro",
+    "name": "Paranid L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 124,
+      "energycells": 247,
+      "hullparts": 453
+    }
+  },
+  "storage_par_m_liquid_01_macro": {
+    "macro": "storage_par_m_liquid_01_macro",
+    "name": "Paranid M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 84,
+      "energycells": 169,
+      "hullparts": 309
+    }
+  },
+  "storage_par_s_liquid_01_macro": {
+    "macro": "storage_par_s_liquid_01_macro",
+    "name": "Paranid S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 56,
+      "energycells": 112,
+      "hullparts": 204
+    }
+  },
+  "storage_par_l_solid_01_macro": {
+    "macro": "storage_par_l_solid_01_macro",
+    "name": "Paranid L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 124,
+      "energycells": 247,
+      "hullparts": 453
+    }
+  },
+  "storage_par_m_solid_01_macro": {
+    "macro": "storage_par_m_solid_01_macro",
+    "name": "Paranid M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 84,
+      "energycells": 169,
+      "hullparts": 309
+    }
+  },
+  "storage_par_s_solid_01_macro": {
+    "macro": "storage_par_s_solid_01_macro",
+    "name": "Paranid S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 56,
+      "energycells": 112,
+      "hullparts": 204
+    }
+  },
+  "struct_tel_base_01_macro": {
+    "macro": "struct_tel_base_01_macro",
+    "name": "Teladi Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 14,
+      "energycells": 27,
+      "hullparts": 50
+    }
+  },
+  "struct_tel_base_02_macro": {
+    "macro": "struct_tel_base_02_macro",
+    "name": "Teladi Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 17,
+      "energycells": 34,
+      "hullparts": 62
+    }
+  },
+  "struct_tel_base_03_macro": {
+    "macro": "struct_tel_base_03_macro",
+    "name": "Teladi Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 18,
+      "energycells": 37,
+      "hullparts": 68
+    }
+  },
+  "struct_tel_cross_01_macro": {
+    "macro": "struct_tel_cross_01_macro",
+    "name": "Teladi Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 12,
+      "energycells": 24,
+      "hullparts": 44
+    }
+  },
+  "struct_tel_vertical_01_macro": {
+    "macro": "struct_tel_vertical_01_macro",
+    "name": "Teladi Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 10,
+      "energycells": 20,
+      "hullparts": 36
+    }
+  },
+  "struct_tel_vertical_02_macro": {
+    "macro": "struct_tel_vertical_02_macro",
+    "name": "Teladi Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 13,
+      "energycells": 26,
+      "hullparts": 48
+    }
+  },
+  "defence_tel_claim_01_macro": {
+    "macro": "defence_tel_claim_01_macro",
+    "name": "Teladi Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 138,
+      "energycells": 275,
+      "hullparts": 503
+    }
+  },
+  "defence_tel_disc_01_macro": {
+    "macro": "defence_tel_disc_01_macro",
+    "name": "Teladi Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 98,
+      "energycells": 196,
+      "hullparts": 359
+    }
+  },
+  "defence_tel_tube_01_macro": {
+    "macro": "defence_tel_tube_01_macro",
+    "name": "Teladi Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 85,
+      "energycells": 170,
+      "hullparts": 312
+    }
+  },
+  "hab_tel_l_01_macro": {
+    "macro": "hab_tel_l_01_macro",
+    "name": "Teladi L Biome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 182,
+      "energycells": 363,
+      "hullparts": 664
+    }
+  },
+  "hab_tel_m_01_macro": {
+    "macro": "hab_tel_m_01_macro",
+    "name": "Teladi M Biome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 121,
+      "energycells": 242,
+      "hullparts": 443
+    }
+  },
+  "hab_tel_s_01_macro": {
+    "macro": "hab_tel_s_01_macro",
+    "name": "Teladi S Biome",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 86,
+      "energycells": 171,
+      "hullparts": 313
+    }
+  },
+  "pier_tel_harbor_01_macro": {
+    "macro": "pier_tel_harbor_01_macro",
+    "name": "Teladi 3-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 542,
+      "energycells": 1083,
+      "hullparts": 1980
+    }
+  },
+  "pier_tel_harbor_02_macro": {
+    "macro": "pier_tel_harbor_02_macro",
+    "name": "Teladi 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 313,
+      "energycells": 625,
+      "hullparts": 1143
+    }
+  },
+  "pier_tel_harbor_03_macro": {
+    "macro": "pier_tel_harbor_03_macro",
+    "name": "Teladi 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 625,
+      "energycells": 1250,
+      "hullparts": 2287
+    }
+  },
+  "prod_tel_advancedcomposites_macro": {
+    "macro": "prod_tel_advancedcomposites_macro",
+    "name": "Teladi Advanced Composite Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 628,
+      "energycells": 1241,
+      "hullparts": 2300
+    }
+  },
+  "prod_tel_engineparts_macro": {
+    "macro": "prod_tel_engineparts_macro",
+    "name": "Teladi Engine Part Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 394,
+      "energycells": 778,
+      "hullparts": 1443
+    }
+  },
+  "prod_tel_hullparts_macro": {
+    "macro": "prod_tel_hullparts_macro",
+    "name": "Teladi Hull Part Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 614,
+      "energycells": 1213,
+      "hullparts": 2249
+    }
+  },
+  "prod_tel_medicalsupplies_macro": {
+    "macro": "prod_tel_medicalsupplies_macro",
+    "name": "Teladi Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 224,
+      "energycells": 448,
+      "hullparts": 822
+    }
+  },
+  "prod_tel_nostropoil_macro": {
+    "macro": "prod_tel_nostropoil_macro",
+    "name": "Nostrop Oil Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 289,
+      "energycells": 579,
+      "hullparts": 1063
+    }
+  },
+  "prod_tel_scanningarrays_macro": {
+    "macro": "prod_tel_scanningarrays_macro",
+    "name": "Teladi Scanning Array Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 637,
+      "energycells": 1259,
+      "hullparts": 2333
+    }
+  },
+  "prod_tel_spaceweed_macro": {
+    "macro": "prod_tel_spaceweed_macro",
+    "name": "Spaceweed Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 639,
+      "energycells": 1277,
+      "hullparts": 2338
+    }
+  },
+  "prod_tel_sunriseflowers_macro": {
+    "macro": "prod_tel_sunriseflowers_macro",
+    "name": "Sunrise Flower Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 296,
+      "energycells": 592,
+      "hullparts": 1087
+    }
+  },
+  "prod_tel_swampplant_macro": {
+    "macro": "prod_tel_swampplant_macro",
+    "name": "Swamp Plant Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 639,
+      "energycells": 1277,
+      "hullparts": 2338
+    }
+  },
+  "prod_tel_teladianium_macro": {
+    "macro": "prod_tel_teladianium_macro",
+    "name": "Teladianium Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 50,
+      "energycells": 101,
+      "hullparts": 185
+    }
+  },
+  "storage_tel_l_container_01_macro": {
+    "macro": "storage_tel_l_container_01_macro",
+    "name": "Teladi L Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 112,
+      "energycells": 223,
+      "hullparts": 408
+    }
+  },
+  "storage_tel_m_container_01_macro": {
+    "macro": "storage_tel_m_container_01_macro",
+    "name": "Teladi M Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 78,
+      "energycells": 156,
+      "hullparts": 285
+    }
+  },
+  "storage_tel_s_container_01_macro": {
+    "macro": "storage_tel_s_container_01_macro",
+    "name": "Teladi S Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 102,
+      "hullparts": 187
+    }
+  },
+  "storage_tel_l_liquid_01_macro": {
+    "macro": "storage_tel_l_liquid_01_macro",
+    "name": "Teladi L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 112,
+      "energycells": 223,
+      "hullparts": 408
+    }
+  },
+  "storage_tel_m_liquid_01_macro": {
+    "macro": "storage_tel_m_liquid_01_macro",
+    "name": "Teladi M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 78,
+      "energycells": 156,
+      "hullparts": 285
+    }
+  },
+  "storage_tel_s_liquid_01_macro": {
+    "macro": "storage_tel_s_liquid_01_macro",
+    "name": "Teladi S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 102,
+      "hullparts": 187
+    }
+  },
+  "storage_tel_l_solid_01_macro": {
+    "macro": "storage_tel_l_solid_01_macro",
+    "name": "Teladi L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 112,
+      "energycells": 223,
+      "hullparts": 408
+    }
+  },
+  "storage_tel_m_solid_01_macro": {
+    "macro": "storage_tel_m_solid_01_macro",
+    "name": "Teladi M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 78,
+      "energycells": 156,
+      "hullparts": 285
+    }
+  },
+  "storage_tel_s_solid_01_macro": {
+    "macro": "storage_tel_s_solid_01_macro",
+    "name": "Teladi S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 102,
+      "hullparts": 187
+    }
+  },
+  "struct_spl_base_01_macro": {
+    "macro": "struct_spl_base_01_macro",
+    "name": "Split Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 14,
+      "energycells": 27,
+      "hullparts": 50
+    }
+  },
+  "struct_spl_base_02_macro": {
+    "macro": "struct_spl_base_02_macro",
+    "name": "Split Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 17,
+      "energycells": 34,
+      "hullparts": 62
+    }
+  },
+  "struct_spl_base_03_macro": {
+    "macro": "struct_spl_base_03_macro",
+    "name": "Split Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 18,
+      "energycells": 37,
+      "hullparts": 68
+    }
+  },
+  "struct_spl_cross_01_macro": {
+    "macro": "struct_spl_cross_01_macro",
+    "name": "Split Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 12,
+      "energycells": 24,
+      "hullparts": 44
+    }
+  },
+  "struct_spl_vertical_01_macro": {
+    "macro": "struct_spl_vertical_01_macro",
+    "name": "Split Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 10,
+      "energycells": 20,
+      "hullparts": 36
+    }
+  },
+  "struct_spl_vertical_02_macro": {
+    "macro": "struct_spl_vertical_02_macro",
+    "name": "Split Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 13,
+      "energycells": 26,
+      "hullparts": 48
+    }
+  },
+  "defence_spl_claim_01_macro": {
+    "macro": "defence_spl_claim_01_macro",
+    "name": "Split Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 138,
+      "energycells": 276,
+      "hullparts": 505
+    }
+  },
+  "defence_spl_disc_01_macro": {
+    "macro": "defence_spl_disc_01_macro",
+    "name": "Split Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 105,
+      "energycells": 210,
+      "hullparts": 384
+    }
+  },
+  "defence_spl_tube_01_macro": {
+    "macro": "defence_spl_tube_01_macro",
+    "name": "Split Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 105,
+      "energycells": 210,
+      "hullparts": 384
+    }
+  },
+  "hab_spl_l_01_macro": {
+    "macro": "hab_spl_l_01_macro",
+    "name": "Split L Parlour",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 191,
+      "energycells": 383,
+      "hullparts": 700
+    }
+  },
+  "hab_spl_m_01_macro": {
+    "macro": "hab_spl_m_01_macro",
+    "name": "Split M Parlour",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 271,
+      "hullparts": 495
+    }
+  },
+  "hab_spl_s_01_macro": {
+    "macro": "hab_spl_s_01_macro",
+    "name": "Split S Parlour",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 94,
+      "energycells": 188,
+      "hullparts": 343
+    }
+  },
+  "pier_spl_harbor_01_macro": {
+    "macro": "pier_spl_harbor_01_macro",
+    "name": "Split 4-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 542,
+      "energycells": 1083,
+      "hullparts": 1980
+    }
+  },
+  "pier_spl_harbor_02_macro": {
+    "macro": "pier_spl_harbor_02_macro",
+    "name": "Split 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 313,
+      "energycells": 625,
+      "hullparts": 1143
+    }
+  },
+  "pier_spl_harbor_03_macro": {
+    "macro": "pier_spl_harbor_03_macro",
+    "name": "Split 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 625,
+      "energycells": 1250,
+      "hullparts": 2287
+    }
+  },
+  "prod_spl_cheltmeat_macro": {
+    "macro": "prod_spl_cheltmeat_macro",
+    "name": "Chelt Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 282,
+      "energycells": 256,
+      "hullparts": 1158
+    }
+  },
+  "prod_spl_medicalsupplies_macro": {
+    "macro": "prod_spl_medicalsupplies_macro",
+    "name": "Split Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 248,
+      "energycells": 451,
+      "hullparts": 910
+    }
+  },
+  "prod_spl_scruffinfruit_macro": {
+    "macro": "prod_spl_scruffinfruit_macro",
+    "name": "Scruffin Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 335,
+      "energycells": 305,
+      "hullparts": 1377
+    }
+  },
+  "storage_spl_l_container_01_macro": {
+    "macro": "storage_spl_l_container_01_macro",
+    "name": "Split L Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 270,
+      "hullparts": 494
+    }
+  },
+  "storage_spl_m_container_01_macro": {
+    "macro": "storage_spl_m_container_01_macro",
+    "name": "Split M Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 90,
+      "energycells": 180,
+      "hullparts": 329
+    }
+  },
+  "storage_spl_s_container_01_macro": {
+    "macro": "storage_spl_s_container_01_macro",
+    "name": "Split S Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 61,
+      "energycells": 121,
+      "hullparts": 222
+    }
+  },
+  "storage_spl_l_liquid_01_macro": {
+    "macro": "storage_spl_l_liquid_01_macro",
+    "name": "Split L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 270,
+      "hullparts": 494
+    }
+  },
+  "storage_spl_m_liquid_01_macro": {
+    "macro": "storage_spl_m_liquid_01_macro",
+    "name": "Split M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 90,
+      "energycells": 180,
+      "hullparts": 329
+    }
+  },
+  "storage_spl_s_liquid_01_macro": {
+    "macro": "storage_spl_s_liquid_01_macro",
+    "name": "Split S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 61,
+      "energycells": 121,
+      "hullparts": 222
+    }
+  },
+  "storage_spl_l_solid_01_macro": {
+    "macro": "storage_spl_l_solid_01_macro",
+    "name": "Split L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 135,
+      "energycells": 270,
+      "hullparts": 494
+    }
+  },
+  "storage_spl_m_solid_01_macro": {
+    "macro": "storage_spl_m_solid_01_macro",
+    "name": "Split M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 90,
+      "energycells": 180,
+      "hullparts": 329
+    }
+  },
+  "storage_spl_s_solid_01_macro": {
+    "macro": "storage_spl_s_solid_01_macro",
+    "name": "Split S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 61,
+      "energycells": 121,
+      "hullparts": 222
+    }
+  },
+  "buildmodule_ter_ships_m_dockarea_01_macro": {
+    "macro": "buildmodule_ter_ships_m_dockarea_01_macro",
+    "name": "Terran S/M Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 895,
+      "energycells": 6620,
+      "siliconcarbide": 1843
+    }
+  },
+  "buildmodule_ter_ships_l_macro": {
+    "macro": "buildmodule_ter_ships_l_macro",
+    "name": "Terran L Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 505,
+      "energycells": 3731,
+      "siliconcarbide": 1039
+    }
+  },
+  "buildmodule_ter_ships_xl_macro": {
+    "macro": "buildmodule_ter_ships_xl_macro",
+    "name": "Terran XL Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 658,
+      "energycells": 4866,
+      "siliconcarbide": 1354
+    }
+  },
+  "struct_ter_base_01_macro": {
+    "macro": "struct_ter_base_01_macro",
+    "name": "Terran Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 3,
+      "energycells": 19,
+      "siliconcarbide": 5
+    }
+  },
+  "struct_ter_base_02_macro": {
+    "macro": "struct_ter_base_02_macro",
+    "name": "Terran Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 4,
+      "energycells": 27,
+      "siliconcarbide": 8
+    }
+  },
+  "struct_ter_base_03_macro": {
+    "macro": "struct_ter_base_03_macro",
+    "name": "Terran Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 5,
+      "energycells": 38,
+      "siliconcarbide": 11
+    }
+  },
+  "struct_ter_cross_01_macro": {
+    "macro": "struct_ter_cross_01_macro",
+    "name": "Terran Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 5,
+      "energycells": 38,
+      "siliconcarbide": 11
+    }
+  },
+  "struct_ter_vertical_01_macro": {
+    "macro": "struct_ter_vertical_01_macro",
+    "name": "Terran Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 3,
+      "energycells": 19,
+      "siliconcarbide": 5
+    }
+  },
+  "struct_ter_vertical_02_macro": {
+    "macro": "struct_ter_vertical_02_macro",
+    "name": "Terran Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "computronicsubstrate": 4,
+      "energycells": 27,
+      "siliconcarbide": 8
+    }
+  },
+  "defence_ter_claim_01_macro": {
+    "macro": "defence_ter_claim_01_macro",
+    "name": "Terran Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "computronicsubstrate": 80,
+      "energycells": 593,
+      "siliconcarbide": 165
+    }
+  },
+  "defence_ter_disc_01_macro": {
+    "macro": "defence_ter_disc_01_macro",
+    "name": "Terran Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "computronicsubstrate": 57,
+      "energycells": 419,
+      "siliconcarbide": 117
+    }
+  },
+  "defence_ter_tube_01_macro": {
+    "macro": "defence_ter_tube_01_macro",
+    "name": "Terran Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "computronicsubstrate": 40,
+      "energycells": 296,
+      "siliconcarbide": 83
+    }
+  },
+  "dockarea_ter_m_station_01_hightech_macro": {
+    "macro": "dockarea_ter_m_station_01_hightech_macro",
+    "name": "Terran 4M10S Luxury Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "computronicsubstrate": 11,
+      "energycells": 81,
+      "siliconcarbide": 23
+    }
+  },
+  "buildmodule_ter_equip_m_dockarea_01_macro": {
+    "macro": "buildmodule_ter_equip_m_dockarea_01_macro",
+    "name": "Terran S/M Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 447,
+      "energycells": 3312,
+      "siliconcarbide": 921
+    }
+  },
+  "buildmodule_ter_equip_l_macro": {
+    "macro": "buildmodule_ter_equip_l_macro",
+    "name": "Terran L Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 252,
+      "energycells": 1866,
+      "siliconcarbide": 519
+    }
+  },
+  "buildmodule_ter_equip_xl_macro": {
+    "macro": "buildmodule_ter_equip_xl_macro",
+    "name": "Terran XL Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "computronicsubstrate": 329,
+      "energycells": 2434,
+      "siliconcarbide": 677
+    }
+  },
+  "hab_ter_l_01_macro": {
+    "macro": "hab_ter_l_01_macro",
+    "name": "Terran L Living Quarters",
+    "type": "habitation",
+    "cost": {
+      "computronicsubstrate": 80,
+      "energycells": 593,
+      "siliconcarbide": 165
+    }
+  },
+  "hab_ter_m_01_macro": {
+    "macro": "hab_ter_m_01_macro",
+    "name": "Terran M Living Quarters",
+    "type": "habitation",
+    "cost": {
+      "computronicsubstrate": 57,
+      "energycells": 419,
+      "siliconcarbide": 117
+    }
+  },
+  "hab_ter_s_01_macro": {
+    "macro": "hab_ter_s_01_macro",
+    "name": "Terran S Living Quarters",
+    "type": "habitation",
+    "cost": {
+      "computronicsubstrate": 40,
+      "energycells": 296,
+      "siliconcarbide": 83
+    }
+  },
+  "pier_ter_harbor_01_macro": {
+    "macro": "pier_ter_harbor_01_macro",
+    "name": "Terran 3-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "computronicsubstrate": 146,
+      "energycells": 1083,
+      "siliconcarbide": 301
+    }
+  },
+  "pier_ter_harbor_02_macro": {
+    "macro": "pier_ter_harbor_02_macro",
+    "name": "Terran 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "computronicsubstrate": 85,
+      "energycells": 625,
+      "siliconcarbide": 174
+    }
+  },
+  "pier_ter_harbor_03_macro": {
+    "macro": "pier_ter_harbor_03_macro",
+    "name": "Terran 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "computronicsubstrate": 169,
+      "energycells": 1250,
+      "siliconcarbide": 348
+    }
+  },
+  "pier_ter_harbor_04_macro": {
+    "macro": "pier_ter_harbor_04_macro",
+    "name": "Terran 4-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "computronicsubstrate": 85,
+      "energycells": 625,
+      "siliconcarbide": 174
+    }
+  },
+  "pier_ter_tradestation_01_macro": {
+    "macro": "pier_ter_tradestation_01_macro",
+    "name": "Terran Trading Station Hexa-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "computronicsubstrate": 239,
+      "energycells": 1768,
+      "siliconcarbide": 492
+    }
+  },
+  "prod_ter_computronicsubstrate_macro": {
+    "macro": "prod_ter_computronicsubstrate_macro",
+    "name": "Computronic Substrate Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 238,
+      "energycells": 688,
+      "siliconcarbide": 155
+    }
+  },
+  "prod_ter_energycells_macro": {
+    "macro": "prod_ter_energycells_macro",
+    "name": "Terran Energy Cell Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 24,
+      "energycells": 100,
+      "siliconcarbide": 20
+    }
+  },
+  "prod_ter_medicalsupplies_macro": {
+    "macro": "prod_ter_medicalsupplies_macro",
+    "name": "Terran Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 17,
+      "energycells": 50,
+      "siliconcarbide": 11
+    }
+  },
+  "prod_ter_metallicmicrolattice_macro": {
+    "macro": "prod_ter_metallicmicrolattice_macro",
+    "name": "Metallic Microlattice Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 6,
+      "energycells": 18,
+      "siliconcarbide": 4
+    }
+  },
+  "prod_ter_proteinpaste_macro": {
+    "macro": "prod_ter_proteinpaste_macro",
+    "name": "Protein Paste Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 73,
+      "energycells": 211,
+      "siliconcarbide": 47
+    }
+  },
+  "prod_ter_scrap_recycler_macro": {
+    "macro": "prod_ter_scrap_recycler_macro",
+    "name": "Terran Scrap Recycler",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 99,
+      "energycells": 131,
+      "siliconcarbide": 21
+    }
+  },
+  "prod_ter_siliconcarbide_macro": {
+    "macro": "prod_ter_siliconcarbide_macro",
+    "name": "Silicon Carbide Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 40,
+      "energycells": 117,
+      "siliconcarbide": 26
+    }
+  },
+  "prod_ter_stimulants_macro": {
+    "macro": "prod_ter_stimulants_macro",
+    "name": "Stimulant Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 140,
+      "energycells": 407,
+      "siliconcarbide": 92
+    }
+  },
+  "prod_ter_mre_macro": {
+    "macro": "prod_ter_mre_macro",
+    "name": "Terran MRE Production",
+    "type": "production",
+    "cost": {
+      "computronicsubstrate": 30,
+      "energycells": 89,
+      "siliconcarbide": 20
+    }
+  },
+  "storage_ter_l_container_01_macro": {
+    "macro": "storage_ter_l_container_01_macro",
+    "name": "Terran L Container Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 36,
+      "energycells": 265,
+      "siliconcarbide": 74
+    }
+  },
+  "storage_ter_m_container_01_macro": {
+    "macro": "storage_ter_m_container_01_macro",
+    "name": "Terran M Container Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 24,
+      "energycells": 178,
+      "siliconcarbide": 50
+    }
+  },
+  "storage_ter_s_container_01_macro": {
+    "macro": "storage_ter_s_container_01_macro",
+    "name": "Terran S Container Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 14,
+      "energycells": 103,
+      "siliconcarbide": 29
+    }
+  },
+  "storage_ter_l_liquid_01_macro": {
+    "macro": "storage_ter_l_liquid_01_macro",
+    "name": "Terran L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 36,
+      "energycells": 265,
+      "siliconcarbide": 74
+    }
+  },
+  "storage_ter_m_liquid_01_macro": {
+    "macro": "storage_ter_m_liquid_01_macro",
+    "name": "Terran M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 24,
+      "energycells": 178,
+      "siliconcarbide": 50
+    }
+  },
+  "storage_ter_s_liquid_01_macro": {
+    "macro": "storage_ter_s_liquid_01_macro",
+    "name": "Terran S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 14,
+      "energycells": 103,
+      "siliconcarbide": 29
+    }
+  },
+  "storage_ter_l_solid_01_macro": {
+    "macro": "storage_ter_l_solid_01_macro",
+    "name": "Terran L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 36,
+      "energycells": 265,
+      "siliconcarbide": 74
+    }
+  },
+  "storage_ter_m_solid_01_macro": {
+    "macro": "storage_ter_m_solid_01_macro",
+    "name": "Terran M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 24,
+      "energycells": 178,
+      "siliconcarbide": 50
+    }
+  },
+  "storage_ter_s_solid_01_macro": {
+    "macro": "storage_ter_s_solid_01_macro",
+    "name": "Terran S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "computronicsubstrate": 14,
+      "energycells": 103,
+      "siliconcarbide": 29
+    }
+  },
+  "hab_pir_l_01_macro": {
+    "macro": "hab_pir_l_01_macro",
+    "name": "Argon L Dormitory",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 420,
+      "energycells": 383,
+      "hullparts": 1729
+    }
+  },
+  "hab_pir_m_01_macro": {
+    "macro": "hab_pir_m_01_macro",
+    "name": "Argon M Dormitory",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 297,
+      "energycells": 271,
+      "hullparts": 1222
+    }
+  },
+  "hab_pir_s_01_macro": {
+    "macro": "hab_pir_s_01_macro",
+    "name": "Argon S Dormitory",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 206,
+      "energycells": 188,
+      "hullparts": 847
+    }
+  },
+  "storage_pir_l_condensate_01_macro": {
+    "macro": "storage_pir_l_condensate_01_macro",
+    "name": "Protectyon Shield Generator",
+    "type": "storage",
+    "cost": {
+      "claytronics": 291,
+      "energycells": 265,
+      "hullparts": 1198
+    }
+  },
+  "buildmodule_bor_ships_m_dockarea_01_macro": {
+    "macro": "buildmodule_bor_ships_m_dockarea_01_macro",
+    "name": "Boron S/M Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 818,
+      "energycells": 8696,
+      "hullparts": 2663,
+      "water": 7875
+    }
+  },
+  "buildmodule_bor_ships_l_macro": {
+    "macro": "buildmodule_bor_ships_l_macro",
+    "name": "Boron L Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1714,
+      "energycells": 18213,
+      "hullparts": 5577,
+      "water": 16495
+    }
+  },
+  "buildmodule_bor_ships_xl_macro": {
+    "macro": "buildmodule_bor_ships_xl_macro",
+    "name": "Boron XL Ship Fabrication Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1744,
+      "energycells": 18526,
+      "hullparts": 5673,
+      "water": 16778
+    }
+  },
+  "struct_bor_base_01_macro": {
+    "macro": "struct_bor_base_01_macro",
+    "name": "Boron Base Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 9,
+      "energycells": 275,
+      "hullparts": 63,
+      "water": 166
+    }
+  },
+  "struct_bor_base_02_macro": {
+    "macro": "struct_bor_base_02_macro",
+    "name": "Boron Base Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 11,
+      "energycells": 336,
+      "hullparts": 77,
+      "water": 203
+    }
+  },
+  "struct_bor_base_03_macro": {
+    "macro": "struct_bor_base_03_macro",
+    "name": "Boron Base Connection Structure 03",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 11,
+      "energycells": 360,
+      "hullparts": 83,
+      "water": 217
+    }
+  },
+  "struct_bor_base_04_macro": {
+    "macro": "struct_bor_base_04_macro",
+    "name": "Boron Base Connection Structure 04",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 12,
+      "energycells": 380,
+      "hullparts": 87,
+      "water": 230
+    }
+  },
+  "struct_bor_base_05_macro": {
+    "macro": "struct_bor_base_05_macro",
+    "name": "Boron Base Connection Structure 05",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 13,
+      "energycells": 417,
+      "hullparts": 96,
+      "water": 252
+    }
+  },
+  "struct_bor_cross_01_macro": {
+    "macro": "struct_bor_cross_01_macro",
+    "name": "Boron Cross Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 7,
+      "energycells": 238,
+      "hullparts": 55,
+      "water": 144
+    }
+  },
+  "struct_bor_cross_02_macro": {
+    "macro": "struct_bor_cross_02_macro",
+    "name": "Boron Cross Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 9,
+      "energycells": 296,
+      "hullparts": 68,
+      "water": 179
+    }
+  },
+  "struct_bor_vertical_01_macro": {
+    "macro": "struct_bor_vertical_01_macro",
+    "name": "Boron Vertical Connection Structure 01",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 6,
+      "energycells": 197,
+      "hullparts": 45,
+      "water": 119
+    }
+  },
+  "struct_bor_vertical_02_macro": {
+    "macro": "struct_bor_vertical_02_macro",
+    "name": "Boron Vertical Connection Structure 02",
+    "type": "connectionmodule",
+    "cost": {
+      "claytronics": 8,
+      "energycells": 258,
+      "hullparts": 59,
+      "water": 156
+    }
+  },
+  "defence_bor_claim_01_macro": {
+    "macro": "defence_bor_claim_01_macro",
+    "name": "Boron Administrative Centre",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 85,
+      "energycells": 2711,
+      "hullparts": 623,
+      "water": 1637
+    }
+  },
+  "defence_bor_disc_01_macro": {
+    "macro": "defence_bor_disc_01_macro",
+    "name": "Boron Disc Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 61,
+      "energycells": 1940,
+      "hullparts": 446,
+      "water": 1172
+    }
+  },
+  "defence_bor_tube_01_macro": {
+    "macro": "defence_bor_tube_01_macro",
+    "name": "Boron Bridge Defence Platform",
+    "type": "defencemodule",
+    "cost": {
+      "claytronics": 53,
+      "energycells": 1684,
+      "hullparts": 387,
+      "water": 1017
+    }
+  },
+  "dockarea_bor_m_station_01_standard_macro": {
+    "macro": "dockarea_bor_m_station_01_standard_macro",
+    "name": "Boron 4M14S Luxury Dock Area",
+    "type": "dockarea",
+    "cost": {
+      "claytronics": 52,
+      "energycells": 1647,
+      "hullparts": 378,
+      "water": 995
+    }
+  },
+  "buildmodule_bor_equip_m_dockarea_01_macro": {
+    "macro": "buildmodule_bor_equip_m_dockarea_01_macro",
+    "name": "Boron S/M Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 595,
+      "energycells": 6322,
+      "hullparts": 1936,
+      "water": 5725
+    }
+  },
+  "buildmodule_bor_equip_l_macro": {
+    "macro": "buildmodule_bor_equip_l_macro",
+    "name": "Boron L Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 872,
+      "energycells": 9260,
+      "hullparts": 2836,
+      "water": 8387
+    }
+  },
+  "buildmodule_bor_equip_xl_macro": {
+    "macro": "buildmodule_bor_equip_xl_macro",
+    "name": "Boron XL Ship Maintenance Bay",
+    "type": "buildmodule",
+    "cost": {
+      "claytronics": 1125,
+      "energycells": 11958,
+      "hullparts": 3662,
+      "water": 10830
+    }
+  },
+  "hab_bor_l_01_macro": {
+    "macro": "hab_bor_l_01_macro",
+    "name": "Boron L Oasis",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 114,
+      "energycells": 3631,
+      "hullparts": 834,
+      "water": 2192
+    }
+  },
+  "hab_bor_m_01_macro": {
+    "macro": "hab_bor_m_01_macro",
+    "name": "Boron M Oasis",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 81,
+      "energycells": 2567,
+      "hullparts": 590,
+      "water": 1550
+    }
+  },
+  "hab_bor_s_01_macro": {
+    "macro": "hab_bor_s_01_macro",
+    "name": "Boron S Oasis",
+    "type": "habitation",
+    "cost": {
+      "claytronics": 56,
+      "energycells": 1785,
+      "hullparts": 410,
+      "water": 1078
+    }
+  },
+  "pier_bor_harbor_01_macro": {
+    "macro": "pier_bor_harbor_01_macro",
+    "name": "Boron 4-Dock T Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 336,
+      "energycells": 10723,
+      "hullparts": 2463,
+      "water": 6474
+    }
+  },
+  "pier_bor_harbor_02_macro": {
+    "macro": "pier_bor_harbor_02_macro",
+    "name": "Boron 1-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 194,
+      "energycells": 6192,
+      "hullparts": 1422,
+      "water": 3738
+    }
+  },
+  "pier_bor_harbor_03_macro": {
+    "macro": "pier_bor_harbor_03_macro",
+    "name": "Boron 3-Dock E Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 388,
+      "energycells": 12371,
+      "hullparts": 2841,
+      "water": 7470
+    }
+  },
+  "pier_bor_harbor_04_macro": {
+    "macro": "pier_bor_harbor_04_macro",
+    "name": "Boron Trading Station 4-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 273,
+      "energycells": 8715,
+      "hullparts": 2002,
+      "water": 5262
+    }
+  },
+  "pier_bor_tradestation_01_macro": {
+    "macro": "pier_bor_tradestation_01_macro",
+    "name": "Boron Trading Station Hexa-Dock Pier",
+    "type": "pier",
+    "cost": {
+      "claytronics": 417,
+      "energycells": 13303,
+      "hullparts": 3055,
+      "water": 8032
+    }
+  },
+  "prod_bor_bofu_macro": {
+    "macro": "prod_bor_bofu_macro",
+    "name": "BoFu Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 163,
+      "energycells": 5190,
+      "hullparts": 1192,
+      "water": 3133
+    }
+  },
+  "prod_bor_bogas_macro": {
+    "macro": "prod_bor_bogas_macro",
+    "name": "BoGas Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 154,
+      "energycells": 4913,
+      "hullparts": 1128,
+      "water": 2966
+    }
+  },
+  "prod_bor_medicalsupplies_macro": {
+    "macro": "prod_bor_medicalsupplies_macro",
+    "name": "Boron Medical Supply Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 140,
+      "energycells": 4453,
+      "hullparts": 1023,
+      "water": 2689
+    }
+  },
+  "prod_bor_plankton_macro": {
+    "macro": "prod_bor_plankton_macro",
+    "name": "Plankton Production",
+    "type": "production",
+    "cost": {
+      "claytronics": 96,
+      "energycells": 3048,
+      "hullparts": 700,
+      "water": 1840
+    }
+  },
+  "storage_bor_l_container_01_macro": {
+    "macro": "storage_bor_l_container_01_macro",
+    "name": "Boron L Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 71,
+      "energycells": 2277,
+      "hullparts": 523,
+      "water": 1375
+    }
+  },
+  "storage_bor_m_container_01_macro": {
+    "macro": "storage_bor_m_container_01_macro",
+    "name": "Boron M Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 1621,
+      "hullparts": 372,
+      "water": 979
+    }
+  },
+  "storage_bor_s_container_01_macro": {
+    "macro": "storage_bor_s_container_01_macro",
+    "name": "Boron S Container Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 32,
+      "energycells": 1027,
+      "hullparts": 236,
+      "water": 620
+    }
+  },
+  "storage_bor_l_liquid_01_macro": {
+    "macro": "storage_bor_l_liquid_01_macro",
+    "name": "Boron L Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 71,
+      "energycells": 2277,
+      "hullparts": 523,
+      "water": 1375
+    }
+  },
+  "storage_bor_m_liquid_01_macro": {
+    "macro": "storage_bor_m_liquid_01_macro",
+    "name": "Boron M Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 1621,
+      "hullparts": 372,
+      "water": 979
+    }
+  },
+  "storage_bor_s_liquid_01_macro": {
+    "macro": "storage_bor_s_liquid_01_macro",
+    "name": "Boron S Liquid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 32,
+      "energycells": 1027,
+      "hullparts": 236,
+      "water": 620
+    }
+  },
+  "storage_bor_l_solid_01_macro": {
+    "macro": "storage_bor_l_solid_01_macro",
+    "name": "Boron L Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 71,
+      "energycells": 2277,
+      "hullparts": 523,
+      "water": 1375
+    }
+  },
+  "storage_bor_m_solid_01_macro": {
+    "macro": "storage_bor_m_solid_01_macro",
+    "name": "Boron M Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 51,
+      "energycells": 1621,
+      "hullparts": 372,
+      "water": 979
+    }
+  },
+  "storage_bor_s_solid_01_macro": {
+    "macro": "storage_bor_s_solid_01_macro",
+    "name": "Boron S Solid Storage",
+    "type": "storage",
+    "cost": {
+      "claytronics": 32,
+      "energycells": 1027,
+      "hullparts": 236,
+      "water": 620
+    }
+  }
+}

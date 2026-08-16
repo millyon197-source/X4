@@ -1,0 +1,112 @@
+{
+  "struct_arg_base_01_macro": {
+    "claytronics": 14,
+    "energycells": 27,
+    "hullparts": 50
+  },
+  "struct_arg_base_02_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 62
+  },
+  "struct_arg_base_03_macro": {
+    "claytronics": 18,
+    "energycells": 37,
+    "hullparts": 68
+  },
+  "struct_arg_cross_01_macro": {
+    "claytronics": 12,
+    "energycells": 24,
+    "hullparts": 44
+  },
+  "struct_arg_vertical_01_macro": {
+    "claytronics": 10,
+    "energycells": 20,
+    "hullparts": 36
+  },
+  "struct_arg_vertical_02_macro": {
+    "claytronics": 13,
+    "energycells": 26,
+    "hullparts": 48
+  },
+  "defence_arg_claim_01_macro": {
+    "claytronics": 137,
+    "energycells": 274,
+    "hullparts": 501
+  },
+  "defence_arg_disc_01_macro": {
+    "claytronics": 98,
+    "energycells": 196,
+    "hullparts": 359
+  },
+  "defence_arg_tube_01_macro": {
+    "claytronics": 85,
+    "energycells": 170,
+    "hullparts": 312
+  },
+  "dockarea_arg_m_station_01_macro": {
+    "claytronics": 54,
+    "energycells": 108,
+    "hullparts": 198
+  },
+  "dockarea_arg_m_station_01_hightech_macro": {
+    "claytronics": 58,
+    "energycells": 116,
+    "hullparts": 212
+  },
+  "dockarea_arg_m_station_01_lowtech_macro": {
+    "claytronics": 51,
+    "energycells": 101,
+    "hullparts": 185
+  },
+  "dockarea_arg_m_station_02_macro": {
+    "claytronics": 78,
+    "energycells": 155,
+    "hullparts": 284
+  },
+  "dockarea_arg_m_station_02_hightech_macro": {
+    "claytronics": 80,
+    "energycells": 161,
+    "hullparts": 294
+  },
+  "dockarea_arg_m_station_02_lowtech_macro": {
+    "claytronics": 75,
+    "energycells": 150,
+    "hullparts": 274
+  },
+  "dockarea_arg_m_02_tradestation_01_macro": {
+    "claytronics": 116,
+    "energycells": 232,
+    "hullparts": 424
+  },
+  "hab_arg_l_01_macro": {
+    "claytronics": 191,
+    "energycells": 383,
+    "hullparts": 700
+  },
+  "hab_arg_m_01_macro": {
+    "claytronics": 135,
+    "energycells": 271,
+    "hullparts": 495
+  },
+  "hab_arg_s_01_macro": {
+    "claytronics": 94,
+    "energycells": 188,
+    "hullparts": 343
+  },
+  "pier_arg_harbor_01_macro": {
+    "claytronics": 542,
+    "energycells": 1083,
+    "hullparts": 1980
+  },
+  "pier_arg_harbor_02_macro": {
+    "claytronics": 313,
+    "energycells": 625,
+    "hullparts": 1143
+  },
+  "pier_arg_harbor_03_macro": {
+    "claytronics": 625,
+    "energycells": 1250,
+    "hullparts": 2287
+  }
+}
