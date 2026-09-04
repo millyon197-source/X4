@@ -1,46 +1,68 @@
 import './style.css';
-import { PRESET_BLUEPRINTS } from './data/wares.js';
-import { state } from './engine/state.js';
-import { calculateFactoryRequirements } from './engine/calculator.js';
+import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
+import { state, saveActiveBlueprintToStorage } from './engine/state.js';
+import { calculateFactoryRequirements, syncPopulatedMatrix, getPrimaryMacroForWare } from './engine/calculator.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
 import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare } from './ui/matrixView.js';
-import { renderPlannedTabHTML } from './ui/plannedView.js';
+import { renderPlannedTabHTML, filterPlannedModules } from './ui/plannedView.js';
+import { version as appVersion } from '../package.json';
+import { escapeHtml } from './html.js';
 
 function renderApp() {
-  calculateFactoryRequirements();
+  try {
+    if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+      if (state.populateMatrix) {
+        syncPopulatedMatrix();
+      } else {
+        rebuildBlueprintFromMacros();
+      }
+    }
+    calculateFactoryRequirements();
 
-  const app = document.getElementById('app');
+    // Preserve scroll positions
+    const tableContainer = document.querySelector('.macro-table-container');
+    const tableScrollTop = tableContainer ? tableContainer.scrollTop : 0;
+    const tableScrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+
+    const plannedWrapper = document.querySelector('.planned-wrapper');
+    const wrapperScrollTop = plannedWrapper ? plannedWrapper.scrollTop : 0;
+    const wrapperScrollLeft = plannedWrapper ? plannedWrapper.scrollLeft : 0;
+
+    const winScrollY = window.scrollY || document.documentElement.scrollTop;
+    const winScrollX = window.scrollX || document.documentElement.scrollLeft;
+
+    const prevSearchInput = document.getElementById('searchInput');
+    const isSearchFocused = document.activeElement === prevSearchInput;
+    const searchSelStart = isSearchFocused && prevSearchInput ? prevSearchInput.selectionStart : null;
+    const searchSelEnd = isSearchFocused && prevSearchInput ? prevSearchInput.selectionEnd : null;
+
+    const app = document.getElementById('app');
+    if (!app) return;
   app.innerHTML = `
     <header>
       <div class="brand">
         <div class="brand-icon">X4</div>
         <div class="brand-title">
-          <h1>Material Supply Chain Matrix</h1>
-          <p>Real-Time Station Blueprint Recalculator & Supply Explorer</p>
+          <h1><span class="brand-title-text">Ware Supply Chain Matrix</span> <span class="app-version-badge">v${appVersion}</span></h1>
+          <p>Real-Time Station Supply Explorer & Blueprint Generator</p>
         </div>
       </div>
 
       <nav class="nav-tabs">
         <button class="nav-tab-btn ${state.activeTab === 'matrix' ? 'active' : ''}" id="tabBtnMatrix">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          Supply Chain Matrix
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          Supply Matrix
         </button>
         <button class="nav-tab-btn ${state.activeTab === 'planned' ? 'active' : ''}" id="tabBtnPlanned">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-          Planned & Changed Modules
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          Planned Modules
         </button>
       </nav>
 
       <div class="controls">
-        <input type="file" id="xmlFileInput" accept=".xml" style="display:none;" />
-        <button class="btn-upload" id="btnUploadXML">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          Upload .XML Blueprint
-        </button>
-
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" class="search-input" id="searchInput" placeholder="Search ware..." value="${state.searchQuery}" />
+          <input type="text" class="search-input" id="searchInput" placeholder="${state.activeTab === 'planned' ? '(!) Search module...' : '(!) Search ware...'}" value="${escapeHtml(state.searchQuery)}" />
         </div>
 
         ${Object.keys(PRESET_BLUEPRINTS).map(key => {
@@ -51,41 +73,30 @@ function renderApp() {
             </button>
           `;
         }).join('')}
-        <button class="btn-filter ${state.currentPreset === 'all' ? 'active' : ''}" data-preset="all">Single Target Mode</button>
       </div>
     </header>
 
     <div class="calc-bar">
-      <div class="calc-group" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-        <span style="font-weight:600; color:#94a3b8;">Active Blueprint:</span>
-        ${state.activeBlueprint ? `
-          <div class="bp-tags-list">
-            <div class="bp-tag active-bp-tag">
-              <strong id="activeBpName" class="active-bp-name" title="Click to reload this blueprint">${state.activeBlueprint.name} 🔄</strong>
-              <span class="bp-entries-badge">${state.activeBlueprint.totalModules} Entries</span>
-              <button id="btnRemoveActiveBP" class="btn-remove-bp-tag" title="Remove active blueprint">&times;</button>
-            </div>
-
-            ${(state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
-              const encName = encodeURIComponent(b.name);
-              return `
-                <div class="bp-tag prev-bp-tag">
-                  <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to switch to ${b.name}">${b.name}</span>
-                  <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
-                  <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        ` : `
-          ${(state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
+      <div class="calc-bar-row">
+        <div class="calc-group" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <input type="file" id="xmlFileInput" accept=".xml" style="display:none;" />
+          <button class="btn-upload" id="btnUploadXML" style="padding:0.25rem 0.65rem; font-size:0.75rem;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Upload .XML Blueprint
+          </button>
+          ${state.activeBlueprint ? `
             <div class="bp-tags-list">
-              <span style="color:#94a3b8; font-style:italic; font-size:0.8rem; margin-right:0.3rem;">(Single Target Mode)</span>
-              ${state.loadedBlueprints.map(b => {
+              <div class="bp-tag active-bp-tag">
+                <strong id="activeBpName" class="active-bp-name" title="Click to reload this blueprint">${escapeHtml(state.activeBlueprint.name)} 🔄</strong>
+                <span class="bp-entries-badge">${state.activeBlueprint.totalModules} Entries</span>
+                <button id="btnRemoveActiveBP" class="btn-remove-bp-tag" title="Remove active blueprint">&times;</button>
+              </div>
+
+              ${(state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
                 const encName = encodeURIComponent(b.name);
                 return `
                   <div class="bp-tag prev-bp-tag">
-                    <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to load ${b.name}">${b.name}</span>
+                    <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to switch to ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
                     <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
                     <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
                   </div>
@@ -93,59 +104,109 @@ function renderApp() {
               }).join('')}
             </div>
           ` : `
-            <span style="color:#94a3b8; font-style:italic;">No active blueprint loaded (Single Target Mode)</span>
+            ${(state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
+              <div class="bp-tags-list">
+                ${state.loadedBlueprints.map(b => {
+                  const encName = encodeURIComponent(b.name);
+                  return `
+                    <div class="bp-tag prev-bp-tag">
+                      <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to load ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
+                      <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
+                      <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
           `}
-        `}
+        </div>
+        ${state.activeTab === 'matrix' ? `
+          <div class="slider-group">
+            <label for="workforceSlider" class="${state.workforceBonus === 0 ? 'flash-wf-label' : ''}">Workforce Eff Bonus:</label>
+            <button class="btn-qty" id="btnWfDec" title="Decrease workforce bonus by 1%">&lt;</button>
+            <input type="range" id="workforceSlider" min="0" max="100" step="1" value="${state.workforceBonus}" />
+            <button class="btn-qty" id="btnWfInc" title="Increase workforce bonus by 1%">&gt;</button>
+            <span id="wfBonusValue" style="font-weight:700; color:#34d399; min-width:45px;">+${state.workforceBonus}%</span>
+          </div>
+        ` : ''}
       </div>
-      ${!state.activeBlueprint ? `
-        <div class="calc-group">
-          <label for="moduleInput">Target Modules:</label>
-          <input type="number" id="moduleInput" class="calc-input" min="1" max="500" value="${state.targetModules}" />
+      ${state.activeTab === 'matrix' ? `
+        <div class="calc-bar-row">
+          <div class="calc-group">
+            <label id="lblSubdueEcCalc" style="font-size:0.8rem; color:#fbbf24; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(245,158,11,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(245,158,11,0.35); user-select:none;" title="When checked, hides the EC consumption badges on all ware cards">
+              <input type="checkbox" id="chkSubdueEcCalc" ${state.subdueEcCalc ? 'checked' : ''} style="cursor:pointer;" />
+              Subdue EC Calc
+            </label>
+          </div>
+          <div class="calc-group">
+            <label id="lblSubdueLevel4" style="font-size:0.8rem; color:#a78bfa; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(167,139,250,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(167,139,250,0.35); user-select:none;" title="When checked, hides the Level 4 Applications column and expands remaining columns across the panel">
+              <input type="checkbox" id="chkSubdueLevel4" ${state.subdueLevel4 ? 'checked' : ''} style="cursor:pointer;" />
+              Subdue Level 4
+            </label>
+          </div>
+          <div class="calc-group">
+            <button class="btn-filter ${state.currentPreset === 'all' ? 'active' : ''}" data-preset="all" style="padding:0.25rem 0.65rem; font-size:0.8rem;" title="Click to clear active blueprint and switch to Single Target Mode">Single Target Mode</button>
+            ${(!state.activeBlueprint || state.currentPreset === 'all') ? `
+              <span id="singleTargetModeWording" style="color:#94a3b8; font-style:italic; font-size:0.8rem;">(Single Target Mode)</span>
+            ` : ''}
+          </div>
         </div>
       ` : ''}
-      <div class="slider-group">
-        <label for="workforceSlider">Workforce Efficiency Bonus:</label>
-        <button class="btn-qty" id="btnWfDec" title="Decrease workforce bonus by 1%">&lt;</button>
-        <input type="range" id="workforceSlider" min="0" max="50" step="1" value="${state.workforceBonus}" />
-        <button class="btn-qty" id="btnWfInc" title="Increase workforce bonus by 1%">&gt;</button>
-        <span style="font-weight:700; color:#34d399; min-width:45px;">+${state.workforceBonus}%</span>
-      </div>
-      <div class="calc-group" style="margin-left: 0.5rem;">
-        <label style="font-size:0.8rem; color:#fbbf24; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(245,158,11,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(245,158,11,0.35);" title="When checked, hides the EC consumption badges on all ware cards">
-          <input type="checkbox" id="chkSubdueEcCalc" ${state.subdueEcCalc ? 'checked' : ''} style="cursor:pointer;" />
-          Subdue EC Calc
-        </label>
-      </div>
-      <div class="calc-group" style="margin-left: 0.5rem;">
-        <label style="font-size:0.8rem; color:#a78bfa; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(167,139,250,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(167,139,250,0.35);" title="When checked, hides the Level 4 Applications column and expands remaining columns across the panel">
-          <input type="checkbox" id="chkSubdueLevel4" ${state.subdueLevel4 ? 'checked' : ''} style="cursor:pointer;" />
-          Subdue Level 4
-        </label>
-      </div>
     </div>
 
     ${state.activeTab === 'matrix' ? renderMatrixTabHTML() : renderPlannedTabHTML()}
-
-    <footer>
-      <div class="legend-group">
-        <div><span class="legend-dot" style="background: #10b981"></span> Active Production Links (Green)</div>
-        <div style="opacity:0.6;"><span class="legend-dot" style="background: rgba(148,163,184,0.3); border: 1px dashed #94a3b8;"></span> Subdued Ghost Links (Faint dashed lines)</div>
-      </div>
-      <div>X4: Foundations Materials & Sector Blueprint Engine v2.4</div>
-    </footer>
   `;
 
-  setupEvents();
-  if (state.activeTab === 'matrix') {
-    updateInspector(state.selectedWareId);
-    setTimeout(drawLines, 50);
-    if (state.selectedWareId) {
-      setTimeout(() => centerOnWare(state.selectedWareId), 60);
+    setupEvents({ isSearchFocused, searchSelStart, searchSelEnd });
+
+    // Restore scroll positions
+    const newTableContainer = document.querySelector('.macro-table-container');
+    if (newTableContainer && (tableScrollTop > 0 || tableScrollLeft > 0)) {
+      newTableContainer.scrollTop = tableScrollTop;
+      newTableContainer.scrollLeft = tableScrollLeft;
+      requestAnimationFrame(() => {
+        if (newTableContainer) {
+          newTableContainer.scrollTop = tableScrollTop;
+          newTableContainer.scrollLeft = tableScrollLeft;
+        }
+      });
     }
+
+    const newPlannedWrapper = document.querySelector('.planned-wrapper');
+    if (newPlannedWrapper && (wrapperScrollTop > 0 || wrapperScrollLeft > 0)) {
+      newPlannedWrapper.scrollTop = wrapperScrollTop;
+      newPlannedWrapper.scrollLeft = wrapperScrollLeft;
+      requestAnimationFrame(() => {
+        if (newPlannedWrapper) {
+          newPlannedWrapper.scrollTop = wrapperScrollTop;
+          newPlannedWrapper.scrollLeft = wrapperScrollLeft;
+        }
+      });
+    }
+
+    if (winScrollY > 0 || winScrollX > 0) {
+      window.scrollTo(winScrollX, winScrollY);
+      requestAnimationFrame(() => {
+        window.scrollTo(winScrollX, winScrollY);
+      });
+    }
+
+    if (state.activeTab === 'matrix') {
+      updateInspector(state.selectedWareId, renderApp);
+      filterWares();
+      setTimeout(drawLines, 50);
+      if (state.selectedWareId) {
+        setTimeout(() => centerOnWare(state.selectedWareId), 60);
+      }
+    } else if (state.activeTab === 'planned') {
+      filterPlannedModules();
+    }
+  } catch (err) {
+    console.error('Error rendering app:', err);
   }
 }
 
-function setupEvents() {
+function setupEvents(searchFocusState = {}) {
   const tabBtnMatrix = document.getElementById('tabBtnMatrix');
   const tabBtnPlanned = document.getElementById('tabBtnPlanned');
 
@@ -234,42 +295,102 @@ function setupEvents() {
 
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
+    if (searchFocusState.isSearchFocused) {
+      searchInput.focus();
+      if (searchFocusState.searchSelStart !== null && searchFocusState.searchSelEnd !== null) {
+        searchInput.setSelectionRange(searchFocusState.searchSelStart, searchFocusState.searchSelEnd);
+      }
+    }
+
     searchInput.addEventListener('input', (e) => {
-      state.searchQuery = e.target.value.toLowerCase();
-      if (state.activeTab === 'matrix') filterWares();
+      state.searchQuery = e.target.value;
+      if (state.activeTab === 'matrix') {
+        filterWares();
+      } else if (state.activeTab === 'planned') {
+        filterPlannedModules();
+      }
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        state.searchQuery = '';
+        if (state.activeTab === 'matrix') {
+          filterWares();
+        } else if (state.activeTab === 'planned') {
+          filterPlannedModules();
+        }
+      }
     });
   }
 
-  const moduleInput = document.getElementById('moduleInput');
-  if (moduleInput) {
-    moduleInput.addEventListener('input', (e) => {
-      state.targetModules = Math.max(1, parseInt(e.target.value) || 1);
+
+
+  let hasPendingWfChange = false;
+
+  const updateWfDisplay = () => {
+    const wfValDisplay = document.getElementById('wfBonusValue');
+    if (wfValDisplay) {
+      wfValDisplay.innerText = `+${state.workforceBonus}%`;
+    }
+    const slider = document.getElementById('workforceSlider');
+    if (slider && parseInt(slider.value) !== state.workforceBonus) {
+      slider.value = state.workforceBonus;
+    }
+  };
+
+  const triggerWfRecalc = () => {
+    if (hasPendingWfChange) {
+      hasPendingWfChange = false;
       renderApp();
-    });
-  }
+    }
+  };
 
   const btnWfDec = document.getElementById('btnWfDec');
   if (btnWfDec) {
     btnWfDec.addEventListener('click', () => {
+      const prev = state.workforceBonus;
       state.workforceBonus = Math.max(0, state.workforceBonus - 1);
-      renderApp();
+      if (state.workforceBonus !== prev) {
+        hasPendingWfChange = true;
+        updateWfDisplay();
+      }
     });
+    btnWfDec.addEventListener('blur', triggerWfRecalc);
   }
 
   const btnWfInc = document.getElementById('btnWfInc');
   if (btnWfInc) {
     btnWfInc.addEventListener('click', () => {
-      state.workforceBonus = Math.min(50, state.workforceBonus + 1);
-      renderApp();
+      const prev = state.workforceBonus;
+      state.workforceBonus = Math.min(100, state.workforceBonus + 1);
+      if (state.workforceBonus !== prev) {
+        hasPendingWfChange = true;
+        updateWfDisplay();
+      }
     });
+    btnWfInc.addEventListener('blur', triggerWfRecalc);
   }
 
   const workforceSlider = document.getElementById('workforceSlider');
   if (workforceSlider) {
     workforceSlider.addEventListener('input', (e) => {
-      state.workforceBonus = parseInt(e.target.value) || 0;
-      renderApp();
+      const newVal = parseInt(e.target.value) || 0;
+      if (state.workforceBonus !== newVal) {
+        state.workforceBonus = newVal;
+        hasPendingWfChange = true;
+        updateWfDisplay();
+      }
     });
+    workforceSlider.addEventListener('change', (e) => {
+      const newVal = parseInt(e.target.value) || 0;
+      if (state.workforceBonus !== newVal) {
+        state.workforceBonus = newVal;
+        hasPendingWfChange = true;
+        updateWfDisplay();
+      }
+    });
+    workforceSlider.addEventListener('blur', triggerWfRecalc);
   }
 
   const chkSubdueEcCalc = document.getElementById('chkSubdueEcCalc');
@@ -299,6 +420,15 @@ function setupEvents() {
       } else if (PRESET_BLUEPRINTS[state.currentPreset]) {
         const p = PRESET_BLUEPRINTS[state.currentPreset];
         state.activeBlueprint = {
+          name: p.name,
+          totalModules: p.totalModules,
+          modules: { ...p.modules },
+          rawMacros: { ...(p.rawMacros || {}) },
+          rootMacros: { ...(p.rawMacros || {}) },
+          baselineDemand: null,
+          baselineLayerTotals: null
+        };
+        state.originalBlueprint = {
           name: p.name,
           totalModules: p.totalModules,
           modules: { ...p.modules },
@@ -346,6 +476,43 @@ function setupEvents() {
     });
   }
 
+  const chkFilterWares = document.getElementById('chkFilterWares');
+  if (chkFilterWares) {
+    chkFilterWares.addEventListener('change', (e) => {
+      state.filterWaresPlanned = e.target.checked;
+      if (state.filterWaresPlanned) {
+        state.filterStructuresPlanned = false;
+      }
+      renderApp();
+    });
+  }
+
+  const chkFilterStructures = document.getElementById('chkFilterStructures');
+  if (chkFilterStructures) {
+    chkFilterStructures.addEventListener('change', (e) => {
+      state.filterStructuresPlanned = e.target.checked;
+      if (state.filterStructuresPlanned) {
+        state.filterWaresPlanned = false;
+      }
+      renderApp();
+    });
+  }
+
+  const chkPopulateMatrix = document.getElementById('chkPopulateMatrix');
+  if (chkPopulateMatrix) {
+    chkPopulateMatrix.addEventListener('change', (e) => {
+      state.populateMatrix = e.target.checked;
+      if (state.activeBlueprint) {
+        if (!state.activeBlueprint.rootMacros) {
+          state.activeBlueprint.rootMacros = { ...(state.activeBlueprint.rawMacros || {}) };
+        }
+        syncPopulatedMatrix();
+      }
+      saveActiveBlueprintToStorage();
+      renderApp();
+    });
+  }
+
   const selectFactionMethod = document.getElementById('selectFactionMethod');
   if (selectFactionMethod) {
     selectFactionMethod.addEventListener('change', (e) => {
@@ -365,6 +532,16 @@ function setupEvents() {
   const btnAddMacro = document.getElementById('btnAddMacro');
   const addMacroSelect = document.getElementById('addMacroSelect');
 
+  if (addMacroSelect) {
+    addMacroSelect.addEventListener('change', (e) => {
+      const macro = e.target.value;
+      if (macro) {
+        const wareId = mapMacroToWare(macro);
+        state.selectedWareId = wareId;
+      }
+    });
+  }
+
   if (btnAddMacro && addMacroSelect) {
     btnAddMacro.addEventListener('click', () => {
       const selectedMacro = addMacroSelect.value;
@@ -378,13 +555,25 @@ function setupEvents() {
           name: 'Custom Planned Station Blueprint',
           totalModules: 0,
           modules: {},
-          rawMacros: {}
+          rawMacros: {},
+          rootMacros: {}
         };
       }
 
       if (!state.activeBlueprint.rawMacros) state.activeBlueprint.rawMacros = {};
+      if (!state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
+
+      state.activeBlueprint.rootMacros[selectedMacro] = (state.activeBlueprint.rootMacros[selectedMacro] || 0) + 1;
       state.activeBlueprint.rawMacros[selectedMacro] = (state.activeBlueprint.rawMacros[selectedMacro] || 0) + 1;
-      rebuildBlueprintFromMacros();
+
+      const addedWareId = mapMacroToWare(selectedMacro);
+      state.selectedWareId = addedWareId;
+
+      if (state.populateMatrix) {
+        syncPopulatedMatrix();
+      } else {
+        rebuildBlueprintFromMacros();
+      }
       renderApp();
     });
   }
@@ -395,12 +584,22 @@ function setupEvents() {
       const newQty = Math.max(0, parseInt(e.target.value) || 0);
 
       if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+        if (!state.activeBlueprint.rootMacros) {
+          state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
+        }
         if (newQty === 0) {
+          delete state.activeBlueprint.rootMacros[macro];
           delete state.activeBlueprint.rawMacros[macro];
         } else {
+          state.activeBlueprint.rootMacros[macro] = newQty;
           state.activeBlueprint.rawMacros[macro] = newQty;
         }
-        rebuildBlueprintFromMacros();
+
+        if (state.populateMatrix) {
+          syncPopulatedMatrix();
+        } else {
+          rebuildBlueprintFromMacros();
+        }
         renderApp();
       }
     });
@@ -410,8 +609,16 @@ function setupEvents() {
     btn.addEventListener('click', () => {
       const macro = btn.dataset.macro;
       if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+        if (!state.activeBlueprint.rootMacros) {
+          state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
+        }
+        state.activeBlueprint.rootMacros[macro] = (state.activeBlueprint.rootMacros[macro] || 0) + 1;
         state.activeBlueprint.rawMacros[macro] = (state.activeBlueprint.rawMacros[macro] || 0) + 1;
-        rebuildBlueprintFromMacros();
+        if (state.populateMatrix) {
+          syncPopulatedMatrix();
+        } else {
+          rebuildBlueprintFromMacros();
+        }
         renderApp();
       }
     });
@@ -421,13 +628,23 @@ function setupEvents() {
     btn.addEventListener('click', () => {
       const macro = btn.dataset.macro;
       if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
-        const currentQty = state.activeBlueprint.rawMacros[macro] || 0;
+        if (!state.activeBlueprint.rootMacros) {
+          state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
+        }
+        const currentQty = state.activeBlueprint.rootMacros[macro] !== undefined ? state.activeBlueprint.rootMacros[macro] : (state.activeBlueprint.rawMacros[macro] || 0);
         if (currentQty <= 1) {
+          delete state.activeBlueprint.rootMacros[macro];
           delete state.activeBlueprint.rawMacros[macro];
         } else {
+          state.activeBlueprint.rootMacros[macro] = currentQty - 1;
           state.activeBlueprint.rawMacros[macro] = currentQty - 1;
         }
-        rebuildBlueprintFromMacros();
+
+        if (state.populateMatrix) {
+          syncPopulatedMatrix();
+        } else {
+          rebuildBlueprintFromMacros();
+        }
         renderApp();
       }
     });
@@ -437,8 +654,16 @@ function setupEvents() {
     btn.addEventListener('click', () => {
       const macro = btn.dataset.macro;
       if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+        if (!state.activeBlueprint.rootMacros) {
+          state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
+        }
+        delete state.activeBlueprint.rootMacros[macro];
         delete state.activeBlueprint.rawMacros[macro];
-        rebuildBlueprintFromMacros();
+        if (state.populateMatrix) {
+          syncPopulatedMatrix();
+        } else {
+          rebuildBlueprintFromMacros();
+        }
         renderApp();
       }
     });
@@ -451,7 +676,11 @@ function setupEvents() {
         highlightGraph(card.dataset.id);
       });
       card.addEventListener('mouseleave', () => {
-        highlightGraph(state.selectedWareId);
+        if (state.searchQuery && state.searchQuery.trim()) {
+          filterWares();
+        } else {
+          highlightGraph(state.selectedWareId);
+        }
       });
       card.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -466,8 +695,28 @@ function setupEvents() {
       });
     }
 
+    const sectorSelect = document.getElementById('sectorSelect');
+    if (sectorSelect) {
+      const handleSectorChange = (e) => {
+        const chosen = e.target.value;
+        if (!chosen) return;
+        state.selectedSector = chosen;
+        if (state.activeBlueprint) {
+          state.activeBlueprint.sector = chosen;
+        }
+        saveActiveBlueprintToStorage();
+        renderApp();
+      };
+      sectorSelect.addEventListener('change', handleSectorChange);
+      sectorSelect.addEventListener('input', handleSectorChange);
+    }
+
     window.addEventListener('resize', drawLines);
   }
 }
 
-document.addEventListener('DOMContentLoaded', renderApp);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderApp);
+} else {
+  renderApp();
+}

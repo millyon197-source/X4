@@ -6,16 +6,15 @@ A high-performance interactive web application built with **Vite, HTML5, and Van
 
 ## 🚀 Key Features
 
-### ⚙️ 1. Supply Chain Matrix & Dependency Visualizer
+### ⚙️ 1. Supply Matrix & Dependency Visualizer
 - **Interactive 5-Level Supply Chain Grid:** Visualizes production flows from **Level 0 (Raw Minerals & Solar Harvesting)** through **Level 4 (Station Expansion & Starship Fabrication)**.
-- **Subdue 0x Modules Toggle:** Check `Subdue 0x` to ghost inactive production cards (`opacity: 0.3; grayscale(100%)`) and faint dashed ghost-link lines, illuminating active blueprint production paths in bright green.
-- **Workforce Efficiency Bonus Slider:** Adjust workforce bonus sliders (**0% to +50%**) to evaluate how worker efficiency scales hourly throughput and reduces station module footprints.
+- **Workforce Efficiency Bonus Slider:** Adjust workforce bonus sliders (**0% to +100%**) to evaluate how worker efficiency scales hourly throughput and reduces station module footprints.
 - **Upstream Mining & Raw Harvesting Rates:** Calculates exact hourly mining extraction demand (*Ore/hr, Silicon/hr, Methane/hr, Hydrogen/hr, Helium/hr, Ice/hr, Energy Cells/hr*).
 
-### 📋 2. Planned & Changed Station Modules Editor
+### 📋 2. Planned Modules Editor
 - **Friendly Station Module Names:** Displays human-readable station names (*e.g., Paranid Faction Capital, Wide Area Sensor Array, Pavilion Observation Deck, Penthouse Observation Deck*) with secondary `_macro` identifier tags.
 - **1x Single Unit vs. Total Build Costs:** Displays single-unit component costs (`1x Module Cost`) under *Mapped Ware / Purpose* and row total multiplied build costs (`Total for Nx modules`) under *Construction Resources Needed*.
-- **Standardized Resource Sequence:** Displays resources strictly in the order: **Claytronics**, **EC (Energy Cells)**, **Hull Parts**, followed by Terran/Specialty wares.
+- **Standardized Resource Sequence:** Displays resources strictly in an order:  **Hull Parts**, **Engine **Parts**, **Advanced Composites, ... **EC (Energy Cells)**, with any faction wares as included.
 - **Faction Construction Method Selector:** Dynamically switch construction methods:
   - 🏛️ **Commonwealth Method:** Claytronics, Hull Parts, Energy Cells.
   - 🪐 **Terran Protectorate Method:** Computronic Substrate, Silicon Carbide, Metallic Microlattice.
@@ -34,15 +33,34 @@ A high-performance interactive web application built with **Vite, HTML5, and Van
 
 ```
 x4-vite-explorer/
-├── index.html                    # Main HTML entry point & Google Fonts
-├── package.json                  # Vite build script & dependency manifest
-├── README.md                     # Complete project documentation
+├── index.html                    # Main HTML5 entry point & Google Fonts
+├── package.json                  # Vite build scripts & dependency manifest
+├── README.md                     # Complete project documentation & guide
+├── public/                       # Static public assets (favicons, SVG sprites)
+│   ├── favicon.svg               # Application browser tab icon
+│   └── icons.svg                 # SVG icon sprite sheet
 └── src/
-    ├── main.js                   # Dual-tab app engine, XML parser & calculator logic
-    ├── style.css                 # Glassmorphic dark mode design system
-    ├── crissian_build_costs.json # 338 verified X4 module build cost recipes
-    ├── macro_names.json          # 329 verified friendly module names
-    └── crissian_modules_master.json # Master module database
+    ├── main.js                   # Application lifecycle entry point & tab routing
+    ├── style.css                 # Glassmorphic dark mode styling & layout
+    ├── assets/                   # Static UI images & vector icons
+    │   ├── hero.png              # Header banner asset
+    │   ├── javascript.svg        # JS logo
+    │   └── vite.svg              # Vite logo
+    ├── data/                     # Game constants, ware databases & sector sunlight
+    │   ├── wares.js              # 5-Level WARES_DB, DEPENDENCIES & MACRO_TO_WARE mappings
+    │   ├── sectors.js            # Sector sunlight percentages & solar formula calculators
+    │   └── sunlight.json         # Verified X4 sector sunlight database
+    ├── engine/                   # Core math, XML parsing & reactive state
+    │   ├── calculator.js         # Downstream demand cascades, mining requirements & layer totals
+    │   ├── state.js              # Centralized reactive application state management
+    │   └── xmlParser.js          # Universal X4 station blueprint XML parser
+    ├── ui/                       # Dynamic modular UI renderers
+    │   ├── matrixView.js         # Interactive 5-Level Supply Chain Matrix & Blueprint Inspector
+    │   └── plannedView.js        # Station Module Planner, build cost breakdowns & filters
+    ├── crissian_build_costs.json # 338 verified module construction resource recipes
+    ├── crissian_modules_master.json # Master module catalog and dimensions
+    ├── macro_costs.json          # Macro construction resource cost database
+    └── macro_names.json          # 329 human-readable friendly module names
 ```
 
 ---
@@ -50,34 +68,29 @@ x4-vite-explorer/
 ## 🛠️ Quick Start
 
 ### Prerequisites
-Make sure **Node.js** (v18+) and **npm** are installed on your system. Use whatever means you choose to clone repo. Here we use Git Bash.
+Make sure **Node.js** (v18+) and **npm** are installed on your system.
 
 ### 1. Installation
-Navigate to the project directory:
-Default Location Behavior for cloning
-  Default Start Path: 
-    When you open Git Bash normally (without right-clicking a specific folder), it opens in your Windows user home directory (C:\Users\YourUsername). Running git clone <url> there places the new repo folder right inside C:\Users\YourUsername.
-  Custom Path via Context Menu: 
-    If you right-clicked a specific folder in Windows Explorer and selected "Git Bash Here", the repo will be placed inside that exact folder.
-  Manual Navigation: 
-    If you typed cd /path/to/folder before running the clone command, the repo will be created inside that targeted directory.
+Clone the repository and install dependencies:
 
 ```bash
+git clone <repository-url>
+cd x4-vite-explorer
 npm install
 ```
 
-### 2. Run Local Development Server
-Start the Vite dev server:
+### 2. Build for Production
+Compile the optimized production bundle to the `dist/` directory:
+```bash
+npm run build
+```
+
+### 3. Run Local Development Server
+Start the local Vite development server:
 ```bash
 npm run dev
 ```
 Open your browser to: **http://localhost:5173/**
-
-### 3. Build for Production
-To compile the optimized production bundle:
-```bash
-npm run build
-```
 
 ---
 
@@ -92,9 +105,8 @@ npm run build
 | **🦎 Teladi Company** | `_tel_` | **35** | Teladi Base Connections, Trade Stations, Nostrop Oil Farms |
 | **👁️ Paranid Empire** | `_par_` | **33** | Paranid Y-Connections, Faction Capital, Harbor Piers |
 | **⚡ Special / Neutral** | Various | **34** | Scrap Recycling, Protectyon Condensate Collectors, Gambling Halls |
-| **🤖 Xenon Collective** | `_xen_` | **7** | Xenon Base Structures, XL Fabrication Bays, Solar Arrays |
 | **🗡️ Split Dynasty** | `_split_` | **1** | Split Administrative Sector Claim Structure |
-| **Total** | | **338** | **100% Verified X4 Database Coverage** |
+| **Total** | | **331** | **100% Verified X4 Database Coverage** |
 
 ---
 

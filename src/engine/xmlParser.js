@@ -2,21 +2,39 @@ import { mapMacroToWare, PRESET_BLUEPRINTS } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage } from './state.js';
 
 export function rebuildBlueprintFromMacros() {
-  if (!state.activeBlueprint || !state.activeBlueprint.rawMacros) return;
+  if (!state.activeBlueprint) return;
 
-  const moduleCounts = {};
-  let totalEntries = 0;
-
-  Object.entries(state.activeBlueprint.rawMacros).forEach(([macro, count]) => {
-    totalEntries += count;
-    const wareId = mapMacroToWare(macro);
-    if (wareId) {
-      moduleCounts[wareId] = (moduleCounts[wareId] || 0) + count;
+  if (state.activeBlueprint.name === 'Prod Max' && (!state.activeBlueprint.modules || !state.activeBlueprint.modules['TerEC'] || !state.activeBlueprint.rawMacros || !state.activeBlueprint.rawMacros['prod_ter_energycells_macro'])) {
+    if (PRESET_BLUEPRINTS && PRESET_BLUEPRINTS['prod_max']) {
+      state.activeBlueprint.rawMacros = { ...PRESET_BLUEPRINTS['prod_max'].rawMacros };
+      state.activeBlueprint.modules = { ...PRESET_BLUEPRINTS['prod_max'].modules };
+      state.activeBlueprint.totalModules = PRESET_BLUEPRINTS['prod_max'].totalModules;
+      return;
     }
-  });
+  }
 
-  state.activeBlueprint.totalModules = totalEntries;
-  state.activeBlueprint.modules = moduleCounts;
+  if (state.activeBlueprint.rawMacros && Object.keys(state.activeBlueprint.rawMacros).length > 0) {
+    const moduleCounts = {};
+    let totalEntries = 0;
+
+    Object.entries(state.activeBlueprint.rawMacros).forEach(([macro, count]) => {
+      totalEntries += count;
+      const wareId = mapMacroToWare(macro);
+      if (wareId) {
+        moduleCounts[wareId] = (moduleCounts[wareId] || 0) + count;
+      }
+    });
+
+    state.activeBlueprint.totalModules = totalEntries;
+    state.activeBlueprint.modules = moduleCounts;
+  } else if (state.activeBlueprint.modules) {
+    Object.entries(state.activeBlueprint.modules).forEach(([k, v]) => {
+      const wareId = mapMacroToWare(k);
+      if (wareId && wareId !== k) {
+        state.activeBlueprint.modules[wareId] = (state.activeBlueprint.modules[wareId] || 0) + v;
+      }
+    });
+  }
 }
 
 export function parseXMLBlueprint(xmlText, fileName, onRender) {
@@ -45,7 +63,10 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       name: planName,
       totalModules: 0,
       modules: {},
-      rawMacros: { ...rawMacroCounts }
+      rawMacros: { ...rawMacroCounts },
+      rootMacros: { ...rawMacroCounts },
+      baselineDemand: null,
+      baselineLayerTotals: null
     };
 
     rebuildBlueprintFromMacros();
@@ -57,7 +78,8 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       name: planName,
       totalModules: state.activeBlueprint.totalModules,
       modules: { ...state.activeBlueprint.modules },
-      rawMacros: { ...state.activeBlueprint.rawMacros }
+      rawMacros: { ...state.activeBlueprint.rawMacros },
+      rootMacros: { ...state.activeBlueprint.rootMacros }
     });
 
     state.currentPreset = 'blueprint';
@@ -85,17 +107,26 @@ export function reloadActiveBlueprint(onRender) {
       name: p.name,
       totalModules: p.totalModules,
       modules: { ...p.modules },
-      rawMacros: { ...(p.rawMacros || {}) }
+      rawMacros: { ...(p.rawMacros || {}) },
+      rootMacros: { ...(p.rawMacros || {}) },
+      baselineDemand: null,
+      baselineLayerTotals: null
     };
   } else if (state.originalBlueprint && state.originalBlueprint.rawMacros) {
     state.activeBlueprint = {
       name: state.originalBlueprint.name,
       totalModules: 0,
       modules: {},
-      rawMacros: { ...state.originalBlueprint.rawMacros }
+      rawMacros: { ...state.originalBlueprint.rawMacros },
+      rootMacros: { ...state.originalBlueprint.rawMacros },
+      baselineDemand: null,
+      baselineLayerTotals: null
     };
     rebuildBlueprintFromMacros();
   } else if (state.activeBlueprint.rawMacros) {
+    state.activeBlueprint.rootMacros = { ...(state.activeBlueprint.rawMacros || {}) };
+    state.activeBlueprint.baselineDemand = null;
+    state.activeBlueprint.baselineLayerTotals = null;
     rebuildBlueprintFromMacros();
   }
 
@@ -119,12 +150,17 @@ export function switchLoadedBlueprint(name, onRender) {
     name: targetBp.name,
     totalModules: targetBp.totalModules,
     modules: { ...targetBp.modules },
-    rawMacros: { ...targetBp.rawMacros }
+    rawMacros: { ...(targetBp.rootMacros || targetBp.rawMacros) },
+    rootMacros: { ...(targetBp.rootMacros || targetBp.rawMacros) },
+    baselineDemand: null,
+    baselineLayerTotals: null
   };
   state.originalBlueprint = {
     name: targetBp.name,
     rawMacros: { ...targetBp.rawMacros }
   };
+
+  rebuildBlueprintFromMacros();
 
   // Move switched blueprint to front (index 0) so other previous blueprints are to the right
   state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== name);
