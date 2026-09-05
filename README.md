@@ -74,7 +74,7 @@ Make sure **Node.js** (v18+) and **npm** are installed on your system.
 Clone the repository and install dependencies:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/wfbrown53-source/x4-vite-explorer.git
 cd x4-vite-explorer
 npm install
 ```
