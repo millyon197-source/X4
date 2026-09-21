@@ -1161,7 +1161,7 @@
   },
   "prod_tel_engineparts_macro": {
     "macro": "prod_tel_engineparts_macro",
-    "name": "Teladi Engine Part Production",
+    "name": "Engine Part Production (Teladi)",
     "type": "production",
     "cost": {
       "claytronics": 394,

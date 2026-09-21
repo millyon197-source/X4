@@ -1,10 +1,10 @@
-import { mapMacroToWare, PRESET_BLUEPRINTS } from '../data/wares.js';
+import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage } from './state.js';
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;
 
-  if (state.activeBlueprint.name === 'Prod Max' && (!state.activeBlueprint.modules || !state.activeBlueprint.modules['TerEC'] || !state.activeBlueprint.rawMacros || !state.activeBlueprint.rawMacros['prod_ter_energycells_macro'])) {
+  if (state.activeBlueprint.name === 'Prod Max' && (!state.activeBlueprint.rawMacros || Object.keys(state.activeBlueprint.rawMacros).length === 0)) {
     if (PRESET_BLUEPRINTS && PRESET_BLUEPRINTS['prod_max']) {
       state.activeBlueprint.rawMacros = { ...PRESET_BLUEPRINTS['prod_max'].rawMacros };
       state.activeBlueprint.modules = { ...PRESET_BLUEPRINTS['prod_max'].modules };
@@ -19,6 +19,20 @@ export function rebuildBlueprintFromMacros() {
 
     Object.entries(state.activeBlueprint.rawMacros).forEach(([macro, count]) => {
       totalEntries += count;
+      const lowerMacro = macro.toLowerCase();
+      const isRecycler = (lowerMacro.includes('scraprecycler') || lowerMacro.includes('scrap_recycler')) && !lowerMacro.includes('khaak');
+      if (isRecycler) {
+        if (lowerMacro.includes('ter')) {
+          moduleCounts['TerCompSubstrate'] = (moduleCounts['TerCompSubstrate'] || 0) + count;
+          moduleCounts['TerSilCarbide'] = (moduleCounts['TerSilCarbide'] || 0) + count;
+          moduleCounts['TerScrapMetal'] = (moduleCounts['TerScrapMetal'] || 0) + count;
+        } else {
+          moduleCounts['ScrapHullParts'] = (moduleCounts['ScrapHullParts'] || 0) + count;
+          moduleCounts['ScrapClaytronics'] = (moduleCounts['ScrapClaytronics'] || 0) + count;
+          moduleCounts['ScrapMetal'] = (moduleCounts['ScrapMetal'] || 0) + count;
+        }
+        return;
+      }
       const wareId = mapMacroToWare(macro);
       if (wareId) {
         moduleCounts[wareId] = (moduleCounts[wareId] || 0) + count;
@@ -34,6 +48,83 @@ export function rebuildBlueprintFromMacros() {
         state.activeBlueprint.modules[wareId] = (state.activeBlueprint.modules[wareId] || 0) + v;
       }
     });
+  }
+
+  if (state.activeBlueprint.modules && state.activeBlueprint.modules['RawScrap'] && !state.activeBlueprint.modules['ScrapProc']) {
+    state.activeBlueprint.modules['ScrapProc'] = state.activeBlueprint.modules['RawScrap'];
+    delete state.activeBlueprint.modules['RawScrap'];
+  }
+
+  if (!state.activeBlueprint.ppStates) state.activeBlueprint.ppStates = {};
+  delete state.activeBlueprint.ppStates['ScrapHullParts'];
+  delete state.activeBlueprint.ppStates['ScrapClaytronics'];
+  delete state.activeBlueprint.ppStates['TerCompSubstrate'];
+  delete state.activeBlueprint.ppStates['TerSilCarbide'];
+
+  // Rule: If any inputs to Hull Parts has 0 module count, then check PP for Hull Part
+  const bpModules = state.activeBlueprint.modules || {};
+  const hullWare = WARES_DB['HullParts'];
+  if (hullWare && hullWare.recipe) {
+    const anyInputZero = Object.keys(hullWare.recipe).some(inpId => {
+      if (inpId === 'EC' || inpId === 'TerEC') {
+        return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+      }
+      return (bpModules[inpId] || 0) === 0;
+    });
+
+    if (anyInputZero) {
+      if (!state.activeBlueprint._manualHullPartsPP) {
+        state.activeBlueprint.ppStates['HullParts'] = true;
+        state.activeBlueprint._autoHullPartsPP = true;
+      }
+    } else if (state.activeBlueprint._autoHullPartsPP) {
+      delete state.activeBlueprint.ppStates['HullParts'];
+      delete state.activeBlueprint._autoHullPartsPP;
+      delete state.activeBlueprint._manualHullPartsPP;
+    }
+  }
+
+  const telWare = WARES_DB['TelParts'];
+  if (telWare && telWare.recipe && bpModules['TelParts'] !== undefined) {
+    const anyTelInputZero = Object.keys(telWare.recipe).some(inpId => {
+      if (inpId === 'EC' || inpId === 'TerEC') {
+        return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+      }
+      return (bpModules[inpId] || 0) === 0;
+    });
+
+    if (anyTelInputZero) {
+      if (!state.activeBlueprint._manualTelPartsPP) {
+        state.activeBlueprint.ppStates['TelParts'] = true;
+        state.activeBlueprint._autoTelPartsPP = true;
+      }
+    } else if (state.activeBlueprint._autoTelPartsPP) {
+      delete state.activeBlueprint.ppStates['TelParts'];
+      delete state.activeBlueprint._autoTelPartsPP;
+      delete state.activeBlueprint._manualTelPartsPP;
+    }
+  }
+
+  // Rule: If any inputs to Claytronics has 0 module count, then check PP for Claytronics
+  const clayWare = WARES_DB['Claytronics'];
+  if (clayWare && clayWare.recipe) {
+    const anyClayInputZero = Object.keys(clayWare.recipe).some(inpId => {
+      if (inpId === 'EC' || inpId === 'TerEC') {
+        return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+      }
+      return (bpModules[inpId] || 0) === 0;
+    });
+
+    if (anyClayInputZero) {
+      if (!state.activeBlueprint._manualClaytronicsPP) {
+        state.activeBlueprint.ppStates['Claytronics'] = true;
+        state.activeBlueprint._autoClaytronicsPP = true;
+      }
+    } else if (state.activeBlueprint._autoClaytronicsPP) {
+      delete state.activeBlueprint.ppStates['Claytronics'];
+      delete state.activeBlueprint._autoClaytronicsPP;
+      delete state.activeBlueprint._manualClaytronicsPP;
+    }
   }
 }
 
@@ -65,9 +156,15 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       modules: {},
       rawMacros: { ...rawMacroCounts },
       rootMacros: { ...rawMacroCounts },
+      sector: null,
+      workforceBonus: 0,
+      ppStates: {},
       baselineDemand: null,
       baselineLayerTotals: null
     };
+
+    state.selectedSector = null;
+    state.workforceBonus = 0;
 
     rebuildBlueprintFromMacros();
 
@@ -79,7 +176,10 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       totalModules: state.activeBlueprint.totalModules,
       modules: { ...state.activeBlueprint.modules },
       rawMacros: { ...state.activeBlueprint.rawMacros },
-      rootMacros: { ...state.activeBlueprint.rootMacros }
+      rootMacros: { ...state.activeBlueprint.rootMacros },
+      sector: null,
+      workforceBonus: 0,
+      ppStates: {}
     });
 
     state.currentPreset = 'blueprint';
@@ -99,7 +199,20 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
 }
 
 export function reloadActiveBlueprint(onRender) {
-  if (!state.activeBlueprint) return;
+  if (!state.activeBlueprint) {
+    state.workforceBonus = 0;
+    return;
+  }
+
+  const currentLb = (state.loadedBlueprints || []).find(b => b && b.name === state.activeBlueprint.name);
+  const preservedSector = (currentLb && currentLb.sector) || state.activeBlueprint.sector || null;
+  const preservedWf = (currentLb && typeof currentLb.workforceBonus === 'number')
+    ? currentLb.workforceBonus
+    : (typeof state.activeBlueprint.workforceBonus === 'number' ? state.activeBlueprint.workforceBonus : 0);
+  const preservedPP = (currentLb && currentLb.ppStates) || state.activeBlueprint.ppStates || {};
+
+  state.selectedSector = preservedSector;
+  state.workforceBonus = preservedWf;
 
   if (state.currentPreset && PRESET_BLUEPRINTS[state.currentPreset]) {
     const p = PRESET_BLUEPRINTS[state.currentPreset];
@@ -109,6 +222,9 @@ export function reloadActiveBlueprint(onRender) {
       modules: { ...p.modules },
       rawMacros: { ...(p.rawMacros || {}) },
       rootMacros: { ...(p.rawMacros || {}) },
+      sector: preservedSector,
+      workforceBonus: preservedWf,
+      ppStates: { ...preservedPP },
       baselineDemand: null,
       baselineLayerTotals: null
     };
@@ -119,6 +235,9 @@ export function reloadActiveBlueprint(onRender) {
       modules: {},
       rawMacros: { ...state.originalBlueprint.rawMacros },
       rootMacros: { ...state.originalBlueprint.rawMacros },
+      sector: preservedSector,
+      workforceBonus: preservedWf,
+      ppStates: { ...preservedPP },
       baselineDemand: null,
       baselineLayerTotals: null
     };
@@ -127,6 +246,9 @@ export function reloadActiveBlueprint(onRender) {
     state.activeBlueprint.rootMacros = { ...(state.activeBlueprint.rawMacros || {}) };
     state.activeBlueprint.baselineDemand = null;
     state.activeBlueprint.baselineLayerTotals = null;
+    state.activeBlueprint.sector = preservedSector;
+    state.activeBlueprint.workforceBonus = preservedWf;
+    state.activeBlueprint.ppStates = { ...preservedPP };
     rebuildBlueprintFromMacros();
   }
 
@@ -135,6 +257,8 @@ export function reloadActiveBlueprint(onRender) {
   state.searchQuery = '';
   state.subdueEcCalc = true;
   state.subdueLevel4 = true;
+  state.previousBlueprint = null;
+  state.previousPreset = null;
 
   saveActiveBlueprintToStorage();
 
@@ -146,12 +270,19 @@ export function switchLoadedBlueprint(name, onRender) {
   const targetBp = state.loadedBlueprints.find(b => b.name === name);
   if (!targetBp) return;
 
+  const targetSector = targetBp.sector || null;
+  const targetWf = typeof targetBp.workforceBonus === 'number' ? targetBp.workforceBonus : 0;
+  const targetPP = targetBp.ppStates || {};
+
   state.activeBlueprint = {
     name: targetBp.name,
     totalModules: targetBp.totalModules,
     modules: { ...targetBp.modules },
     rawMacros: { ...(targetBp.rootMacros || targetBp.rawMacros) },
     rootMacros: { ...(targetBp.rootMacros || targetBp.rawMacros) },
+    sector: targetSector,
+    workforceBonus: targetWf,
+    ppStates: { ...targetPP },
     baselineDemand: null,
     baselineLayerTotals: null
   };
@@ -159,6 +290,12 @@ export function switchLoadedBlueprint(name, onRender) {
     name: targetBp.name,
     rawMacros: { ...targetBp.rawMacros }
   };
+
+  // If a load of a blueprint has no internalStorage used to allow switching between already loaded blueprints,
+  // targetSector will be null. This sets state.selectedSector to null, returning the dropdown to "-- Select Sector --"
+  // and flashing the needle indicator between red and green head.
+  state.selectedSector = targetSector;
+  state.workforceBonus = targetWf;
 
   rebuildBlueprintFromMacros();
 
@@ -172,6 +309,8 @@ export function switchLoadedBlueprint(name, onRender) {
   state.searchQuery = '';
   state.subdueEcCalc = true;
   state.subdueLevel4 = true;
+  state.previousBlueprint = null;
+  state.previousPreset = null;
 
   saveActiveBlueprintToStorage();
   if (typeof onRender === 'function') onRender();
@@ -183,24 +322,34 @@ export function removeLoadedBlueprint(name, onRender) {
   state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== name);
 
   if (wasActive) {
+    state.previousBlueprint = null;
+    state.previousPreset = null;
     if (state.loadedBlueprints.length > 0) {
       const nextBp = state.loadedBlueprints[0];
+      const nextSector = nextBp.sector || null;
+      const nextWf = typeof nextBp.workforceBonus === 'number' ? nextBp.workforceBonus : 0;
       state.activeBlueprint = {
         name: nextBp.name,
         totalModules: nextBp.totalModules,
         modules: { ...nextBp.modules },
-        rawMacros: { ...nextBp.rawMacros }
+        rawMacros: { ...nextBp.rawMacros },
+        sector: nextSector,
+        workforceBonus: nextWf
       };
       state.originalBlueprint = {
         name: nextBp.name,
         rawMacros: { ...nextBp.rawMacros }
       };
+      state.selectedSector = nextSector;
+      state.workforceBonus = nextWf;
       state.currentPreset = 'blueprint';
       state.subdueEcCalc = true;
       state.subdueLevel4 = true;
     } else {
       state.activeBlueprint = null;
       state.originalBlueprint = null;
+      state.selectedSector = null;
+      state.workforceBonus = 0;
       state.currentPreset = 'all';
     }
     state.selectedWareId = null;
@@ -218,6 +367,8 @@ export function removeActiveBlueprint(onRender) {
   } else {
     state.activeBlueprint = null;
     state.originalBlueprint = null;
+    state.selectedSector = null;
+    state.workforceBonus = 0;
     state.currentPreset = 'all';
     state.selectedWareId = null;
     state.calculatedDemand = {};

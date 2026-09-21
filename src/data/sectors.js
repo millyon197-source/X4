@@ -1,5 +1,5 @@
 // X4: Foundations v9.0 Sector Sunlight Efficiency Master Data & EC Calculation Engine
-import SUNLIGHT_DATA from './sunlight.json';
+import SUNLIGHT_DATA from './sunlight.json' with { type: 'json' };
 
 export const SECTORS_SUNLIGHT = SUNLIGHT_DATA;
 
@@ -7,24 +7,79 @@ export const SECTORS_SUNLIGHT = SUNLIGHT_DATA;
 export const BASE_SOLAR_OUTPUT = 10500;
 
 /**
+ * Calculates dynamic solar cycle metrics for a given sector and workforce bonus
+ * 
+ * @param {string|number} sectorOrSunlight - Sector name string or numeric nominal sunlight percentage
+ * @param {number} workforceBonus - Workforce bonus percentage (e.g. 0 to 50)
+ * @param {number} baseOutput - Base hourly output per module (default 10,500 EC/hr)
+ * @param {number} maxWorkforce - Max workforce multiplier (0.43 for Commonwealth, 0.0 for Terran)
+ * @param {number} baseCyclesPerHour - Base production cycles per hour (default 60, i.e. 1-minute cycle)
+ * @returns {object} Dynamic cycle metrics object
+ */
+export function getSolarDynamicCycles(sectorOrSunlight, workforceBonus = 0, baseOutput = BASE_SOLAR_OUTPUT, moduleMaxBonus = 0.43, baseCyclesPerHour = 60) {
+  const sunlightPercent = typeof sectorOrSunlight === 'number' 
+    ? sectorOrSunlight 
+    : getSectorSunlight(sectorOrSunlight);
+
+  const sunlightDecimal = sunlightPercent / 100;
+  const baseRatePerCycle = baseOutput / baseCyclesPerHour;
+
+  // Determine Module Max Workforce Bonus (0.43 for Commonwealth Solar, 0.0 for Terran Solar)
+  const isTer = baseOutput === 3000 || moduleMaxBonus === 0;
+  const actualModuleMaxBonus = isTer ? 0 : (typeof moduleMaxBonus === 'number' ? moduleMaxBonus : 0.43);
+
+  // Gained Workforce Bonus = WEB times Module Max Workforce Bonus rounded up becomes Efficiency
+  const gainedBonus = (workforceBonus > 0 && actualModuleMaxBonus > 0)
+    ? Math.ceil(workforceBonus * actualModuleMaxBonus)
+    : 0;
+
+  // Efficiency converted to decimal with one added to it yields Workforce
+  const workforceFactor = parseFloat((1 + (gainedBonus / 100)).toFixed(4));
+
+  // Overall Module Efficiency then becomes Sunlight Efficiency (in decimal) times Gained Workforce Bonus (Workforce factor)
+  const overallEfficiency = sunlightDecimal * workforceFactor;
+  const overallEfficiencyPercent = Math.round(overallEfficiency * 100);
+
+  const cycleYield = Math.floor(baseRatePerCycle * (overallEfficiencyPercent / 100));
+  const hourlyOutputPerModule = cycleYield * baseCyclesPerHour;
+
+  const cycleDurationSec = baseCyclesPerHour > 0 ? (3600 / baseCyclesPerHour) : 60;
+  const dynamicCyclesPerHour = baseCyclesPerHour;
+
+  return {
+    sunlightPercent,
+    sunlightDecimal,
+    baseYield: Math.floor(baseRatePerCycle * sunlightDecimal),
+    cycleYield,
+    baseCyclesPerHour,
+    dynamicCyclesPerHour,
+    cycleDurationSec,
+    gainedBonus,
+    workforceFactor,
+    effectiveBonus: gainedBonus / 100,
+    workforceMultiplier: workforceFactor,
+    overallEfficiencyPercent,
+    hourlyOutputPerModule
+  };
+}
+
+/**
  * Calculates hourly Energy Cell output for Solar Power Plant modules
- * Formula: Base Output × (Nominal Sunlight % / 100) × (1 + Workforce % / 100)
+ * Formula: floor(floor((Base Output / 60) × (Nominal Sunlight % / 100)) × (60 × (1 + Workforce % / 100)))
+ * Uses dynamic cycles per hour scaled by workforce efficiency bonus, rounding down to discrete integer units.
  * 
  * @param {string|number} sectorOrSunlight - Sector name string or numeric nominal sunlight percentage
  * @param {number} workforceBonus - Workforce bonus percentage (e.g. 0 to 50)
  * @param {number} modulesCount - Number of solar power plant modules (default 1)
  * @param {number} baseOutput - Base hourly output per module (default 10,500 EC/hr)
+ * @param {number} maxWorkforce - Max workforce multiplier (0.43 for Commonwealth, 0.0 for Terran)
+ * @param {number} cyclesPerHour - Production cycles per hour (default 60, i.e. 1-minute cycle)
  * @returns {number} Total hourly Energy Cells output
  */
-export function calculateSolarOutput(sectorOrSunlight, workforceBonus = 0, modulesCount = 1, baseOutput = BASE_SOLAR_OUTPUT, maxWorkforce = 0.43) {
-  const sunlightPercent = typeof sectorOrSunlight === 'number' 
-    ? sectorOrSunlight 
-    : getSectorSunlight(sectorOrSunlight);
-
-  const sunlightMultiplier = sunlightPercent / 100;
-  const workforceMultiplier = maxWorkforce !== 0 ? (1 + (maxWorkforce * (workforceBonus / 100))) : 1;
-
-  return modulesCount * baseOutput * sunlightMultiplier * workforceMultiplier;
+export function calculateSolarOutput(sectorOrSunlight, workforceBonus = 0, modulesCount = 1, baseOutput = BASE_SOLAR_OUTPUT, moduleMaxBonus = 0.43, cyclesPerHour = 60) {
+  if (modulesCount <= 0) return 0;
+  const { hourlyOutputPerModule } = getSolarDynamicCycles(sectorOrSunlight, workforceBonus, baseOutput, moduleMaxBonus, cyclesPerHour);
+  return modulesCount * hourlyOutputPerModule;
 }
 
 /**
@@ -34,11 +89,12 @@ export function calculateSolarOutput(sectorOrSunlight, workforceBonus = 0, modul
  * @param {string|number} sectorOrSunlight - Sector name or nominal sunlight percentage
  * @param {number} workforceBonus - Workforce bonus percentage (e.g. 0 to 50)
  * @param {number} baseOutput - Base hourly output per module (default 10,500 EC/hr)
+ * @param {number} moduleMaxBonus - Module max workforce bonus (0.43 for Commonwealth, 0.0 for Terran)
  * @returns {number} Number of solar modules needed (integer ceiling)
  */
-export function calculateSolarPanelsNeeded(totalECDemand, sectorOrSunlight, workforceBonus = 0, baseOutput = BASE_SOLAR_OUTPUT) {
+export function calculateSolarPanelsNeeded(totalECDemand, sectorOrSunlight, workforceBonus = 0, baseOutput = BASE_SOLAR_OUTPUT, moduleMaxBonus = 0.43) {
   if (totalECDemand <= 0) return 0;
-  const singleModuleRate = calculateSolarOutput(sectorOrSunlight, workforceBonus, 1, baseOutput);
+  const singleModuleRate = calculateSolarOutput(sectorOrSunlight, workforceBonus, 1, baseOutput, moduleMaxBonus);
   if (singleModuleRate <= 0) return 0;
   return Math.ceil(totalECDemand / singleModuleRate);
 }
@@ -115,7 +171,7 @@ export function getSectorInfo(name) {
  * @param {number} baseOutput - Base hourly output per module
  * @returns {object} Comprehensive solar metrics object
  */
-export function calculateSectorECMetrics(sectorName, totalECDemand = 0, modulesInstalled = 1, workforceBonus = 0, baseOutput = BASE_SOLAR_OUTPUT) {
+export function calculateSectorECMetrics(sectorName, totalECDemand = 0, modulesInstalled = 1, workforceBonus = 0, baseOutput = BASE_SOLAR_OUTPUT, moduleMaxBonus = 0.43) {
   const info = getSectorInfo(sectorName) || {
     sector: sectorName,
     cluster: 'Unknown',
@@ -124,9 +180,9 @@ export function calculateSectorECMetrics(sectorName, totalECDemand = 0, modulesI
     environment: 'Standard'
   };
 
-  const outputPerModule = calculateSolarOutput(info.sunlight, workforceBonus, 1, baseOutput);
-  const totalProduction = calculateSolarOutput(info.sunlight, workforceBonus, modulesInstalled, baseOutput);
-  const solarPanelsNeeded = calculateSolarPanelsNeeded(totalECDemand, info.sunlight, workforceBonus, baseOutput);
+  const outputPerModule = calculateSolarOutput(info.sunlight, workforceBonus, 1, baseOutput, moduleMaxBonus);
+  const totalProduction = calculateSolarOutput(info.sunlight, workforceBonus, modulesInstalled, baseOutput, moduleMaxBonus);
+  const solarPanelsNeeded = calculateSolarPanelsNeeded(totalECDemand, info.sunlight, workforceBonus, baseOutput, moduleMaxBonus);
   const surplusOrDeficit = totalProduction - totalECDemand;
 
   return {

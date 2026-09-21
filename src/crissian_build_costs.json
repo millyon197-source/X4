@@ -94,6 +94,26 @@
     "energycells": 188,
     "hullparts": 343
   },
+  "landmarks_arg_antigonepillar_01_macro": {
+    "claytronics": 117,
+    "energycells": 6627,
+    "hullparts": 888
+  },
+  "landmarks_arg_antigonespire_01_macro": {
+    "claytronics": 165,
+    "energycells": 9375,
+    "hullparts": 1256
+  },
+  "hab_arg_antigonepillar_01_macro": {
+    "claytronics": 117,
+    "energycells": 6627,
+    "hullparts": 888
+  },
+  "hab_arg_antigonespire_01_macro": {
+    "claytronics": 165,
+    "energycells": 9375,
+    "hullparts": 1256
+  },
   "pier_arg_harbor_01_macro": {
     "claytronics": 542,
     "energycells": 1083,
@@ -300,6 +320,11 @@
     "hullparts": 2305
   },
   "prod_gen_scrap_recycler_macro": {
+    "claytronics": 300,
+    "energycells": 600,
+    "hullparts": 1100
+  },
+  "prod_gen_scrap_recyclerkhaak_macro": {
     "claytronics": 300,
     "energycells": 600,
     "hullparts": 1100

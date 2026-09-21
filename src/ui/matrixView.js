@@ -1,11 +1,29 @@
-import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareWorkforceMultiplier, MACRO_TO_WARE, FACTION_WARE_MAP } from '../data/wares.js';
+import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareHourlyRatePerModule, getWareCycleTimeSec, getWareOutputPerCycle, MACRO_TO_WARE, FACTION_WARE_MAP, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage } from '../engine/state.js';
 import { rebuildBlueprintFromMacros, reloadActiveBlueprint } from '../engine/xmlParser.js';
-import { calculateFactoryRequirements, calculateLiveOutputRate } from '../engine/calculator.js';
-import { SECTORS_SUNLIGHT, getSectorInfo } from '../data/sectors.js';
+import { calculateFactoryRequirements, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
+import { SECTORS_SUNLIGHT, getSectorInfo, getSectorSunlight, getSolarDynamicCycles, calculateSolarOutput } from '../data/sectors.js';
 import { escapeHtml } from '../html.js';
 
-export { FACTION_WARE_MAP };
+export { FACTION_WARE_MAP, NO_PP_WARES };
+
+export const SCRAP_WARE_IDS = new Set(['RawScrap', 'ScrapProc', 'ScrapMetal', 'TerScrapMetal', 'ScrapHullParts', 'ScrapClaytronics', 'TerCompSubstrate', 'TerSilCarbide']);
+
+export function getProductionMacroForWare(wareId) {
+  const ware = WARES_DB[wareId];
+  if (!ware) return null;
+  if (ware.level === 0 && wareId !== 'EC' && wareId !== 'TerEC') return null;
+  if (ware.level === 4) return null;
+  return getPrimaryMacroForWare(wareId);
+}
+
+export function updateScrapWarningPill(activeWareId) {
+  const pill = document.getElementById('scrapWarningPill');
+  if (!pill) return;
+  const targetId = activeWareId !== undefined ? activeWareId : state.selectedWareId;
+  const hasYellowLink = Boolean(targetId) && SCRAP_WARE_IDS.has(targetId);
+  pill.style.display = hasYellowLink ? 'flex' : 'none';
+}
 
 export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
   if (!FACTION_WARE_MAP[id]) return true;
@@ -21,9 +39,10 @@ export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
     if (q && !isNegated) {
       const ware = WARES_DB[id];
       const faction = FACTION_WARE_MAP[id];
+      const catWords = ware && ware.cat ? ware.cat.toLowerCase().split(/[\s/()]+/) : [];
+      const catMatches = catWords.some(w => w.startsWith(q)) || (ware && ware.cat && ware.cat.toLowerCase().includes(q) && q.includes(' '));
       const contains = (ware && (
-        ware.name.toLowerCase().includes(q) || 
-        (ware.cat && ware.cat.toLowerCase().includes(q))
+        ware.name.toLowerCase().includes(q) || catMatches
       )) || (faction && faction.toLowerCase().includes(q));
       if (contains) return true;
     }
@@ -53,21 +72,16 @@ export function renderMatrixTabHTML() {
   };
 
   const effMultiplier = 1 + (state.workforceBonus / 100);
+  const ppDownstreamWares = getPPDownstreamWares();
+  const hasYellowLinkInitial = Boolean(state.selectedWareId) && SCRAP_WARE_IDS.has(state.selectedWareId);
 
   const activeLevels = state.subdueLevel4 ? [0, 1, 2, 3] : [0, 1, 2, 3, 4];
   const colClass = state.subdueLevel4 ? 'cols-4' : 'cols-5';
 
-  const sectorInfo = getSectorInfo(lt.sector || state.selectedSector || "Nopileos' Fortune VI / Duke's Awakening");
-  const rawSectorName = sectorInfo ? sectorInfo.sector : (lt.sector || state.selectedSector || "Nopileos' Fortune VI / Duke's Awakening");
-
-  let twoLetter = 'Du';
-  if (rawSectorName.toLowerCase().includes('duke')) {
-    twoLetter = 'Du';
-  } else {
-    const letters = rawSectorName.replace(/[^a-zA-Z]/g, '');
-    twoLetter = letters.length >= 2 ? letters.slice(0, 2) : rawSectorName.slice(0, 2);
-  }
-  const abbrSectorDisplay = `${twoLetter}...`;
+  const isSectorSelected = Boolean(state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector));
+  const activeSectorName = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || null;
+  const sectorInfo = activeSectorName ? getSectorInfo(activeSectorName) : null;
+  const rawSectorName = sectorInfo ? sectorInfo.sector : (activeSectorName || 'No Sector Selected');
 
   return `
     <div class="main-wrapper">
@@ -76,11 +90,21 @@ export function renderMatrixTabHTML() {
           <div class="layer-totals-card" style="overflow:hidden;">
             <div class="layer-title" style="display:flex; justify-content:space-between; align-items:center; gap:0.35rem; overflow:hidden;">
               <span style="white-space:nowrap; flex-shrink:0;">⚡ Solar Harvesting</span>
-              <div style="display:inline-flex; align-items:center; gap:2px; max-width:115px; overflow:hidden; flex-shrink:1;">
-                <span style="font-size:0.75rem; flex-shrink:0;">📍</span>
-                <select id="sectorSelect" class="sector-select-badge" title="${rawSectorName} (${lt.sunlight || 100}%) • Click to select sector location">
+              <div style="display:inline-flex; align-items:center; gap:3px; max-width:125px; overflow:hidden; flex-shrink:1;">
+                <svg id="needleIndicator" class="needle-indicator ${isSectorSelected ? 'needle-selected' : 'needle-flashing'}" width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" title="${isSectorSelected ? `Sector location: ${rawSectorName} (${lt.sunlight}%)` : 'Sector not selected • Click to choose sector location'}">
+                  <!-- Needle Pin Shaft -->
+                  <line x1="10" y1="10" x2="3" y2="17" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+                  <!-- Needle Collar -->
+                  <path d="M8.5 8.5L11.5 11.5" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+                  <!-- Needle Head (Round Pin Head) -->
+                  <circle class="needle-head" cx="13" cy="7" r="4.5" />
+                  <!-- Specular shine on head -->
+                  <circle cx="11.8" cy="5.2" r="1.3" fill="#ffffff" opacity="0.75"/>
+                </svg>
+                <select id="sectorSelect" class="sector-select-badge ${isSectorSelected ? '' : 'unselected'}" title="${isSectorSelected ? `${rawSectorName} (${lt.sunlight || 100}%) • Click to select sector location` : 'Sector not selected • Click to choose sector location'}">
+                  <option value="" ${!isSectorSelected ? 'selected' : ''}>-- Select Sector --</option>
                   ${SECTORS_SUNLIGHT.map(s => {
-                    const isSel = (s.sector === rawSectorName || (state.selectedSector && (state.selectedSector === s.sector || state.selectedSector.includes(s.sector))) || (lt.sector && lt.sector.includes(s.sector)));
+                    const isSel = isSectorSelected && (s.sector === rawSectorName || (activeSectorName && (activeSectorName === s.sector || activeSectorName.includes(s.sector))));
                     const optionVal = `${s.sector} (${s.sunlight}%)`;
                     return `<option value="${optionVal}" ${isSel ? 'selected' : ''}>${s.sunlight}% — ${s.sector}</option>`;
                   }).join('')}
@@ -111,13 +135,15 @@ export function renderMatrixTabHTML() {
                   }
                 }
 
+                const ecFallback = (WARES_DB['EC'] && typeof WARES_DB['EC'].baseRate === 'number') ? WARES_DB['EC'].baseRate : 10500;
+                const terEcFallback = (WARES_DB['TerEC'] && typeof WARES_DB['TerEC'].baseRate === 'number') ? WARES_DB['TerEC'].baseRate : 3000;
                 let reqHtml = '';
                 if (state.activeBlueprint && !terLoaded) {
-                  reqHtml = `Requires <strong style="color:#34d399;">${lt.solarModulesNeeded}x</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.solarOutputPerPanel || 10500).toLocaleString()}/mod)</span>`;
+                  reqHtml = `Requires <strong style="color:#34d399;">${lt.solarModulesNeeded}x</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.solarOutputPerPanel || ecFallback).toLocaleString()}/mod)</span>`;
                 } else if (state.activeBlueprint && terLoaded && !genLoaded) {
-                  reqHtml = `Requires <strong style="color:#38bdf8;">${lt.terSolarModulesNeeded}x TER</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.terSolarOutputPerPanel || 3000).toLocaleString()}/mod)</span>`;
+                  reqHtml = `Requires <strong style="color:#38bdf8;">${lt.terSolarModulesNeeded}x TER</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.terSolarOutputPerPanel || terEcFallback).toLocaleString()}/mod)</span>`;
                 } else {
-                  reqHtml = `Requires <strong style="color:#34d399;">${lt.solarModulesNeeded}x Gen</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.solarOutputPerPanel || 10500).toLocaleString()}/mod)</span> or <strong style="color:#38bdf8;">${lt.terSolarModulesNeeded}x TER</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.terSolarOutputPerPanel || 3000).toLocaleString()}/mod)</span>`;
+                  reqHtml = `Requires <strong style="color:#34d399;">${lt.solarModulesNeeded}x Gen</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.solarOutputPerPanel || ecFallback).toLocaleString()}/mod)</span> or <strong style="color:#38bdf8;">${lt.terSolarModulesNeeded}x TER</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.terSolarOutputPerPanel || terEcFallback).toLocaleString()}/mod)</span>`;
                 }
 
                 return `${installedHtml}${reqHtml}`;
@@ -187,14 +213,93 @@ export function renderMatrixTabHTML() {
                   }
                   if (inPlanCount === 0 && state.activeBlueprint && state.activeBlueprint.rawMacros) {
                     Object.entries(state.activeBlueprint.rawMacros).forEach(([m, count]) => {
-                      if (mapMacroToWare(m) === id) inPlanCount += count;
+                      const lower = m.toLowerCase();
+                      const isRecycler = (lower.includes('scraprecycler') || lower.includes('scrap_recycler')) && !lower.includes('khaak');
+                      if (isRecycler) {
+                        if (lower.includes('ter')) {
+                          if (id === 'TerCompSubstrate' || id === 'TerSilCarbide' || id === 'TerScrapMetal') inPlanCount += count;
+                        } else {
+                          if (id === 'ScrapHullParts' || id === 'ScrapClaytronics' || id === 'ScrapMetal') inPlanCount += count;
+                        }
+                      } else if (mapMacroToWare(m) === id) {
+                        inPlanCount += count;
+                      }
                     });
                   }
-                  const calcNeeded = calc ? (calc.modulesNeeded || 0) : 0;
-                  const hasDemand = calc ? (calc.rateNeeded > 0 || calc.modulesNeeded > 0) : false;
-                  const isTerECOmitted = isTerEC && state.activeBlueprint && inPlanCount === 0;
+                  const smInPlan = (state.activeBlueprint && state.activeBlueprint.modules && ((state.activeBlueprint.modules['ScrapMetal'] || 0) + (state.activeBlueprint.modules['TerScrapMetal'] || 0) + (state.activeBlueprint.modules['ScrapProc'] || 0))) || 0;
+                  const smCalc = state.calculatedDemand && (state.calculatedDemand['ScrapMetal'] || state.calculatedDemand['TerScrapMetal'] || state.calculatedDemand['ScrapProc']);
+                  const smOutputNonZero = smInPlan > 0 || (smCalc && (smCalc.rateNeeded > 0 || smCalc.modulesNeeded > 0)) || (state.selectedWareId === 'ScrapMetal' || state.selectedWareId === 'TerScrapMetal' || state.selectedWareId === 'ScrapProc' || state.selectedWareId === 'RawScrap');
+
+                  let calcNeeded = calc ? (calc.modulesNeeded || 0) : 0;
+                  let hasDemand = calc ? (calc.rateNeeded > 0 || calc.modulesNeeded > 0) : false;
+                  if ((id === 'ScrapHullParts' || id === 'ScrapClaytronics') && smOutputNonZero) {
+                    if (!state.activeBlueprint) {
+                      calcNeeded = Math.max(calcNeeded, 1);
+                    }
+                    hasDemand = true;
+                  }
+                  const isTerranBp = state.activeBlueprint ? isBlueprintTerran(state.activeBlueprint) : false;
+                  const isGenECOmitted = isGenEC && (
+                    (state.activeBlueprint && (
+                      (lt.inPlanTerSolarCount > 0 && inPlanCount === 0) ||
+                      (lt.inPlanSolarCount === 0 && lt.inPlanTerSolarCount === 0 && isTerranBp)
+                    )) ||
+                    (!state.activeBlueprint && Boolean(state.selectedWareId) && isTerranWare(state.selectedWareId))
+                  );
+                  const isTerECOmitted = isTerEC && (
+                    (state.activeBlueprint && (
+                      (lt.inPlanSolarCount > 0 && inPlanCount === 0) ||
+                      (lt.inPlanSolarCount === 0 && lt.inPlanTerSolarCount === 0 && !isTerranBp)
+                    )) ||
+                    (!state.activeBlueprint && (!state.selectedWareId || !isTerranWare(state.selectedWareId)))
+                  );
+                  const activeSector = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || null;
+                  const sunlightVal = activeSector ? getSectorSunlight(activeSector) : (lt.sunlight || 100);
+                  const baseOutput = ware.baseRate || (isTerEC ? 3000 : 10500);
+                  const moduleMaxBonus = isTerEC ? 0.0 : 0.43;
+                  const solarPerMod = isEC 
+                    ? calculateSolarOutput(sunlightVal, state.workforceBonus, 1, baseOutput, moduleMaxBonus, ware.cyclesPerHr || 60)
+                    : 0;
+                  const solarModsNeeded = isTerEC ? (lt.terSolarModulesNeeded || 0) : (lt.solarModulesNeeded || 0);
+
+                  let isZeroCountOrInput = false;
+                  const hasAlloFrag = Boolean(state.activeBlueprint && (
+                    (state.activeBlueprint.modules && state.activeBlueprint.modules['AllographyneFragments'] > 0) ||
+                    (state.calculatedDemand && state.calculatedDemand['AllographyneFragments'] && state.calculatedDemand['AllographyneFragments'].modulesNeeded > 0)
+                  ));
+
+                  if (state.activeBlueprint) {
+                    if (ware.level === 0) {
+                      if (isEC) {
+                        isZeroCountOrInput = inPlanCount <= 0;
+                      } else {
+                        const rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
+                        isZeroCountOrInput = (id === 'RawKhaakScrap' && hasAlloFrag) ? false : (rawRate <= 0);
+                      }
+                    } else {
+                      if (id === 'AllographyneScrapProc' && hasAlloFrag) {
+                        isZeroCountOrInput = false;
+                      } else {
+                        isZeroCountOrInput = inPlanCount <= 0;
+                      }
+                    }
+                  } else if (state.selectedWareId) {
+                    if (ware.level === 0) {
+                      if (isEC) {
+                        isZeroCountOrInput = id === state.selectedWareId ? false : (solarModsNeeded <= 0);
+                      } else {
+                        const rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
+                        isZeroCountOrInput = id === state.selectedWareId ? false : (rawRate <= 0);
+                      }
+                    } else {
+                      const isTarget = id === state.selectedWareId;
+                      const count = (calc && calc.modulesNeeded > 0) ? calc.modulesNeeded : (isTarget ? 1 : 0);
+                      isZeroCountOrInput = count <= 0;
+                    }
+                  }
+
                   const isFactionOmitted = !isFactionWarePresent(id, inPlanCount, hasDemand);
-                  const isOmitted = isTerECOmitted || isFactionOmitted;
+                  const isOmitted = isGenECOmitted || isTerECOmitted || isFactionOmitted || isZeroCountOrInput;
 
                   const rawQ = (state.searchQuery || '').trim().toLowerCase();
                   const isNegatedQ = rawQ.startsWith('!');
@@ -206,12 +311,14 @@ export function renderMatrixTabHTML() {
                     const wareName = (ware.name || '').toLowerCase();
                     const wareCat = (ware.cat || '').toLowerCase();
                     const factionName = (faction || '').toLowerCase();
-                    const contains = wareName.includes(searchQ) || wareCat.includes(searchQ) || factionName.includes(searchQ);
+                    const catWords = wareCat ? wareCat.split(/[\s/()]+/) : [];
+                    const catMatches = catWords.some(w => w.startsWith(searchQ)) || (wareCat.includes(searchQ) && searchQ.includes(' '));
+                    const contains = wareName.includes(searchQ) || catMatches || factionName.includes(searchQ);
                     isMatchedBySearch = isNegatedQ ? !contains : contains;
                   }
 
                   const hasCalc = state.activeBlueprint 
-                    ? (inPlanCount > 0 || hasDemand || (isEC && lt.totalECNeeded > 0) || ware.level === 4 || !state.subdueZeroX) 
+                    ? (inPlanCount > 0 || hasDemand || (isEC && !isOmitted && lt.totalECNeeded > 0) || ware.level === 4 || !state.subdueZeroX) 
                     : true;
                   const isGhost = state.activeBlueprint ? (state.subdueZeroX && inPlanCount === 0 && !hasDemand && ware.level !== 4) : false;
 
@@ -231,82 +338,132 @@ export function renderMatrixTabHTML() {
                     }
                   }
 
-                  const solarPerMod = isTerEC ? (lt.terSolarOutputPerPanel || 3000) : (lt.solarOutputPerPanel || 10500);
-                  const solarModsNeeded = isTerEC ? (lt.terSolarModulesNeeded || 0) : (lt.solarModulesNeeded || 0);
-
-                  const activeCount = isEC 
-                    ? (state.activeBlueprint ? inPlanCount : (solarModsNeeded > 0 ? solarModsNeeded : 1)) 
-                    : (state.activeBlueprint ? (inPlanCount > 0 ? inPlanCount : calcNeeded) : (calcNeeded > 0 ? calcNeeded : 1));
+                  let activeCount = isEC 
+                    ? (state.activeBlueprint 
+                        ? inPlanCount 
+                        : (state.selectedWareId === id ? 1 : (solarModsNeeded > 0 ? solarModsNeeded : 1))) 
+                    : (state.activeBlueprint 
+                        ? (inPlanCount > 0 ? inPlanCount : ((id === 'AllographyneScrapProc' && hasAlloFrag) ? (calcNeeded > 0 ? calcNeeded : 1) : 0)) 
+                        : (calcNeeded > 0 ? calcNeeded : 1));
 
                   let prodOutputRate = 0;
                   let ecConsRate = 0;
                   let totalCompUnits = 0;
                   let rawRate = 0;
                   if (hasCalc) {
-                    const wareEff = getWareWorkforceMultiplier(ware, state.workforceBonus);
                     if (ware.level === 4) {
                       totalCompUnits = ware.recipe ? Object.entries(ware.recipe).filter(([k]) => k !== 'EC').reduce((sum, [_, v]) => sum + v, 0) : 0;
                     } else if (isEC) {
-                      prodOutputRate = activeCount * solarPerMod;
+                      prodOutputRate = calculateSolarOutput(sunlightVal, state.workforceBonus, activeCount, baseOutput, moduleMaxBonus, ware.cyclesPerHr || 60);
                     } else if (ware.level > 0) {
                       const baselineCalc = (state.activeBlueprint && state.activeBlueprint.baselineDemand && state.activeBlueprint.baselineDemand[id]) || (state.calculatedDemand && state.calculatedDemand[id]);
                       const optimumRate = baselineCalc ? (baselineCalc.rateNeeded || 0) : 0;
-                      prodOutputRate = optimumRate > 0 ? calculateLiveOutputRate(id, activeCount, optimumRate) : activeCount * (ware.baseRate || 1) * wareEff;
+                      prodOutputRate = calculateLiveOutputRate(id, activeCount, optimumRate);
                     } else if (ware.level === 0) {
                       rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
                     }
                     if (ware.recipe && ware.recipe['EC']) {
-                      const inputEff = (ware.level >= 1 && ware.level <= 3) ? wareEff : 1;
-                      ecConsRate = activeCount * ware.recipe['EC'] * inputEff;
+                      ecConsRate = activeCount * ware.recipe['EC'];
                     }
                   }
+                  const isRecyclerProduct = NO_PP_WARES.has(id);
+                  const isL1toL3 = ware.level >= 1 && ware.level <= 3 && !isRecyclerProduct;
+                  const isPPChecked = isL1toL3 && Boolean(
+                    (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[id]) ||
+                    (!state.activeBlueprint && state.ppStates && state.ppStates[id])
+                  );
+                  const isOutputSuppressed = isPPChecked || ppDownstreamWares.has(id);
+                  if (isOutputSuppressed) {
+                    prodOutputRate = 0;
+                  }
+                  if (isRecyclerProduct || isPPChecked) {
+                    ecConsRate = 0;
+                  }
+                  if (id === 'ScrapProc') {
+                    ecConsRate = state.scrapMetalEc ? state.scrapMetalEc.processorEc : (activeCount * 90000);
+                  } else if (id === 'ScrapMetal') {
+                    ecConsRate = state.scrapMetalEc ? state.scrapMetalEc.totalDemand : 0;
+                  } else if (id === 'TerScrapMetal') {
+                    const hasGenSm = Boolean(state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScrapMetal']);
+                    if (!hasGenSm && state.scrapMetalEc && state.scrapMetalEc.totalDemand > 0) {
+                      ecConsRate = state.scrapMetalEc.totalDemand;
+                    } else {
+                      ecConsRate = 0;
+                    }
+                  }
+                  const hasEcBadge = hasCalc && !isEC && !state.subdueEcCalc && ecConsRate > 0;
+                  const hasSolarBadge = hasCalc && isEC;
+                  const isSingleTargetActive = Boolean(state.selectedWareId || !state.activeBlueprint);
+                  const prodMacro = isSingleTargetActive ? getProductionMacroForWare(id) : null;
+                  const showBottomPanel = hasSolarBadge || hasEcBadge || isL1toL3 || Boolean(prodMacro);
+
+                  const isScrapSubsetCard = id === 'ScrapMetal' || id === 'TerScrapMetal';
 
                   return `
-                    <div class="ware-card ${initialGhost ? 'ghost-card' : ''} ${id === state.selectedWareId ? 'active-selected' : ''}" id="ware-${id}" data-id="${id}" data-omitted="${isOmitted ? 'true' : 'false'}" style="${initialDisplay}">
+                    <div class="ware-card ${initialGhost ? 'ghost-card' : ''} ${id === state.selectedWareId ? 'active-selected' : ''} ${isScrapSubsetCard ? 'scrap-subset-card' : ''}" id="ware-${id}" data-id="${id}" data-omitted="${isOmitted ? 'true' : 'false'}" style="${initialDisplay}">
                       <div class="ware-header">
-                        <div class="ware-name">${ware.name}</div>
+                        <div class="ware-name" title="${ware.name}">${ware.name}</div>
                       </div>
                       ${hasCalc ? `
                         <div class="card-calc-info">
                           ${isEC ? `
                             <span class="module-badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);">
-                              ${state.activeBlueprint ? `${inPlanCount}x Installed ${isTerEC ? 'TER Solar' : 'Solar'}` : `${solarModsNeeded}x Required ${isTerEC ? 'TER Solar' : 'Solar'}`}
+                              ${state.activeBlueprint 
+                                ? (inPlanCount > 0 
+                                    ? `${inPlanCount}x Installed ${isTerEC ? 'TER Solar' : 'Solar'}` 
+                                    : (solarModsNeeded > 0 ? `${solarModsNeeded}x Required ${isTerEC ? 'TER Solar' : 'Solar'}` : `0x Installed ${isTerEC ? 'TER Solar' : 'Solar'}`)) 
+                                : `${activeCount}x ${solarModsNeeded > 0 ? 'Required ' : ''}${isTerEC ? 'TER Solar' : 'Solar'}`}
                             </span>
                             <span class="rate-badge-prod" title="Hourly production output in ${rawSectorName}">
-                              Output: ${Math.round(activeCount * solarPerMod).toLocaleString()}/hr
+                              Output: ${Math.round(prodOutputRate).toLocaleString()} /hr
                             </span>
                           ` : `
-                            <span class="module-badge" style="${ware.level === 4 ? 'background:rgba(167,139,250,0.15); color:#a78bfa; border-color:rgba(167,139,250,0.3);' : ''}">${ware.level === 4 ? (ware.cat || 'Application') : (ware.level > 0 ? `${activeCount}x Modules` : (id === 'RawScrap' ? 'Scrap' : 'Mining'))}</span>
+                            <span class="module-badge" style="${ware.level === 4 ? 'background:rgba(167,139,250,0.15); color:#a78bfa; border-color:rgba(167,139,250,0.3);' : ''}">
+                              ${ware.level === 4 ? (ware.cat || 'Application') : (ware.level > 0 ? `${activeCount}x Modules` : (id === 'RawScrap' || id === 'RawKhaakScrap' ? 'Scrap' : 'Mining'))}
+                            </span>
                             ${ware.level === 4 ? `
                               <span class="rate-badge-prod" style="background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);" title="Total required component units">${Math.round(totalCompUnits).toLocaleString()} Components</span>
                             ` : (ware.level > 0 ? `
-                              <span class="rate-badge-prod" title="Hourly production output">Output: ${Math.round(prodOutputRate).toLocaleString()}/hr</span>
+                              <span class="rate-badge-prod" title="Hourly production output">Output: ${Math.round(prodOutputRate).toLocaleString()} /hr</span>
                             ` : `
-                              <span class="rate-badge-prod" ${id === 'RawScrap' ? 'style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);"' : ''} title="Hourly required ${id === 'RawScrap' ? 'scrap collection' : 'raw extraction'} rate">${Math.round(rawRate).toLocaleString()}/hr</span>
+                              <span class="rate-badge-prod" title="Hourly required ${(id === 'RawScrap' || id === 'RawKhaakScrap') ? 'scrap collection' : 'raw extraction'} rate">${Math.round(rawRate).toLocaleString()} /hr</span>
                             `)}
                           `}
                         </div>
-                        ${isEC ? `
-                          <div style="margin-top:0.25rem; display:flex; justify-content:flex-start;">
-                            <span class="rate-badge-cons" style="background:rgba(56,189,248,0.12); color:#38bdf8; border-color:rgba(56,189,248,0.25);" title="Solar panel generation efficiency in this sector">
-                              ⚡ ${Math.round(solarPerMod).toLocaleString()} EC/mod (${lt.sunlight}%)
-                            </span>
-                          </div>
-                        ` : `
-                          ${!state.subdueEcCalc && ecConsRate > 0 ? `
-                            <div style="margin-top:0.25rem; display:flex; justify-content:flex-start;">
-                              <span class="rate-badge-cons" title="Energy Cells consumed per hour">⚡ Consumes ${Math.round(ecConsRate).toLocaleString()} EC/hr</span>
-                            </div>
-                          ` : ''}
-                        `}
                       ` : `
                         <div class="card-calc-info">
                           <span class="module-badge" style="opacity:0.4; background:none; border-color:rgba(255,255,255,0.1); color:#64748b;">${state.activeBlueprint ? 'Ghost Module' : 'Hover / Select'}</span>
                         </div>
                       `}
+                      ${showBottomPanel ? `
+                        <div class="card-bottom-pill-panel">
+                          ${isEC ? `
+                            <span class="rate-badge-cons" style="background:rgba(56,189,248,0.12); color:#38bdf8; border-color:rgba(56,189,248,0.25);" title="Solar panel generation efficiency in this sector">
+                              ⚡ ${Math.round(solarPerMod).toLocaleString()} EC/mod (${sunlightVal}%)
+                            </span>
+                          ` : (prodMacro ? `
+                            <span class="macro-badge" title="${prodMacro}">${prodMacro}</span>
+                          ` : `
+                            ${hasEcBadge ? `
+                              <span class="rate-badge-cons" title="Energy Cells consumed per hour">⚡ Consumes ${Math.round(ecConsRate).toLocaleString()} EC/hr</span>
+                            ` : ''}
+                          `)}
+                          ${isL1toL3 ? `
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="${id}" ${isPPChecked ? 'checked' : ''} onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: ${isPPChecked ? '#f97316' : '#ffffff'};" title="Pause Production">PP</span>
+                            </label>
+                          ` : ''}
+                        </div>
+                      ` : ''}
                     </div>
                   `;
                 }).join('')}
+                ${level === 0 ? `
+                  <div id="scrapWarningPill" class="scrap-warning-pill" style="display:${hasYellowLinkInitial ? 'flex' : 'none'};">
+                    Scrap calculations are confusing for Hull and Claytronics outputs. Do some research
+                  </div>
+                ` : ''}
               </div>
             `;
           }).join('')}
@@ -354,7 +511,35 @@ export function drawLines() {
     const x2 = r2.left - rect.left + viewport.scrollLeft;
     const y2 = r2.top + r2.height / 2 - rect.top + viewport.scrollTop;
 
-    const dx = (x2 - x1) * 0.45;
+    const fromWare = WARES_DB[dep.from];
+    const isSameCol = (fromWare && toWare && fromWare.level === toWare.level) || Math.abs(r1.left - r2.left) < 35;
+    let pathD = '';
+
+    if (dep.from === 'ScrapProc' && (dep.to === 'ScrapMetal' || dep.to === 'TerScrapMetal')) {
+      const branchX = (r1.left - rect.left + viewport.scrollLeft) + 8;
+      const startY = r1.bottom - rect.top + viewport.scrollTop;
+      const dy = y2 - startY;
+      const cy1 = startY + dy * 0.55;
+      const cx2 = x2 - Math.min((x2 - branchX) * 0.45, 18);
+      pathD = `M ${branchX} ${startY} C ${branchX} ${cy1}, ${cx2} ${y2}, ${x2} ${y2}`;
+    } else if (isSameCol) {
+      const r2Right = r2.right - rect.left + viewport.scrollLeft;
+      const dy = y2 - y1;
+      const loopDist = Math.max(26, Math.min(48, Math.abs(dy) * 0.25));
+      const cx1 = x1 + loopDist;
+      const cx2 = r2Right + loopDist;
+      pathD = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${r2Right} ${y2}`;
+    } else {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const absDy = Math.abs(dy);
+      const handle = Math.max(20, Math.min(dx * 0.5, 75 + absDy * 0.08));
+      const cx1 = x1 + handle;
+      const cy1 = y1;
+      const cx2 = x2 - handle;
+      const cy2 = y2;
+      pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+    }
 
     const fromInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[dep.from]) || 0;
     const toInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[dep.to]) || 0;
@@ -367,15 +552,26 @@ export function drawLines() {
 
     let isActiveLink = isFromActive && isToActive;
     if (state.activeBlueprint && state.subdueZeroX && (fromInPlan === 0 || toInPlan === 0)) {
-      isActiveLink = false;
+      const hasAlloFrag = Boolean(
+        (state.activeBlueprint.modules && state.activeBlueprint.modules['AllographyneFragments'] > 0) ||
+        (state.calculatedDemand && state.calculatedDemand['AllographyneFragments'] && state.calculatedDemand['AllographyneFragments'].modulesNeeded > 0)
+      );
+      const isAlloActiveFlow = isAllographyne && hasAlloFrag && (
+        (dep.from === 'RawKhaakScrap' && dep.to === 'AllographyneScrapProc') ||
+        (dep.from === 'AllographyneScrapProc' && dep.to === 'AllographyneFragments')
+      );
+      if (!isAlloActiveFlow) {
+        isActiveLink = false;
+      }
     }
 
-    const isScrap = dep.from === 'ScrapMetal' || dep.from === 'RawScrap';
+    const isScrap = dep.from === 'ScrapMetal' || dep.from === 'TerScrapMetal' || dep.from === 'RawScrap' || dep.from === 'ScrapProc' || dep.from === 'RawKhaakScrap' || dep.from === 'AllographyneScrapProc';
+    const isAllographyne = (dep.from === 'RawKhaakScrap' && dep.to === 'AllographyneScrapProc') || (dep.from === 'AllographyneScrapProc' && dep.to === 'AllographyneFragments') || (dep.from === 'AllographyneFragments' && dep.to === 'Allographyne');
     const isDashed = dep.dashed || false;
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
-    path.setAttribute('class', `link-line ${isActiveLink ? 'active-link' : 'ghost-link'} ${isScrap ? 'scrap-link' : ''} ${isDashed ? 'dashed-link' : ''}`.trim());
+    path.setAttribute('d', pathD);
+    path.setAttribute('class', `link-line ${isActiveLink ? 'active-link' : 'ghost-link'} ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${isDashed ? 'dashed-link' : ''}`.trim());
     path.setAttribute('data-from', dep.from);
     path.setAttribute('data-to', dep.to);
     if (isDashed) {
@@ -396,21 +592,25 @@ export function drawLines() {
 
       const fromGhost = fromEl.classList.contains('ghost-card');
       const toGhost = toEl.classList.contains('ghost-card');
-      const isScrap = from === 'ScrapMetal' || from === 'RawScrap';
+      const isScrap = from === 'ScrapMetal' || from === 'TerScrapMetal' || from === 'RawScrap' || from === 'ScrapProc' || from === 'RawKhaakScrap' || from === 'AllographyneScrapProc';
+      const isAllographyne = (from === 'RawKhaakScrap' && to === 'AllographyneScrapProc') || (from === 'AllographyneScrapProc' && to === 'AllographyneFragments') || (from === 'AllographyneFragments' && to === 'Allographyne');
       const isDashed = line.getAttribute('data-dashed') === 'true';
       const dashedClass = isDashed ? 'dashed-link' : '';
 
       if (!fromGhost && !toGhost) {
-        line.className.baseVal = `link-line active-link ${isScrap ? 'scrap-link' : ''} ${dashedClass}`.trim();
+        line.className.baseVal = `link-line active-link ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${dashedClass}`.trim();
       } else {
-        line.className.baseVal = `link-line ghost-link ${isScrap ? 'scrap-link' : ''} ${dashedClass}`.trim();
+        line.className.baseVal = `link-line ghost-link ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${dashedClass}`.trim();
       }
     });
   }
+
+  updateScrapWarningPill(state.selectedWareId);
 }
 
 export function highlightGraph(id) {
   if (!id) {
+    updateScrapWarningPill(null);
     document.querySelectorAll('.link-line').forEach(l => {
       const from = l.getAttribute('data-from');
       const to = l.getAttribute('data-to');
@@ -425,13 +625,24 @@ export function highlightGraph(id) {
       const isToActive = toInPlan > 0 || (toCalc && (toCalc.rateNeeded > 0 || toCalc.modulesNeeded > 0));
 
       const isDashed = l.getAttribute('data-dashed') === 'true';
-      const isScrap = from === 'ScrapMetal' || from === 'RawScrap';
+      const isScrap = from === 'ScrapMetal' || from === 'TerScrapMetal' || from === 'RawScrap' || from === 'ScrapProc' || from === 'RawKhaakScrap' || from === 'AllographyneScrapProc';
+      const isAllographyne = (from === 'RawKhaakScrap' && to === 'AllographyneScrapProc') || (from === 'AllographyneScrapProc' && to === 'AllographyneFragments') || (from === 'AllographyneFragments' && to === 'Allographyne');
 
       let active = isFromActive && isToActive;
       if (state.activeBlueprint && state.subdueZeroX && (fromInPlan === 0 || toInPlan === 0)) {
-        active = false;
+        const hasAlloFrag = Boolean(
+          (state.activeBlueprint.modules && state.activeBlueprint.modules['AllographyneFragments'] > 0) ||
+          (state.calculatedDemand && state.calculatedDemand['AllographyneFragments'] && state.calculatedDemand['AllographyneFragments'].modulesNeeded > 0)
+        );
+        const isAlloActiveFlow = isAllographyne && hasAlloFrag && (
+          (from === 'RawKhaakScrap' && to === 'AllographyneScrapProc') ||
+          (from === 'AllographyneScrapProc' && to === 'AllographyneFragments')
+        );
+        if (!isAlloActiveFlow) {
+          active = false;
+        }
       }
-      l.className.baseVal = `link-line ${active ? 'active-link' : 'ghost-link'} ${isScrap ? 'scrap-link' : ''} ${isDashed ? 'dashed-link' : ''}`.trim();
+      l.className.baseVal = `link-line ${active ? 'active-link' : 'ghost-link'} ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${isDashed ? 'dashed-link' : ''}`.trim();
     });
     document.querySelectorAll('.ware-card').forEach(c => {
       const cardId = c.dataset.id;
@@ -452,8 +663,23 @@ export function highlightGraph(id) {
   const upstreamSet = new Set([id]);
   const downstreamSet = new Set([id]);
 
+  const lt = state.layerTotals || {};
+  const inPlanSolarCount = lt.inPlanSolarCount || 0;
+  const inPlanTerSolarCount = lt.inPlanTerSolarCount || 0;
+  const isTerranBp = state.activeBlueprint ? isBlueprintTerran(state.activeBlueprint) : false;
+
   function traverseUp(curr) {
     DEPENDENCIES.filter(d => d.to === curr).forEach(d => {
+      if (d.from === 'EC') {
+        if (state.activeBlueprint && inPlanTerSolarCount > 0 && inPlanSolarCount === 0) return;
+        if (state.activeBlueprint && inPlanSolarCount === 0 && inPlanTerSolarCount === 0 && isTerranBp) return;
+        if (!state.activeBlueprint && state.selectedWareId && isTerranWare(state.selectedWareId)) return;
+      }
+      if (d.from === 'TerEC') {
+        if (state.activeBlueprint && inPlanSolarCount > 0 && inPlanTerSolarCount === 0) return;
+        if (state.activeBlueprint && inPlanSolarCount === 0 && inPlanTerSolarCount === 0 && !isTerranBp) return;
+        if (!state.activeBlueprint && (!state.selectedWareId || !isTerranWare(state.selectedWareId))) return;
+      }
       upstreamSet.add(d.from);
       traverseUp(d.from);
     });
@@ -487,7 +713,8 @@ export function highlightGraph(id) {
   document.querySelectorAll('.link-line').forEach(line => {
     const from = line.getAttribute('data-from');
     const to = line.getAttribute('data-to');
-    const isScrap = from === 'ScrapMetal' || from === 'RawScrap';
+    const isScrap = from === 'ScrapMetal' || from === 'TerScrapMetal' || from === 'RawScrap' || from === 'ScrapProc' || from === 'RawKhaakScrap' || from === 'AllographyneScrapProc';
+    const isAllographyne = (from === 'RawKhaakScrap' && to === 'AllographyneScrapProc') || (from === 'AllographyneScrapProc' && to === 'AllographyneFragments') || (from === 'AllographyneFragments' && to === 'Allographyne');
     const isDashed = line.getAttribute('data-dashed') === 'true';
     const dashedClass = isDashed ? 'dashed-link' : '';
 
@@ -499,11 +726,13 @@ export function highlightGraph(id) {
     const isTracedLink = isUpstreamLink || isDownstreamLink;
 
     if (isTracedLink) {
-      line.className.baseVal = `link-line active-link ${isScrap ? 'scrap-link' : ''} ${dashedClass}`.trim();
+      line.className.baseVal = `link-line active-link ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${dashedClass}`.trim();
     } else {
-      line.className.baseVal = `link-line ghost-link ${isScrap ? 'scrap-link' : ''} ${dashedClass}`.trim();
+      line.className.baseVal = `link-line ghost-link ${isScrap ? 'scrap-link' : ''} ${isAllographyne ? 'allographyne-link' : ''} ${dashedClass}`.trim();
     }
   });
+
+  updateScrapWarningPill(id);
 }
 
 export function filterWares() {
@@ -535,7 +764,9 @@ export function filterWares() {
     const wareCat = (ware.cat || '').toLowerCase();
     const factionName = (faction || '').toLowerCase();
 
-    const contains = wareName.includes(q) || wareCat.includes(q) || factionName.includes(q);
+    const catWords = wareCat ? wareCat.split(/[\s/()]+/) : [];
+    const catMatches = catWords.some(w => w.startsWith(q)) || (wareCat.includes(q) && q.includes(' '));
+    const contains = wareName.includes(q) || catMatches || factionName.includes(q);
     const matches = isNegated ? !contains : contains;
 
     if (matches) {
@@ -558,14 +789,47 @@ export function filterWares() {
   drawLines();
 }
 
-export function centerOnWare(id) {
+export function getCenteredWareId() {
+  if (state.selectedWareId) return state.selectedWareId;
+  const viewport = document.getElementById('viewport');
+  if (!viewport) return state.lastFocusedWareId || null;
+
+  const vpRect = viewport.getBoundingClientRect();
+  if (vpRect.width === 0 || vpRect.height === 0) {
+    return state.selectedWareId || state.lastFocusedWareId || null;
+  }
+
+  const vpCenterX = vpRect.left + vpRect.width / 2;
+  const vpCenterY = vpRect.top + vpRect.height / 2;
+
+  const cards = document.querySelectorAll('.ware-card');
+  let closestId = null;
+  let minDistance = Infinity;
+
+  cards.forEach(card => {
+    if (card.offsetParent === null) return;
+    const r = card.getBoundingClientRect();
+    const cardCenterX = r.left + r.width / 2;
+    const cardCenterY = r.top + r.height / 2;
+    const dist = Math.hypot(cardCenterX - vpCenterX, cardCenterY - vpCenterY);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestId = card.dataset.id;
+    }
+  });
+
+  return closestId || state.selectedWareId || state.lastFocusedWareId || null;
+}
+
+export function centerOnWare(id, behavior = 'smooth') {
   if (!id) return;
   const cardEl = document.getElementById(`ware-${id}`);
   const viewport = document.getElementById('viewport');
-  if (!cardEl || !viewport) return;
+  if (!cardEl || !viewport || cardEl.offsetParent === null) return;
 
   const cardRect = cardEl.getBoundingClientRect();
   const viewportRect = viewport.getBoundingClientRect();
+  if (viewportRect.width === 0 || viewportRect.height === 0) return;
 
   const scrollLeftTarget = viewport.scrollLeft + (cardRect.left - viewportRect.left) - (viewportRect.width / 2) + (cardRect.width / 2);
   const scrollTopTarget = viewport.scrollTop + (cardRect.top - viewportRect.top) - (viewportRect.height / 2) + (cardRect.height / 2);
@@ -573,11 +837,14 @@ export function centerOnWare(id) {
   viewport.scrollTo({
     left: Math.max(0, scrollLeftTarget),
     top: Math.max(0, scrollTopTarget),
-    behavior: 'smooth'
+    behavior
   });
 }
 
 export function selectWare(id, onRender) {
+  if (id) {
+    state.lastFocusedWareId = id;
+  }
   state.selectedWareId = id;
   const selectedWare = WARES_DB[id];
   const isLevel4 = selectedWare && selectedWare.level === 4;
@@ -622,14 +889,19 @@ export function updateInspector(id, onRender) {
     let hasExceeded = false;
     let hasDeficit = false;
 
+    const smInPlan = (state.activeBlueprint && state.activeBlueprint.modules && ((state.activeBlueprint.modules['ScrapMetal'] || 0) + (state.activeBlueprint.modules['TerScrapMetal'] || 0) + (state.activeBlueprint.modules['ScrapProc'] || 0))) || 0;
+    const smCalc = state.calculatedDemand && (state.calculatedDemand['ScrapMetal'] || state.calculatedDemand['TerScrapMetal'] || state.calculatedDemand['ScrapProc']);
+    const smOutputNonZero = smInPlan > 0 || (smCalc && (smCalc.rateNeeded > 0 || smCalc.modulesNeeded > 0)) || (state.selectedWareId === 'ScrapMetal' || state.selectedWareId === 'TerScrapMetal' || state.selectedWareId === 'ScrapProc' || state.selectedWareId === 'RawScrap');
+
     Object.keys(WARES_DB).forEach(wId => {
       const ware = WARES_DB[wId];
-      if (ware.level === 0 || ware.level === 4) return;
+      if (ware.level === 0 && wId !== 'EC' && wId !== 'TerEC') return;
+      if (ware.level === 4) return;
 
-      const inPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wId]) || 0;
+      let inPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wId]) || 0;
       let optimum = 0;
-      if (wId === 'EC') {
-        optimum = liveLt.solarModulesNeeded || (liveDemand['EC'] ? liveDemand['EC'].modulesNeeded : 0);
+      if (wId === 'EC' || wId === 'TerEC') {
+        optimum = (liveDemand[wId] ? liveDemand[wId].modulesNeeded : 0) || 0;
       } else if (liveDemand[wId]) {
         optimum = liveDemand[wId].modulesNeeded || 0;
       }
@@ -674,7 +946,8 @@ export function updateInspector(id, onRender) {
       { name: 'Hydrogen', rate: state.calculatedDemand['Hydrogen'] ? state.calculatedDemand['Hydrogen'].rateNeeded : 0 },
       { name: 'Helium', rate: state.calculatedDemand['Helium'] ? state.calculatedDemand['Helium'].rateNeeded : 0 },
       { name: 'Ice', rate: state.calculatedDemand['Ice'] ? state.calculatedDemand['Ice'].rateNeeded : 0, color: '#38bdf8' },
-      { name: 'Raw Scrap Fragments', rate: state.calculatedDemand['RawScrap'] ? state.calculatedDemand['RawScrap'].rateNeeded : 0, color: '#fbbf24' },
+      { name: 'Raw Scrap Fragments', rate: state.calculatedDemand['RawScrap'] ? state.calculatedDemand['RawScrap'].rateNeeded : 0, color: '#34d399' },
+      { name: 'Raw Kha\'ak Salvage', rate: state.calculatedDemand['RawKhaakScrap'] ? state.calculatedDemand['RawKhaakScrap'].rateNeeded : 0, color: '#c084fc' },
       { name: 'Protectyon (Condensate)', rate: state.calculatedDemand['Protectyon'] ? state.calculatedDemand['Protectyon'].rateNeeded : 0, color: '#f472b6' }
     ];
 
@@ -708,6 +981,13 @@ export function updateInspector(id, onRender) {
           if (!bpEntriesMap[wId]) bpEntriesMap[wId] = calc;
         }
       });
+    }
+
+    if (smOutputNonZero) {
+      bpEntriesMap['ScrapClaytronics'] = liveDemand['ScrapClaytronics'] || (state.calculatedDemand && state.calculatedDemand['ScrapClaytronics']) || { modulesNeeded: 0, rateNeeded: 0 };
+      if (liveDemand['ScrapProc'] || (state.calculatedDemand && state.calculatedDemand['ScrapProc'])) {
+        bpEntriesMap['ScrapProc'] = liveDemand['ScrapProc'] || state.calculatedDemand['ScrapProc'];
+      }
     }
 
     const sortedEntries = Object.entries(bpEntriesMap)
@@ -792,19 +1072,20 @@ export function updateInspector(id, onRender) {
 
     const renderTableRow = ([wareId, calc]) => {
       const ware = WARES_DB[wareId];
-      const inPlanCount = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wareId]) || 0;
+      let inPlanCount = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wareId]) || 0;
       const liveCalc = (state.calculatedDemand && state.calculatedDemand[wareId]) || (state.activeBlueprint && state.activeBlueprint.baselineDemand && state.activeBlueprint.baselineDemand[wareId]) || calc;
-      const neededModules = liveCalc.modulesNeeded || 0;
+      let neededModules = liveCalc.modulesNeeded || 0;
       const neededCountStr = neededModules >= 1 ? `${neededModules}x` : `${neededModules.toFixed(1)}x`;
       const isDirectPlan = inPlanCount > 0;
       const isSubdued = state.subdueZeroX && inPlanCount === 0;
       const isExceeded = inPlanCount > neededModules;
       const asterisk = isExceeded ? '<span style="color:#fb923c; font-weight:bold; margin-left:1px;">*</span>' : '';
 
-      const wareEff = getWareWorkforceMultiplier(ware, state.workforceBonus);
       const optimumRate = liveCalc.rateNeeded > 0 
         ? liveCalc.rateNeeded 
-        : (neededModules * (ware.baseRate || 1) * wareEff);
+        : (wareId === 'ScrapHullParts' || wareId === 'ScrapClaytronics'
+          ? calculateLiveOutputRate(wareId, neededModules, 0)
+          : (neededModules * getWareHourlyRatePerModule(wareId, state.workforceBonus)));
       const currentRate = calculateLiveOutputRate(wareId, inPlanCount, optimumRate);
       const planColor = inPlanCount > 0 ? '#38bdf8' : '#64748b';
 
@@ -819,8 +1100,20 @@ export function updateInspector(id, onRender) {
       let ecConsRate = 0;
       if (ware.recipe && ware.recipe['EC']) {
         const modCount = inPlanCount > 0 ? inPlanCount : neededModules;
-        const inputEff = (ware.level >= 1 && ware.level <= 3) ? wareEff : 1;
-        ecConsRate = modCount * ware.recipe['EC'] * inputEff;
+        ecConsRate = modCount * ware.recipe['EC'];
+      }
+      if (NO_PP_WARES.has(wareId)) {
+        ecConsRate = 0;
+      }
+      if (wareId === 'ScrapMetal') {
+        ecConsRate = state.scrapMetalEc ? state.scrapMetalEc.totalDemand : 0;
+      } else if (wareId === 'TerScrapMetal') {
+        const hasGenSm = Boolean(state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScrapMetal']);
+        if (!hasGenSm && state.scrapMetalEc && state.scrapMetalEc.totalDemand > 0) {
+          ecConsRate = state.scrapMetalEc.totalDemand;
+        } else {
+          ecConsRate = 0;
+        }
       }
 
       const rateDisplay = `
@@ -830,21 +1123,7 @@ export function updateInspector(id, onRender) {
         </div>
       `;
 
-      let dividerHtml = '';
-      if (state.bpSortField === 'level' && ware.level !== lastLevel) {
-        lastLevel = ware.level;
-        const meta = levelMeta[ware.level] || { title: `Level ${ware.level}`, color: '#38bdf8', icon: '🔹' };
-        dividerHtml = `
-          <tr class="level-divider-row" style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.15); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-            <td colspan="3" style="padding: 0.35rem 0.6rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: ${meta.color}; font-family: var(--font-heading);">
-              ${meta.icon} ${meta.title}
-            </td>
-          </tr>
-        `;
-      }
-
       return `
-        ${dividerHtml}
         <tr style="${isDirectPlan ? 'background:rgba(56,189,248,0.08);' : ''} ${isSubdued ? 'opacity:0.3; filter:grayscale(100%); font-style:italic;' : ''}">
           <td>
             <div>
@@ -863,7 +1142,138 @@ export function updateInspector(id, onRender) {
       `;
     };
 
+    const renderLevelPanel = (lvl) => {
+      const meta = levelMeta[lvl] || { title: `Level ${lvl}`, color: '#38bdf8', icon: '🔹' };
+      const levelEntries = productionEntries.filter(([wId]) => WARES_DB[wId] && WARES_DB[wId].level === lvl);
+
+      let lvlPlan = 0;
+      let lvlNeeds = 0;
+      levelEntries.forEach(([wareId, calc]) => {
+        const inPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wareId]) || 0;
+        const liveCalc = (state.calculatedDemand && state.calculatedDemand[wareId]) || (state.activeBlueprint && state.activeBlueprint.baselineDemand && state.activeBlueprint.baselineDemand[wareId]) || calc;
+        lvlPlan += inPlan;
+        lvlNeeds += (liveCalc.modulesNeeded || 0);
+      });
+
+      const isCollapsed = state.bpLevelCollapsed ? Boolean(state.bpLevelCollapsed[lvl]) : true;
+      const arrowChar = isCollapsed ? '▶' : '▼';
+
+      return `
+        <div class="bp-level-panel" data-level="${lvl}">
+          <div class="bp-level-header" data-level="${lvl}" title="Click to ${isCollapsed ? 'expand' : 'collapse'} ${meta.title}">
+            <div class="bp-level-title-group">
+              <span class="bp-level-arrow">${arrowChar}</span>
+              <span style="color:${meta.color}; font-weight:700; font-size:0.78rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">
+                ${meta.icon} ${meta.title}
+              </span>
+            </div>
+            <div class="bp-level-badge-group">
+              <span style="font-size:0.7rem; color:#94a3b8; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.08);">
+                ${levelEntries.length} Wares
+              </span>
+              <span style="font-size:0.7rem; font-weight:600; color:${lvlPlan >= lvlNeeds ? '#34d399' : '#fbbf24'}; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.08);" title="Total modules in plan vs calculated needed">
+                ${lvlPlan}x Plan / ${Math.round(lvlNeeds)}x Needs
+              </span>
+            </div>
+          </div>
+          <div class="bp-level-body" style="display:${isCollapsed ? 'none' : 'block'};">
+            ${levelEntries.length > 0 ? `
+              <table class="summary-table">
+                <thead>
+                  <tr>
+                    <th class="th-bp-sort-comp sortable" title="Click to sort by Component Name">
+                      Component ${state.bpSortField === 'component' ? (state.bpSortAsc ? '▲' : '▼') : '<span style="opacity:0.35; font-size:0.7rem;">▲▼</span>'}
+                    </th>
+                    <th class="th-bp-sort-needed sortable" title="Click to sort by Needs Modules">
+                      Plan / Needs ${state.bpSortField === 'needed' ? (state.bpSortAsc ? '▲' : '▼') : '<span style="opacity:0.35; font-size:0.7rem;">▲▼</span>'}
+                    </th>
+                    <th>Current / Optimum Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${levelEntries.map(renderTableRow).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <div style="padding:0.5rem 0.65rem; font-size:0.75rem; color:#64748b; font-style:italic;">
+                No active or needed modules in this level.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    };
+
+    const wf = calculateBlueprintWorkforce(state.activeBlueprint);
+    const hasWorkforce = wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0;
+
     insBody.innerHTML = `
+      ${hasWorkforce ? `
+        <div class="workforce-box" style="border-color:#10b981; margin-bottom:0.6rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <h4 style="margin:0; color:#34d399; font-size:0.8rem;">👥 Station Workforce Summary</h4>
+            <span style="font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:4px; background:${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}; color:${wf.coveragePercent >= 100 ? '#34d399' : '#fbbf24'}; border:1px solid ${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'};">
+              ${wf.coveragePercent}% Coverage
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.35rem 0.6rem; font-size:0.76rem;">
+            <div><span style="color:#94a3b8;">Optimal Needed:</span> <strong style="color:#38bdf8;">${wf.totalOptimalWorkforce.toLocaleString()}</strong></div>
+            <div><span style="color:#94a3b8;">Hab Capacity:</span> <strong style="color:#34d399;">${wf.totalHabitationCapacity.toLocaleString()}</strong></div>
+            <div><span style="color:#94a3b8;">Production:</span> <strong style="color:#cbd5e1;">${wf.productionWorkforce.toLocaleString()}</strong></div>
+            <div><span style="color:#94a3b8;">Shipyards:</span> <strong style="color:#cbd5e1;">${wf.shipyardWorkforce.toLocaleString()}</strong></div>
+          </div>
+          <div style="margin-top:0.4rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.3rem;">
+            <span style="color:#94a3b8;">Workforce Balance:</span>
+            <strong style="color:${wf.surplusDeficit >= 0 ? '#34d399' : '#ef4444'};">
+              ${wf.surplusDeficit >= 0 ? `+${wf.surplusDeficit.toLocaleString()} surplus beds (${wf.habitatCount} habitats)` : `${wf.surplusDeficit.toLocaleString()} bed shortage`}
+            </strong>
+          </div>
+          ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+          <div style="margin-top:0.35rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem;">
+            <span style="color:#94a3b8;">Sustainable Workers:</span>
+            <strong style="color:${wf.lifeSupport.sustainableWorkers >= wf.totalOptimalWorkforce ? '#34d399' : '#fbbf24'};">
+              ${wf.lifeSupport.sustainableWorkers.toLocaleString()} (${wf.lifeSupport.sustainableCoveragePercent}% self-sufficient)
+            </strong>
+          </div>
+          ` : ''}
+          ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+          <div style="margin-top:0.35rem; font-size:0.72rem; background:rgba(0,0,0,0.2); padding:0.3rem 0.45rem; border-radius:4px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.2rem;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#94a3b8;">🍞 Food Rations:</span>
+              <span><strong>${Math.round(wf.lifeSupport.totalFoodRationsProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.foodRationsDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.foodBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.foodBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}</span>)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#94a3b8;">💊 Medical Supplies:</span>
+              <span><strong>${Math.round(wf.lifeSupport.totalArgMedSuppliesProd || wf.lifeSupport.totalAllMedSuppliesProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.medicalSuppliesDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.medBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.medBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.medBalance).toLocaleString()}</span>)</span>
+            </div>
+          </div>
+          ` : ''}
+          ${(wf.consumersList.length > 0 || wf.providersList.length > 0) ? `
+            <details style="margin-top:0.45rem; font-size:0.72rem; cursor:pointer;">
+              <summary style="color:#38bdf8; user-select:none; font-weight:600; outline:none;">🔍 View Workforce Breakdown (${wf.consumersList.length} consumers, ${wf.providersList.length} habitats)</summary>
+              <div style="margin-top:0.35rem; max-height:160px; overflow-y:auto; padding-right:4px; background:rgba(0,0,0,0.2); padding:0.3rem 0.4rem; border-radius:4px;">
+                <div style="font-weight:700; color:#cbd5e1; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Top Consumers:</div>
+                ${wf.consumersList.slice(0, 10).map(c => `
+                  <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
+                    <span>${c.count}x ${escapeHtml(c.name)}</span>
+                    <strong style="color:#38bdf8;">${c.total.toLocaleString()}</strong>
+                  </div>
+                `).join('')}
+                ${wf.providersList.length > 0 ? `
+                  <div style="font-weight:700; color:#cbd5e1; margin-top:0.35rem; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Habitation Modules:</div>
+                  ${wf.providersList.map(p => `
+                    <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
+                      <span>${p.count}x ${escapeHtml(p.name)}</span>
+                      <strong style="color:#34d399;">${p.total.toLocaleString()}</strong>
+                    </div>
+                  `).join('')}
+                ` : ''}
+              </div>
+            </details>
+          ` : ''}
+        </div>
+      ` : ''}
+
       <div class="workforce-box" style="border-color:#38bdf8;">
         <h4>⛏️ Total Recalculated Raw Mining & Liquids</h4>
         <p><strong style="color:#34d399;">Total Active Raw Extraction:</strong> ${Math.round(totalRaw).toLocaleString()} / hr</p>
@@ -872,22 +1282,7 @@ export function updateInspector(id, onRender) {
 
       <div style="margin-top:0.6rem;">
         <div class="section-label">All Plan Modules & Recalculated Upstream Chains</div>
-        <table class="summary-table">
-          <thead>
-            <tr>
-              <th id="thBpSortComp" class="sortable" title="Click to sort by Level / Component Name">
-                Component (Level) ${state.bpSortField === 'level' ? (state.bpSortAsc ? '▲' : '▼') : (state.bpSortField === 'component' ? (state.bpSortAsc ? '▲' : '▼') : '<span style="opacity:0.35; font-size:0.7rem;">▲▼</span>')}
-              </th>
-              <th id="thBpSortNeeded" class="sortable" title="Click to sort by Needs Modules">
-                Plan / Needs ${state.bpSortField === 'needed' ? (state.bpSortAsc ? '▲' : '▼') : '<span style="opacity:0.35; font-size:0.7rem;">▲▼</span>'}
-              </th>
-              <th>Current / Optimum Rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${productionEntries.map(renderTableRow).join('')}
-          </tbody>
-        </table>
+        ${[1, 2, 3].map(lvl => renderLevelPanel(lvl)).join('')}
       </div>
 
       <div class="module-diff-box" style="margin-top:0.65rem; padding:0.45rem 0.65rem; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem;">
@@ -927,24 +1322,41 @@ export function updateInspector(id, onRender) {
         if (!state.activeBlueprint.modules) state.activeBlueprint.modules = {};
         if (!state.activeBlueprint.rawMacros) state.activeBlueprint.rawMacros = {};
 
-        let macroKey = Object.keys(state.activeBlueprint.rawMacros).find(m => mapMacroToWare(m) === wareId);
-        if (!macroKey) {
-          macroKey = Object.keys(MACRO_TO_WARE).find(m => MACRO_TO_WARE[m] === wareId);
-        }
-
-        if (macroKey) {
-          if (newQty <= 0) {
-            delete state.activeBlueprint.rawMacros[macroKey];
-          } else {
-            state.activeBlueprint.rawMacros[macroKey] = newQty;
+        let macroKey = null;
+        if (wareId === 'ScrapMetal' || wareId === 'ScrapHullParts' || wareId === 'ScrapClaytronics') {
+          macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_gen_scraprecycler_macro'] !== undefined)
+            ? 'prod_gen_scraprecycler_macro'
+            : 'prod_gen_scrap_recycler_macro';
+        } else if (wareId === 'TerScrapMetal' || wareId === 'TerCompSubstrate' || wareId === 'TerSilCarbide') {
+          macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined)
+            ? 'prod_ter_scraprecycler_macro'
+            : 'prod_ter_scrap_recycler_macro';
+        } else if (wareId === 'ScrapProc') {
+          macroKey = getPrimaryMacroForWare('ScrapProc');
+        } else {
+          macroKey = Object.keys(state.activeBlueprint.rawMacros).find(m => mapMacroToWare(m) === wareId);
+          if (!macroKey) {
+            macroKey = Object.keys(MACRO_TO_WARE).find(m => MACRO_TO_WARE[m] === wareId);
           }
         }
 
-        if (newQty <= 0) {
-          delete state.activeBlueprint.modules[wareId];
-        } else {
-          state.activeBlueprint.modules[wareId] = newQty;
-        }
+          if (macroKey) {
+            if (newQty <= 0) {
+              delete state.activeBlueprint.rawMacros[macroKey];
+              if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+            } else {
+              state.activeBlueprint.rawMacros[macroKey] = newQty;
+              if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = newQty;
+            }
+          }
+
+          if (newQty <= 0) {
+            delete state.activeBlueprint.modules[wareId];
+          } else {
+            state.activeBlueprint.modules[wareId] = newQty;
+          }
+
+        delete state.activeBlueprint.modules['RawScrap'];
 
         rebuildBlueprintFromMacros();
         saveActiveBlueprintToStorage();
@@ -958,6 +1370,7 @@ export function updateInspector(id, onRender) {
       };
 
       input.addEventListener('blur', handlePlanChange);
+      input.addEventListener('change', handlePlanChange);
       input.addEventListener('click', (e) => e.stopPropagation());
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -966,22 +1379,43 @@ export function updateInspector(id, onRender) {
       });
     });
 
-    const thBpSortComp = document.getElementById('thBpSortComp');
-    if (thBpSortComp) {
-      thBpSortComp.addEventListener('click', () => {
-        if (state.bpSortField === 'level') {
+    document.querySelectorAll('.bp-level-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const lvl = parseInt(header.dataset.level);
+        if (!lvl) return;
+        if (!state.bpLevelCollapsed) state.bpLevelCollapsed = {};
+        state.bpLevelCollapsed[lvl] = !state.bpLevelCollapsed[lvl];
+        try {
+          sessionStorage.setItem('x4_bp_level_collapsed', JSON.stringify(state.bpLevelCollapsed));
+        } catch(err) {}
+
+        const panel = header.closest('.bp-level-panel');
+        const arrow = header.querySelector('.bp-level-arrow');
+        const body = panel ? panel.querySelector('.bp-level-body') : null;
+        const isCollapsed = state.bpLevelCollapsed[lvl];
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} ${levelMeta[lvl] ? levelMeta[lvl].title : 'Level ' + lvl}`;
+      });
+    });
+
+    document.querySelectorAll('.th-bp-sort-comp').forEach(th => {
+      th.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.bpSortField === 'component') {
           state.bpSortAsc = !state.bpSortAsc;
         } else {
-          state.bpSortField = 'level';
+          state.bpSortField = 'component';
           state.bpSortAsc = true;
         }
         updateInspector(id, onRender);
       });
-    }
+    });
 
-    const thBpSortNeeded = document.getElementById('thBpSortNeeded');
-    if (thBpSortNeeded) {
-      thBpSortNeeded.addEventListener('click', () => {
+    document.querySelectorAll('.th-bp-sort-needed').forEach(th => {
+      th.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (state.bpSortField === 'needed') {
           state.bpSortAsc = !state.bpSortAsc;
         } else {
@@ -990,7 +1424,7 @@ export function updateInspector(id, onRender) {
         }
         updateInspector(id, onRender);
       });
-    }
+    });
 
     const handleSyncOptimum = (e) => {
       if (!e.target.checked) {
@@ -1020,8 +1454,7 @@ export function updateInspector(id, onRender) {
 
         let optimum = 0;
         if (wId === 'EC' || wId === 'TerEC') {
-          const isTer = wId === 'TerEC';
-          optimum = isTer ? (liveLt.terSolarModulesNeeded || (liveDemand['TerEC'] ? liveDemand['TerEC'].modulesNeeded : 0)) : (liveLt.solarModulesNeeded || (liveDemand['EC'] ? liveDemand['EC'].modulesNeeded : 0));
+          optimum = (liveDemand[wId] ? liveDemand[wId].modulesNeeded : 0) || 0;
         } else if (liveDemand[wId]) {
           optimum = liveDemand[wId].modulesNeeded || 0;
         }
@@ -1038,15 +1471,68 @@ export function updateInspector(id, onRender) {
           return;
         }
 
+        if (wId === 'ScrapMetal' || wId === 'TerScrapMetal') {
+          return;
+        }
+
+        if (wId === 'ScrapClaytronics' || wId === 'ScrapHullParts') {
+          const macroKey = state.activeBlueprint.rawMacros['prod_gen_scraprecycler_macro'] !== undefined
+            ? 'prod_gen_scraprecycler_macro'
+            : 'prod_gen_scrap_recycler_macro';
+          if (optimum > 0) {
+            state.activeBlueprint.modules[wId] = optimum;
+            state.activeBlueprint.modules['ScrapMetal'] = Math.max(state.activeBlueprint.modules['ScrapClaytronics'] || 0, state.activeBlueprint.modules['ScrapHullParts'] || 0);
+            state.activeBlueprint.rawMacros[macroKey] = Math.max(state.activeBlueprint.rawMacros[macroKey] || 0, optimum);
+            if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = Math.max(state.activeBlueprint.rootMacros[macroKey] || 0, optimum);
+          } else {
+            delete state.activeBlueprint.modules[wId];
+            const otherId = wId === 'ScrapClaytronics' ? 'ScrapHullParts' : 'ScrapClaytronics';
+            if (!state.activeBlueprint.modules[otherId]) {
+              delete state.activeBlueprint.modules['ScrapMetal'];
+              delete state.activeBlueprint.rawMacros[macroKey];
+              if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+            } else {
+              state.activeBlueprint.modules['ScrapMetal'] = state.activeBlueprint.modules[otherId];
+            }
+          }
+          return;
+        }
+
+        if (wId === 'TerCompSubstrate' || wId === 'TerSilCarbide') {
+          const macroKey = state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined
+            ? 'prod_ter_scraprecycler_macro'
+            : 'prod_ter_scrap_recycler_macro';
+          if (optimum > 0) {
+            state.activeBlueprint.modules[wId] = optimum;
+            state.activeBlueprint.modules['TerScrapMetal'] = Math.max(state.activeBlueprint.modules['TerCompSubstrate'] || 0, state.activeBlueprint.modules['TerSilCarbide'] || 0);
+            state.activeBlueprint.rawMacros[macroKey] = Math.max(state.activeBlueprint.rawMacros[macroKey] || 0, optimum);
+            if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = Math.max(state.activeBlueprint.rootMacros[macroKey] || 0, optimum);
+          } else {
+            delete state.activeBlueprint.modules[wId];
+            const otherId = wId === 'TerCompSubstrate' ? 'TerSilCarbide' : 'TerCompSubstrate';
+            if (!state.activeBlueprint.modules[otherId]) {
+              delete state.activeBlueprint.modules['TerScrapMetal'];
+              delete state.activeBlueprint.rawMacros[macroKey];
+              if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+            } else {
+              state.activeBlueprint.modules['TerScrapMetal'] = state.activeBlueprint.modules[otherId];
+            }
+          }
+          return;
+        }
+
         // Clean up all existing macros for this ware to prevent double counting
         const matchingMacros = Object.keys(state.activeBlueprint.rawMacros).filter(m => mapMacroToWare(m) === wId);
         matchingMacros.forEach(m => {
           delete state.activeBlueprint.rawMacros[m];
+          if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[m];
         });
 
         // Determine primary macro name
         let primaryMacro = matchingMacros[0];
-        if (!primaryMacro) {
+        if (wId === 'ScrapProc') {
+          primaryMacro = getPrimaryMacroForWare('ScrapProc');
+        } else if (!primaryMacro) {
           primaryMacro = Object.keys(MACRO_TO_WARE).find(m => MACRO_TO_WARE[m] === wId);
         }
         if (!primaryMacro) {
@@ -1056,10 +1542,13 @@ export function updateInspector(id, onRender) {
         if (optimum > 0) {
           state.activeBlueprint.modules[wId] = optimum;
           state.activeBlueprint.rawMacros[primaryMacro] = optimum;
+          if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[primaryMacro] = optimum;
         } else {
           delete state.activeBlueprint.modules[wId];
         }
       });
+
+      delete state.activeBlueprint.modules['RawScrap'];
 
       rebuildBlueprintFromMacros();
       saveActiveBlueprintToStorage();
@@ -1094,9 +1583,32 @@ export function updateInspector(id, onRender) {
   // CASE 3: A specific card is selected (including Level 4 components)
   const ware = WARES_DB[id];
   insTitle.innerText = ware.name;
-  insSub.innerText = `Level ${ware.level} • ${ware.cat}`;
+  let cycleSec = getWareCycleTimeSec(ware);
+  let cycleOut = getWareOutputPerCycle(ware, state.workforceBonus);
+  if (id === 'ScrapHullParts' || id === 'ScrapClaytronics') {
+    const scrapYield = getScrapRecyclerCycleYield(id, state.workforceBonus);
+    if (scrapYield) {
+      cycleSec = 600;
+      cycleOut = scrapYield.yieldPerCycle;
+    }
+  } else if (id === 'EC' || id === 'TerEC') {
+    const isTer = id === 'TerEC';
+    const baseOutput = ware.baseRate || (isTer ? 3000 : 10500);
+    const moduleMaxBonus = isTer ? 0.0 : 0.43;
+    const activeSector = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || null;
+    const solarInfo = getSolarDynamicCycles(activeSector || 100, state.workforceBonus, baseOutput, moduleMaxBonus, ware.cyclesPerHr || 60);
+    cycleSec = solarInfo.cycleDurationSec;
+    cycleOut = solarInfo.cycleYield;
+  }
+  const formattedSec = (typeof cycleSec === 'number' && cycleSec % 1 !== 0) ? cycleSec.toFixed(1) : cycleSec;
+  const cycleInfoStr = cycleSec > 0 ? ` • ${formattedSec}s cycle (${Math.floor(cycleOut)} units)` : '';
+  insSub.innerText = `Level ${ware.level} • ${ware.cat}${cycleInfoStr}`;
 
-  const inPlanCount = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[id]) || 0;
+  const smInPlan = (state.activeBlueprint && state.activeBlueprint.modules && ((state.activeBlueprint.modules['ScrapMetal'] || 0) + (state.activeBlueprint.modules['TerScrapMetal'] || 0) + (state.activeBlueprint.modules['ScrapProc'] || 0))) || 0;
+  const smCalc = state.calculatedDemand && (state.calculatedDemand['ScrapMetal'] || state.calculatedDemand['TerScrapMetal'] || state.calculatedDemand['ScrapProc']);
+  const smOutputNonZero = smInPlan > 0 || (smCalc && (smCalc.rateNeeded > 0 || smCalc.modulesNeeded > 0)) || (state.selectedWareId === 'ScrapMetal' || state.selectedWareId === 'TerScrapMetal' || state.selectedWareId === 'ScrapProc' || state.selectedWareId === 'RawScrap');
+
+  let inPlanCount = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[id]) || 0;
   const planModCount = inPlanCount > 0 ? inPlanCount : (state.calculatedDemand[id] ? state.calculatedDemand[id].modulesNeeded : 1);
   const effectiveCount = state.inspectorSingle ? 1 : Math.max(1, planModCount);
 
@@ -1111,40 +1623,105 @@ export function updateInspector(id, onRender) {
         activeDemand[inpId] = { rateNeeded: reqQty, modulesNeeded: 0 };
         const inpW = WARES_DB[inpId];
         if (inpW && inpW.level > 0) {
-          const inpEff = getWareWorkforceMultiplier(inpW, state.workforceBonus);
-          activeDemand[inpId].modulesNeeded = Math.ceil(reqQty / ((inpW.baseRate || 1) * inpEff));
+          activeDemand[inpId].modulesNeeded = Math.ceil(reqQty / getWareHourlyRatePerModule(inpId, state.workforceBonus));
         }
         sQueue.push({ id: inpId, requiredRate: reqQty });
       });
     }
   } else if (ware.level > 0) {
-    const targetEff = getWareWorkforceMultiplier(ware, state.workforceBonus);
-    const targetOut = effectiveCount * (ware.baseRate || 1) * targetEff;
+    const targetOut = (id === 'ScrapHullParts' || id === 'ScrapClaytronics')
+      ? calculateLiveOutputRate(id, effectiveCount, 0)
+      : (effectiveCount * getWareHourlyRatePerModule(id, state.workforceBonus));
     activeDemand[id] = { rateNeeded: targetOut, modulesNeeded: effectiveCount };
+
+    if (id === 'ScrapProc') {
+      const scrapRaw = state.scrapRawDemand || calculateScrapMetalRawScrapDemand();
+      const smTotalDemand = scrapRaw ? ((scrapRaw.genRawScrapDemand || 0) + (scrapRaw.terRawScrapDemand || 0)) : 0;
+      if (smTotalDemand > 0 && !state.inspectorSingle) {
+        const procBaseRate = (WARES_DB['ScrapProc'] && WARES_DB['ScrapProc'].baseRate) || 9000;
+        const procNeeds = Math.ceil(smTotalDemand / procBaseRate);
+        activeDemand['ScrapProc'] = {
+          rateNeeded: smTotalDemand,
+          modulesNeeded: procNeeds
+        };
+      }
+    }
 
     if (ware.recipe) {
       Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
-        const inpRate = effectiveCount * inpQty;
+        let inpRate = effectiveCount * inpQty;
+        if ((id === 'ScrapMetal' || id === 'TerScrapMetal') && inpId === 'EC') {
+          inpRate = state.scrapMetalEc ? state.scrapMetalEc.totalDemand : inpRate;
+        }
+        if (id === 'ScrapProc' && inpId === 'EC') {
+          inpRate = state.scrapMetalEc ? state.scrapMetalEc.processorEc : inpRate;
+        }
+        if (id === 'ScrapMetal' && (inpId === 'RawScrap' || inpId === 'ScrapProc')) {
+          inpRate = state.scrapRawDemand ? state.scrapRawDemand.genRawScrapDemand : inpRate;
+        }
+        if (id === 'TerScrapMetal' && (inpId === 'RawScrap' || inpId === 'ScrapProc')) {
+          inpRate = state.scrapRawDemand ? state.scrapRawDemand.terRawScrapDemand : inpRate;
+        }
+        if (id === 'ScrapProc' && inpId === 'RawScrap') {
+          inpRate = state.scrapRawDemand ? state.scrapRawDemand.totalRawScrapDemand : inpRate;
+        }
+        if (NO_PP_WARES.has(id) && inpId === 'EC') {
+          return;
+        }
         activeDemand[inpId] = { rateNeeded: inpRate, modulesNeeded: 0 };
         const inpW = WARES_DB[inpId];
         if (inpW && inpW.level > 0) {
-          const inpEff = getWareWorkforceMultiplier(inpW, state.workforceBonus);
-          activeDemand[inpId].modulesNeeded = Math.ceil(inpRate / ((inpW.baseRate || 1) * inpEff));
+          activeDemand[inpId].modulesNeeded = Math.ceil(inpRate / getWareHourlyRatePerModule(inpId, state.workforceBonus));
         }
         sQueue.push({ id: inpId, requiredRate: inpRate });
       });
     }
+  } else if (ware.level === 0) {
+    let rawRateNeeded = (state.calculatedDemand[id] && state.calculatedDemand[id].rateNeeded > 0) ? state.calculatedDemand[id].rateNeeded : (ware.baseRate || 1);
+    if (id === 'RawScrap') {
+      const scrapRaw = state.scrapRawDemand || calculateScrapMetalRawScrapDemand();
+      if (scrapRaw && scrapRaw.convertedPerHr > 0) {
+        rawRateNeeded = scrapRaw.convertedPerHr;
+      }
+    } else if (id === 'EC' || id === 'TerEC') {
+      const isTer = id === 'TerEC';
+      const baseOutput = ware.baseRate || (isTer ? 3000 : 10500);
+      const moduleMaxBonus = isTer ? 0.0 : 0.43;
+      const activeSector = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || null;
+      const sunlightVal = activeSector ? getSectorSunlight(activeSector) : 100;
+      rawRateNeeded = calculateSolarOutput(sunlightVal, state.workforceBonus, effectiveCount, baseOutput, moduleMaxBonus, ware.cyclesPerHr || 60);
+    }
+    activeDemand[id] = { rateNeeded: rawRateNeeded, modulesNeeded: effectiveCount };
   }
 
   while (sQueue.length > 0) {
     const { id: currId, requiredRate } = sQueue.shift();
     const currWare = WARES_DB[currId];
     if (currWare && currWare.recipe && currWare.level > 0) {
-      const currEff = getWareWorkforceMultiplier(currWare, state.workforceBonus);
-      const currModRate = (currWare.baseRate || 1) * currEff;
+      const currModRate = (currId === 'ScrapHullParts' || currId === 'ScrapClaytronics')
+        ? calculateLiveOutputRate(currId, 1, 0)
+        : getWareHourlyRatePerModule(currId, state.workforceBonus);
       Object.entries(currWare.recipe).forEach(([inpId, inpQty]) => {
+        if (NO_PP_WARES.has(currId) && inpId === 'EC') {
+          return;
+        }
         const ratePerUnit = inpQty / currModRate;
-        const totalInputRateNeeded = requiredRate * ratePerUnit;
+        let totalInputRateNeeded = requiredRate * ratePerUnit;
+        if ((currId === 'ScrapMetal' || currId === 'TerScrapMetal') && inpId === 'EC') {
+          totalInputRateNeeded = state.scrapMetalEc ? state.scrapMetalEc.totalDemand : totalInputRateNeeded;
+        }
+        if (currId === 'ScrapProc' && inpId === 'EC') {
+          totalInputRateNeeded = state.scrapMetalEc ? state.scrapMetalEc.processorEc : totalInputRateNeeded;
+        }
+        if (currId === 'ScrapMetal' && (inpId === 'RawScrap' || inpId === 'ScrapProc')) {
+          totalInputRateNeeded = state.scrapRawDemand ? state.scrapRawDemand.genRawScrapDemand : totalInputRateNeeded;
+        }
+        if (currId === 'TerScrapMetal' && (inpId === 'RawScrap' || inpId === 'ScrapProc')) {
+          totalInputRateNeeded = state.scrapRawDemand ? state.scrapRawDemand.terRawScrapDemand : totalInputRateNeeded;
+        }
+        if (currId === 'ScrapProc' && inpId === 'RawScrap') {
+          totalInputRateNeeded = state.scrapRawDemand ? state.scrapRawDemand.totalRawScrapDemand : totalInputRateNeeded;
+        }
 
         if (!activeDemand[inpId]) {
           activeDemand[inpId] = { rateNeeded: 0, modulesNeeded: 0 };
@@ -1153,8 +1730,7 @@ export function updateInspector(id, onRender) {
 
         const inputWare = WARES_DB[inpId];
         if (inputWare && inputWare.level > 0) {
-          const inputEff = getWareWorkforceMultiplier(inputWare, state.workforceBonus);
-          activeDemand[inpId].modulesNeeded = Math.ceil(activeDemand[inpId].rateNeeded / ((inputWare.baseRate || 1) * inputEff));
+          activeDemand[inpId].modulesNeeded = Math.ceil(activeDemand[inpId].rateNeeded / getWareHourlyRatePerModule(inpId, state.workforceBonus));
         }
         sQueue.push({ id: inpId, requiredRate: totalInputRateNeeded });
       });
@@ -1168,7 +1744,8 @@ export function updateInspector(id, onRender) {
     { name: 'Hydrogen', rate: activeDemand['Hydrogen'] ? activeDemand['Hydrogen'].rateNeeded : 0 },
     { name: 'Helium', rate: activeDemand['Helium'] ? activeDemand['Helium'].rateNeeded : 0 },
     { name: 'Ice', rate: activeDemand['Ice'] ? activeDemand['Ice'].rateNeeded : 0, color: '#38bdf8' },
-    { name: 'Raw Scrap Fragments', rate: activeDemand['RawScrap'] ? activeDemand['RawScrap'].rateNeeded : 0, color: '#fbbf24' },
+    { name: 'Raw Scrap Fragments', rate: activeDemand['RawScrap'] ? activeDemand['RawScrap'].rateNeeded : 0, color: '#34d399' },
+    { name: 'Raw Kha\'ak Salvage', rate: activeDemand['RawKhaakScrap'] ? activeDemand['RawKhaakScrap'].rateNeeded : 0, color: '#c084fc' },
     { name: 'Protectyon (Condensate)', rate: activeDemand['Protectyon'] ? activeDemand['Protectyon'].rateNeeded : 0, color: '#f472b6' }
   ];
 
@@ -1180,7 +1757,7 @@ export function updateInspector(id, onRender) {
     .filter(uId => {
       const uWare = WARES_DB[uId];
       if (!uWare || uId === id || !activeDemand[uId] || activeDemand[uId].rateNeeded <= 0) return false;
-      return uWare.level > 0 && uWare.level < ware.level;
+      return uWare.level > 0 && uWare.level <= ware.level;
     })
     .sort((uA, uB) => {
       const wareA = WARES_DB[uA];
@@ -1215,9 +1792,8 @@ export function updateInspector(id, onRender) {
     const uWare = WARES_DB[uId];
     const uCalc = activeDemand[uId];
     const curInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[uId]) || 0;
-    const uEff = getWareWorkforceMultiplier(uWare, state.workforceBonus);
-    const currentRate = curInPlan * (uWare.baseRate || 1) * uEff;
     const optimumRate = uCalc.rateNeeded;
+    const currentRate = calculateLiveOutputRate(uId, curInPlan, optimumRate);
 
     if (isLevel4Target) {
       return `
@@ -1260,19 +1836,86 @@ export function updateInspector(id, onRender) {
   let totalBpConsumption = 0;
   let totalOptimumConsumption = 0;
 
-  Object.entries(WARES_DB).forEach(([cId, cWare]) => {
-    const isDirectRecipeInput = cWare.recipe && cWare.recipe[id] !== undefined && cWare.recipe[id] > 0;
-    const isTelPartsAlternative = (id === 'TelParts') && cWare.recipe && cWare.recipe['HullParts'] !== undefined && cWare.recipe['HullParts'] > 0;
-    const isTelArrayAlternative = (id === 'TelArray') && cWare.recipe && cWare.recipe['ScanArray'] !== undefined && cWare.recipe['ScanArray'] > 0;
+  const ppDownstreamWares = getPPDownstreamWares();
+  const isPPCheckedForInspector = (ware.level >= 1 && ware.level <= 3 && !NO_PP_WARES.has(id)) && Boolean(
+    (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[id]) ||
+    (!state.activeBlueprint && state.ppStates && state.ppStates[id])
+  );
+  const isInspectorOutputSuppressed = isPPCheckedForInspector || ppDownstreamWares.has(id);
 
-    if (cWare.level >= minConsumerLevel && cWare.level <= 3 && (isDirectRecipeInput || isTelPartsAlternative || isTelArrayAlternative)) {
-      const cEff = getWareWorkforceMultiplier(cWare, state.workforceBonus);
-      const baseInputQty = isDirectRecipeInput ? cWare.recipe[id] : (isTelPartsAlternative ? cWare.recipe['HullParts'] : cWare.recipe['ScanArray']);
-      const inputPerMod = baseInputQty * cEff;
-      const cInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[cId]) || 0;
-      const cCalc = state.calculatedDemand[cId] ? (state.calculatedDemand[cId].modulesNeeded || 0) : 0;
-      const bpConsumption = cInPlan * inputPerMod;
-      const optConsumption = cCalc * inputPerMod;
+  Object.entries(WARES_DB).forEach(([cId, cWare]) => {
+    const isDirectRecipeInput = cWare.recipe && (
+      (cWare.recipe[id] !== undefined && cWare.recipe[id] > 0) ||
+      (id === 'TerEC' && cWare.recipe['EC'] !== undefined && cWare.recipe['EC'] > 0)
+    );
+    const isTelPartsAlternative = (id === 'TelParts') && cWare.recipe && cWare.recipe['HullParts'] !== undefined && cWare.recipe['HullParts'] > 0;
+    const isScrapPartsAlternative = (id === 'ScrapHullParts') && cWare.recipe && cWare.recipe['HullParts'] !== undefined && cWare.recipe['HullParts'] > 0;
+    const isScrapClaytronicsAlternative = (id === 'ScrapClaytronics') && cWare.recipe && cWare.recipe['Claytronics'] !== undefined && cWare.recipe['Claytronics'] > 0;
+    const isTelArrayAlternative = (id === 'TelArray') && cWare.recipe && cWare.recipe['ScanArray'] !== undefined && cWare.recipe['ScanArray'] > 0;
+    const isTelEngPartsAlternative = (id === 'TelEngParts') && cWare.recipe && cWare.recipe['EngParts'] !== undefined && cWare.recipe['EngParts'] > 0;
+    const isTelAdvCompAlternative = (id === 'TelAdvComp') && cWare.recipe && cWare.recipe['AdvComp'] !== undefined && cWare.recipe['AdvComp'] > 0;
+
+    if (cId !== id && cWare.level >= ((id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') ? 1 : minConsumerLevel) && cWare.level <= 3 && (isDirectRecipeInput || isTelPartsAlternative || isScrapPartsAlternative || isScrapClaytronicsAlternative || isTelArrayAlternative || isTelEngPartsAlternative || isTelAdvCompAlternative)) {
+      if ((id === 'EC' || id === 'TerEC') && NO_PP_WARES.has(cId)) {
+        return;
+      }
+      if ((id === 'EC' || id === 'TerEC') && cId === 'TerScrapMetal' && state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScrapMetal']) {
+        return;
+      }
+
+      const baseInputQty = isDirectRecipeInput 
+        ? (id === 'TerEC' ? cWare.recipe['EC'] : cWare.recipe[id])
+        : ((isTelPartsAlternative || isScrapPartsAlternative) ? cWare.recipe['HullParts'] : (isScrapClaytronicsAlternative ? cWare.recipe['Claytronics'] : (isTelArrayAlternative ? cWare.recipe['ScanArray'] : (isTelEngPartsAlternative ? cWare.recipe['EngParts'] : cWare.recipe['AdvComp']))));
+      let inputPerMod = baseInputQty;
+      let cInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[cId]) || 0;
+      let cCalc = state.calculatedDemand[cId] ? (state.calculatedDemand[cId].modulesNeeded || 0) : 0;
+
+      const smInPlan = (state.activeBlueprint && state.activeBlueprint.modules && ((state.activeBlueprint.modules['ScrapMetal'] || 0) + (state.activeBlueprint.modules['TerScrapMetal'] || 0) + (state.activeBlueprint.modules['ScrapProc'] || 0))) || 0;
+      const smCalc = state.calculatedDemand && (state.calculatedDemand['ScrapMetal'] || state.calculatedDemand['TerScrapMetal'] || state.calculatedDemand['ScrapProc']);
+      const smOutputNonZero = smInPlan > 0 || (smCalc && (smCalc.rateNeeded > 0 || smCalc.modulesNeeded > 0)) || (state.selectedWareId === 'ScrapMetal' || state.selectedWareId === 'TerScrapMetal' || state.selectedWareId === 'ScrapProc' || state.selectedWareId === 'RawScrap');
+
+      if (cId === 'ScrapClaytronics' && smOutputNonZero && !state.activeBlueprint) {
+        cCalc = Math.max(cCalc, 1);
+      }
+
+      let bpConsumption = cInPlan * inputPerMod;
+      let optConsumption = cCalc * inputPerMod;
+
+      if ((id === 'EC' || id === 'TerEC') && (cId === 'ScrapMetal' || cId === 'TerScrapMetal') && state.scrapMetalEc && state.scrapMetalEc.totalDemand > 0) {
+        inputPerMod = state.scrapMetalEc.totalDemand;
+        bpConsumption = state.scrapMetalEc.totalDemand;
+        optConsumption = state.scrapMetalEc.totalDemand;
+      }
+
+      if (id === 'RawScrap' && cId === 'ScrapProc') {
+        inputPerMod = 9000;
+        bpConsumption = (cInPlan > 0 ? cInPlan : 1) * 9000;
+        optConsumption = 9000;
+      }
+
+      if (id === 'ScrapProc') {
+        if (cId === 'ScrapMetal' && state.scrapRawDemand) {
+          inputPerMod = state.scrapRawDemand.genRecyclers > 0 ? Math.round(state.scrapRawDemand.genRawScrapDemand / state.scrapRawDemand.genRecyclers) : 2250;
+          bpConsumption = state.scrapRawDemand.genRawScrapDemand;
+          optConsumption = state.scrapRawDemand.genRawScrapDemand;
+        } else if (cId === 'TerScrapMetal' && state.scrapRawDemand) {
+          inputPerMod = state.scrapRawDemand.terRecyclers > 0 ? Math.round(state.scrapRawDemand.terRawScrapDemand / state.scrapRawDemand.terRecyclers) : 7500;
+          bpConsumption = state.scrapRawDemand.terRawScrapDemand;
+          optConsumption = state.scrapRawDemand.terRawScrapDemand;
+        }
+      }
+
+      const isConsumerSuppressed = isInspectorOutputSuppressed || ppDownstreamWares.has(cId) || (
+        (cWare.level >= 1 && cWare.level <= 3 && !NO_PP_WARES.has(cId)) && Boolean(
+          (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[cId]) ||
+          (!state.activeBlueprint && state.ppStates && state.ppStates[cId])
+        )
+      );
+
+      if (isConsumerSuppressed) {
+        bpConsumption = 0;
+        optConsumption = 0;
+      }
 
       totalBpConsumption += bpConsumption;
       totalOptimumConsumption += optConsumption;
@@ -1304,17 +1947,28 @@ export function updateInspector(id, onRender) {
   const isTerEC = id === 'TerEC';
   const isEC = isGenEC || isTerEC;
   const lt = state.layerTotals || {};
-  const ecPerMod = isTerEC ? (lt.terSolarOutputPerPanel || 3000) : (lt.solarOutputPerPanel || 10500);
+  const ecPerMod = isTerEC 
+    ? (lt.terSolarOutputPerPanel || (WARES_DB['TerEC'] ? WARES_DB['TerEC'].baseRate : 3000)) 
+    : (lt.solarOutputPerPanel || (WARES_DB['EC'] ? WARES_DB['EC'].baseRate : 10500));
   const ecNeeded = isTerEC ? (lt.terSolarModulesNeeded || 0) : (lt.solarModulesNeeded || 0);
-  const currentProd = isEC 
+  let currentProd = isEC 
     ? (state.activeBlueprint ? (inPlanCount * ecPerMod) : (ecNeeded * ecPerMod))
-    : (inPlanCount * (ware.baseRate || 1) * getWareWorkforceMultiplier(ware, state.workforceBonus));
+    : (id === 'ScrapProc'
+      ? (inPlanCount * 9000)
+      : (id === 'ScrapHullParts' || id === 'ScrapClaytronics'
+        ? calculateLiveOutputRate(id, inPlanCount, 0)
+        : (inPlanCount * getWareHourlyRatePerModule(id, state.workforceBonus))));
+  if (isInspectorOutputSuppressed) {
+    currentProd = 0;
+  }
 
   const netBpBalance = currentProd - totalBpConsumption;
 
   const nextLvl = (ware.level !== undefined ? ware.level : 0) + 1;
   let rangeTag = '';
-  if (ware.level >= 3) {
+  if (id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') {
+    rangeTag = '(L1–L3)';
+  } else if (ware.level >= 3) {
     rangeTag = '(No output consumers)';
   } else if (nextLvl === 1) {
     rangeTag = '(L1–L3)';
@@ -1337,8 +1991,9 @@ export function updateInspector(id, onRender) {
         <div style="max-height:190px; overflow-y:auto; padding-right:4px; margin-bottom:0.45rem;">
           ${consumers.map(c => {
             const hasPlan = c.inPlan > 0;
-            const planColor = hasPlan ? '#38bdf8' : '#64748b';
-            const rateColor = hasPlan ? '#34d399' : '#64748b';
+            const rateVal = state.activeBlueprint ? c.bpConsumption : c.optConsumption;
+            const planColor = (hasPlan && rateVal > 0) ? '#38bdf8' : '#64748b';
+            const rateColor = rateVal > 0 ? '#34d399' : '#64748b';
             return `
               <div style="font-size:0.8rem; padding:0.25rem 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -1352,7 +2007,7 @@ export function updateInspector(id, onRender) {
                 </div>
                 <div style="text-align:right;">
                   <strong style="color:${rateColor}; font-size:0.82rem;">
-                    ${state.activeBlueprint ? Math.round(c.bpConsumption).toLocaleString() : Math.round(c.optConsumption).toLocaleString()} / hr
+                    ${Math.round(rateVal).toLocaleString()} / hr
                   </strong>
                 </div>
               </div>
@@ -1367,7 +2022,7 @@ export function updateInspector(id, onRender) {
               <strong style="color:#fbbf24;">${Math.round(totalBpConsumption).toLocaleString()} / hr</strong>
             </div>
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:#94a3b8;">Current Production (${inPlanCount}x):</span>
+              <span style="color:#94a3b8;">${id === 'ScrapProc' ? 'Scrap Metal Converted' : 'Current Production'} (${inPlanCount}x):</span>
               <strong style="color:#38bdf8;">${Math.round(currentProd).toLocaleString()} / hr</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-top:0.15rem; padding-top:0.2rem; border-top:1px dashed rgba(255,255,255,0.1);">
@@ -1406,43 +2061,116 @@ export function updateInspector(id, onRender) {
         const linkedFromDeps = DEPENDENCIES.filter(d => d.to === id).map(d => d.from);
         const displayedInputs = [];
         const telPartsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['TelParts']) || 0;
+        const scrapPartsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScrapHullParts']) || 0;
+        const scrapClayPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScrapClaytronics']) || 0;
         const hullPartsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['HullParts']) || 0;
+        const claytronicsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['Claytronics']) || 0;
+        const telArrayPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['TelArray']) || 0;
+        const scanArrayPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['ScanArray']) || 0;
+        const telEngPartsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['TelEngParts']) || 0;
+        const engPartsPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['EngParts']) || 0;
+        const telAdvCompPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['TelAdvComp']) || 0;
+        const advCompPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['AdvComp']) || 0;
+
+        const isSTM = Boolean(state.selectedWareId || !state.activeBlueprint);
 
         Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
           if (inpId === 'HullParts') {
-            if (telPartsPlan > 0 && hullPartsPlan === 0) {
-              displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Hull Parts]' });
-              return;
-            } else if (telPartsPlan > 0 && hullPartsPlan > 0) {
-              displayedInputs.push({ id: 'HullParts', qty: inpQty, tag: '[Commonwealth]' });
-              displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Hull Parts]' });
-              return;
-            } else if (linkedFromDeps.includes('TelParts')) {
+            if (!isSTM && state.activeBlueprint) {
+              const hasAlt = telPartsPlan > 0 || scrapPartsPlan > 0;
+              if (telPartsPlan > 0 && hullPartsPlan === 0 && scrapPartsPlan === 0) {
+                displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Hull Parts]' });
+              } else if (scrapPartsPlan > 0 && hullPartsPlan === 0 && telPartsPlan === 0) {
+                displayedInputs.push({ id: 'ScrapHullParts', qty: inpQty, tag: '[Scrap Hull Parts]' });
+              } else {
+                displayedInputs.push({ id: 'HullParts', qty: inpQty, tag: hasAlt ? '[Commonwealth]' : '' });
+                if (telPartsPlan > 0) {
+                  displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Hull Parts]' });
+                }
+                if (scrapPartsPlan > 0) {
+                  displayedInputs.push({ id: 'ScrapHullParts', qty: inpQty, tag: '[Scrap Hull Parts]' });
+                }
+              }
+            } else {
               displayedInputs.push({ id: 'HullParts', qty: inpQty, tag: '' });
-              displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Option]' });
-              return;
             }
+            return;
+          } else if (inpId === 'EngParts') {
+            if (!isSTM && state.activeBlueprint) {
+              if (telEngPartsPlan > 0 && engPartsPlan === 0) {
+                displayedInputs.push({ id: 'TelEngParts', qty: inpQty, tag: '[TEL Engine Parts]' });
+              } else if (telEngPartsPlan > 0 && engPartsPlan > 0) {
+                displayedInputs.push({ id: 'EngParts', qty: inpQty, tag: '[Commonwealth]' });
+                displayedInputs.push({ id: 'TelEngParts', qty: inpQty, tag: '[TEL Engine Parts]' });
+              } else {
+                displayedInputs.push({ id: 'EngParts', qty: inpQty, tag: '' });
+              }
+            } else {
+              displayedInputs.push({ id: 'EngParts', qty: inpQty, tag: '' });
+            }
+            return;
+          } else if (inpId === 'AdvComp') {
+            if (!isSTM && state.activeBlueprint) {
+              if (telAdvCompPlan > 0 && advCompPlan === 0) {
+                displayedInputs.push({ id: 'TelAdvComp', qty: inpQty, tag: '[TEL Adv Composites]' });
+              } else if (telAdvCompPlan > 0 && advCompPlan > 0) {
+                displayedInputs.push({ id: 'AdvComp', qty: inpQty, tag: '[Commonwealth]' });
+                displayedInputs.push({ id: 'TelAdvComp', qty: inpQty, tag: '[TEL Adv Composites]' });
+              } else {
+                displayedInputs.push({ id: 'AdvComp', qty: inpQty, tag: '' });
+              }
+            } else {
+              displayedInputs.push({ id: 'AdvComp', qty: inpQty, tag: '' });
+            }
+            return;
+          } else if (inpId === 'ScanArray') {
+            if (!isSTM && state.activeBlueprint) {
+              if (telArrayPlan > 0 && scanArrayPlan === 0) {
+                displayedInputs.push({ id: 'TelArray', qty: inpQty, tag: '[TEL Scanning Arrays]' });
+              } else if (telArrayPlan > 0 && scanArrayPlan > 0) {
+                displayedInputs.push({ id: 'ScanArray', qty: inpQty, tag: '[Commonwealth]' });
+                displayedInputs.push({ id: 'TelArray', qty: inpQty, tag: '[TEL Scanning Arrays]' });
+              } else {
+                displayedInputs.push({ id: 'ScanArray', qty: inpQty, tag: '' });
+              }
+            } else {
+              displayedInputs.push({ id: 'ScanArray', qty: inpQty, tag: '' });
+            }
+            return;
+          } else if (inpId === 'Claytronics') {
+            if (!isSTM && state.activeBlueprint) {
+              const hasAlt = scrapClayPlan > 0;
+              if (scrapClayPlan > 0 && claytronicsPlan === 0) {
+                displayedInputs.push({ id: 'ScrapClaytronics', qty: inpQty, tag: '[Scrap Claytronics]' });
+              } else {
+                displayedInputs.push({ id: 'Claytronics', qty: inpQty, tag: hasAlt ? '[Commonwealth]' : '' });
+                if (scrapClayPlan > 0) {
+                  displayedInputs.push({ id: 'ScrapClaytronics', qty: inpQty, tag: '[Scrap Claytronics]' });
+                }
+              }
+            } else {
+              displayedInputs.push({ id: 'Claytronics', qty: inpQty, tag: '' });
+            }
+            return;
           }
           displayedInputs.push({ id: inpId, qty: inpQty, tag: '' });
         });
 
-        // Include any other linked faction inputs from DEPENDENCIES
-        linkedFromDeps.forEach(depFrom => {
-          if (depFrom !== 'EC' && !displayedInputs.some(d => d.id === depFrom)) {
-            const depWare = WARES_DB[depFrom];
-            if (depWare && depFrom === 'TelParts' && ware.recipe['HullParts']) {
-              displayedInputs.push({ id: depFrom, qty: ware.recipe['HullParts'], tag: '[TEL Option]' });
-            }
-          }
-        });
+        const inputsToRender = isSTM
+          ? displayedInputs.filter(item => {
+              const d = state.calculatedDemand && state.calculatedDemand[item.id];
+              const hasSupply = d ? ((d.rateNeeded && d.rateNeeded > 0) || (d.modulesNeeded && d.modulesNeeded > 0)) : (item.qty > 0);
+              return hasSupply;
+            })
+          : displayedInputs;
 
-        return displayedInputs.map(({ id: inpId, qty: inpQty, tag }) => {
+        return inputsToRender.map(({ id: inpId, qty: inpQty, tag }) => {
           const inpWare = WARES_DB[inpId];
-          const wareEff = (ware.level >= 1 && ware.level <= 3) ? getWareWorkforceMultiplier(ware, state.workforceBonus) : 1;
-          const scaledInpQty = inpQty * wareEff;
-          const calcQty = state.inspectorSingle ? scaledInpQty : (scaledInpQty * effectiveCount);
+          const calcQty = state.inspectorSingle ? inpQty : (inpQty * effectiveCount);
           const unitSuffix = ware.level === 4 ? (inpId === 'EC' ? 'EC' : 'units') : '/ hr';
-          return `<div style="font-size:0.82rem; color:#f8fafc; padding:0.2rem 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center;"><span>${inpWare ? inpWare.name : inpId} ${tag ? `<span style="font-size:0.68rem; color:#38bdf8; background:rgba(56,189,248,0.12); padding:1px 4px; border-radius:3px; margin-left:3px;">${tag}</span>` : ''}:</span> <strong style="color:#34d399;">${Math.round(calcQty).toLocaleString()} ${unitSuffix}</strong></div>`;
+          const cycleQty = (ware.cyclesPerHr && ware.cyclesPerHr > 0 && ware.level < 4) ? (inpQty / ware.cyclesPerHr) : 0;
+          const cycleStr = cycleQty > 0 ? `<span style="font-size:0.72rem; color:#94a3b8; font-weight:normal; margin-left:3px;">(${Math.round(cycleQty * 100) / 100} / cycle)</span>` : '';
+          return `<div style="font-size:0.82rem; color:#f8fafc; padding:0.2rem 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center;"><span>${inpWare ? inpWare.name : inpId} ${tag ? `<span style="font-size:0.68rem; color:#38bdf8; background:rgba(56,189,248,0.12); padding:1px 4px; border-radius:3px; margin-left:3px;">${tag}</span>` : ''}:</span> <strong style="color:#34d399;">${Math.round(calcQty).toLocaleString()} ${unitSuffix}${cycleStr}</strong></div>`;
         }).join('');
       })()}
     </div>

@@ -1,4 +1,6 @@
 import { getFriendlyModuleName, mapMacroToWare, isFoodOrAgriMacro, isWareMacro, isStructureMacro, getModuleBuildCost, MACRO_TO_WARE, MODULE_NAMES, MODULE_BUILD_COSTS, WARES_DB } from '../data/wares.js';
+import MODULES_WORKFORCE from '../data/modules_workforce.json' with { type: 'json' };
+import { calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { state } from '../engine/state.js';
 import { escapeHtml } from '../html.js';
 
@@ -11,6 +13,8 @@ export function getKnownMacrosList() {
 
   return allKnownMacros
     .filter(macro => {
+      if (macro === 'prod_ter_scraprecycler_macro') return false;
+      if (macro === 'hab_arg_antigonepillar_01_macro' || macro === 'hab_arg_antigonespire_01_macro') return false;
       const lower = macro.toLowerCase();
       const friendly = getFriendlyModuleName(macro).toLowerCase();
       if (lower.includes('xen') || friendly.includes('xenon')) return false;
@@ -37,13 +41,19 @@ export function matchesModuleQuery(macro, query) {
   const ware = wareId ? WARES_DB[wareId] : null;
   const wareName = ware ? ware.name.toLowerCase() : '';
   const wareCat = (ware && ware.cat) ? ware.cat.toLowerCase() : '';
-  const purpose = ware ? `${wareName} level ${ware.level} ${wareCat}` : 'station structure utility';
+  const isHab = macroLower.startsWith('hab_') || macroLower.includes('housing') || (MODULES_WORKFORCE && MODULES_WORKFORCE[macro]?.capacity > 0);
+  const purpose = ware ? `${wareName} level ${ware.level} ${wareCat}` : (isHab ? 'station habitat habitation workforce housing structure utility' : 'station structure utility');
+
+  const combinedText = `${friendly} ${macroLower} ${wareName} ${wareCat} ${purpose}`;
+  const queryWords = q.split(/\s+/).filter(Boolean);
+  const allWordsMatch = queryWords.length > 1 && queryWords.every(w => combinedText.includes(w));
 
   const contains = friendly.includes(q) ||
                    macroLower.includes(q) ||
                    wareName.includes(q) ||
                    wareCat.includes(q) ||
-                   purpose.includes(q);
+                   purpose.includes(q) ||
+                   allWordsMatch;
 
   return isNegated ? !contains : contains;
 }
@@ -58,7 +68,12 @@ export function updateAddMacroSelect(query) {
 
   let html = `<option value="">-- Select Station Module to Add ${query ? `(${filtered.length} found)` : ''} --</option>`;
   filtered.forEach(macro => {
-    const friendly = getFriendlyModuleName(macro);
+    let friendly = getFriendlyModuleName(macro, state.factionConstructionMethod);
+    if (macro === 'prod_ter_scrap_recycler_macro' || macro === 'prod_ter_scraprecycler_macro') {
+      friendly = 'Scrap Recycler (TER)';
+    } else if (state.factionConstructionMethod !== 'terran') {
+      if (macro === 'prod_gen_scrap_recycler_macro') friendly = 'Scrap Recycler (Hull Parts)';
+    }
     const isSelected = (macro === currentVal) || (!currentVal && state.selectedWareId && mapMacroToWare(macro) === state.selectedWareId);
     html += `<option value="${escapeHtml(macro)}" ${isSelected ? 'selected' : ''}>${escapeHtml(friendly)} (${escapeHtml(macro)})</option>`;
   });
@@ -115,111 +130,160 @@ export function renderPlannedTabHTML() {
   });
 
   const hasAnyVisible = !searchQuery || macroEntries.some(([macro]) => matchesModuleQuery(macro, searchQuery));
+  const wf = calculateBlueprintWorkforce(state.activeBlueprint);
+  const hasWorkforce = wf && (wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0);
 
   return `
     <div class="planned-wrapper">
       <div class="planned-header-card">
-        <div class="planned-title" style="flex:1; min-width:320px; display:flex; flex-direction:column; justify-content:space-between; gap:0.65rem;">
-          <div style="display:flex; flex-direction:column; gap:0.45rem;">
+        <div class="planned-header-top" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:1.25rem; flex-wrap:wrap;">
+          <div class="planned-title" style="flex:1; min-width:280px;">
             <h2>📋 Planned and Changed Modules</h2>
-            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-              <label style="font-size:0.82rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.35rem 0.65rem; border-radius:6px; border:1px solid rgba(255,255,255,0.08);" title="When checked, hides agricultural & food supply production modules from table and dropdown">
-                <input type="checkbox" id="chkHideFoodAgri" ${state.hideFoodAgriPlanned ? 'checked' : ''} style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
-                🌾 Exclude Food & Agri Modules
-              </label>
-              <label style="font-size:0.82rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.35rem 0.65rem; border-radius:6px; border:1px solid rgba(255,255,255,0.08);" title="When checked, lists only ware production modules">
-                <input type="checkbox" id="chkFilterWares" ${state.filterWaresPlanned ? 'checked' : ''} style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
-                📦 Wares
-              </label>
-              <label style="font-size:0.82rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.35rem 0.65rem; border-radius:6px; border:1px solid rgba(255,255,255,0.08);" title="When checked, unchecks Wares checkbox and populates only station structures">
-                <input type="checkbox" id="chkFilterStructures" ${state.filterStructuresPlanned ? 'checked' : ''} style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
-                🏗️ Structures
-              </label>
-            </div>
+            <p style="margin:0.2rem 0 0 0; font-size:0.8rem; color:#94a3b8;">Specify and adjust quantities for each station module.</p>
           </div>
-          <p style="margin:0; font-size:0.82rem; color:#94a3b8;">Specify and adjust quantities for each station module.</p>
-          <div class="add-macro-box" style="margin:0; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-            <label style="font-size:0.82rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.4rem; cursor:pointer; user-select:none; background:rgba(56,189,248,0.1); padding:0.35rem 0.65rem; border-radius:6px; border:1px solid rgba(56,189,248,0.25);" title="Once checked, signifies that the selected ware may have upstream providers. If the ware is L2 or L3, populates the display with those upstream wares and displays the number required to satisfy the upstream demands of each ware.">
-              <input type="checkbox" id="chkPopulateMatrix" ${state.populateMatrix ? 'checked' : ''} style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
-              ⚡ Populate Needs
-            </label>
-            <label style="font-size:0.8rem; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:0.4rem;">
-              Method:
-              <select id="selectFactionMethod" class="select-preset" style="padding:0.35rem 0.6rem;">
-                <option value="commonwealth" ${state.factionConstructionMethod === 'commonwealth' ? 'selected' : ''}>🏛️ Commonwealth</option>
-                <option value="terran" ${state.factionConstructionMethod === 'terran' ? 'selected' : ''}>🪐 Terran Protectorate</option>
-                <option value="boron" ${state.factionConstructionMethod === 'boron' ? 'selected' : ''}>🌊 Boron Kingdom</option>
-              </select>
-            </label>
-            <select id="addMacroSelect" class="select-macro" style="padding:0.35rem 0.65rem;">
-              <option value="">-- Select Station Module to Add ${searchQuery ? `(${filteredMacrosList.length} found)` : ''} --</option>
-              ${filteredMacrosList.map(macro => {
-                const friendly = getFriendlyModuleName(macro);
-                const isSelected = (state.selectedWareId && mapMacroToWare(macro) === state.selectedWareId);
-                return `<option value="${escapeHtml(macro)}" ${isSelected ? 'selected' : ''}>${escapeHtml(friendly)} (${escapeHtml(macro)})</option>`;
-              }).join('')}
-              ${(searchQuery && filteredMacrosList.length === 0) ? `
-                <option value="" disabled style="color:#94a3b8; font-style:italic;">No station modules match "${escapeHtml(searchQuery)}"</option>
-              ` : ''}
-            </select>
-            <button class="btn-add-macro" id="btnAddMacro" style="padding:0.35rem 0.75rem; white-space:nowrap;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Add Module
-            </button>
-          </div>
-        </div>
 
-        <!-- Total Summated Station Construction Materials Pill (occupies far right vertically as well as horizontal area) -->
-        <div class="construction-summary-pill" title="Total Summated Station Construction Materials required for ${totalMacroModules} planned modules">
-          <div class="construction-pill-header">
-            <div class="construction-pill-title">
-              <span>🏗️ Total Summated Station Construction Materials</span>
+          <div class="planned-pills-container">
+          <!-- Total Summated Station Construction Materials Pill -->
+          <div class="construction-summary-pill" title="Total Summated Station Construction Materials required for ${totalMacroModules} planned modules">
+            <div class="construction-pill-header">
+              <div class="construction-pill-title">
+                <span>🏗️ Total Summated Station Construction Materials</span>
+              </div>
+              <div class="construction-pill-count">
+                <span class="construction-pill-badge">${totalMacroModules} Module${totalMacroModules === 1 ? '' : 's'}</span>
+              </div>
             </div>
-            <div class="construction-pill-count">
-              <span class="construction-pill-badge">${totalMacroModules} Module${totalMacroModules === 1 ? '' : 's'}</span>
+            <div class="construction-pill-grid">
+              <div class="construction-pill-item">
+                <span>Claytronics:</span>
+                <strong style="color:#fbbf24;">${totalClaytronics.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item">
+                <span>Hull Parts:</span>
+                <strong style="color:#38bdf8;">${totalHullParts.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item">
+                <span>EC:</span>
+                <strong style="color:#34d399;">${totalECBuild.toLocaleString()}</strong>
+              </div>
+              ${(totalCompSubstrate > 0 || state.factionConstructionMethod === 'terran') ? `
+              <div class="construction-pill-item">
+                <span>Comp Sub:</span>
+                <strong style="color:#f472b6;">${totalCompSubstrate.toLocaleString()}</strong>
+              </div>` : ''}
+              ${(totalSilCarbide > 0 || state.factionConstructionMethod === 'terran') ? `
+              <div class="construction-pill-item">
+                <span>Sil Carbide:</span>
+                <strong style="color:#a7f3d0;">${totalSilCarbide.toLocaleString()}</strong>
+              </div>` : ''}
+              ${(totalMetMicrolatt > 0 || state.factionConstructionMethod === 'terran') ? `
+              <div class="construction-pill-item">
+                <span>Met Micro:</span>
+                <strong style="color:#94a3b8;">${totalMetMicrolatt.toLocaleString()}</strong>
+              </div>` : ''}
+              ${totalProtectyonBuild > 0 ? `
+              <div class="construction-pill-item">
+                <span>Protectyon:</span>
+                <strong style="color:#f472b6;">${totalProtectyonBuild.toLocaleString()}</strong>
+              </div>` : ''}
+              ${(totalWaterBuild > 0 || state.factionConstructionMethod === 'boron') ? `
+              <div class="construction-pill-item">
+                <span>Water:</span>
+                <strong style="color:#38bdf8;">${totalWaterBuild.toLocaleString()}</strong>
+              </div>` : ''}
             </div>
           </div>
-          <div class="construction-pill-grid">
-            <div class="construction-pill-item">
-              <span>Claytronics:</span>
-              <strong style="color:#fbbf24;">${totalClaytronics.toLocaleString()}</strong>
+
+          <!-- Station Workforce Summary Pill -->
+          <div class="construction-summary-pill" style="border-color: rgba(16, 185, 129, 0.4);" title="Station Workforce Summary based on planned modules">
+            <div class="construction-pill-header">
+              <div class="construction-pill-title" style="color:#34d399; justify-content:space-between; width:100%;">
+                <span>👥 Station Workforce Summary</span>
+                <span class="construction-pill-badge" style="background:${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}; color:${wf.coveragePercent >= 100 ? '#34d399' : '#fbbf24'}; border-color:${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'};">
+                  ${wf.coveragePercent}% Coverage
+                </span>
+              </div>
             </div>
-            <div class="construction-pill-item">
-              <span>Hull Parts:</span>
-              <strong style="color:#38bdf8;">${totalHullParts.toLocaleString()}</strong>
+            <div class="construction-pill-grid">
+              <div class="construction-pill-item">
+                <span>Optimal Needed:</span>
+                <strong style="color:#38bdf8;">${wf.totalOptimalWorkforce.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item">
+                <span>Hab Capacity:</span>
+                <strong style="color:#34d399;">${wf.totalHabitationCapacity.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item">
+                <span>Production:</span>
+                <strong style="color:#cbd5e1;">${wf.productionWorkforce.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item">
+                <span>Shipyards:</span>
+                <strong style="color:#cbd5e1;">${wf.shipyardWorkforce.toLocaleString()}</strong>
+              </div>
+              <div class="construction-pill-item" style="grid-column: span 2;">
+                <span>Workforce Balance:</span>
+                <strong style="color:${wf.surplusDeficit > 0 ? '#34d399' : (wf.surplusDeficit < 0 ? '#ef4444' : '#cbd5e1')};">
+                  ${wf.surplusDeficit > 0 ? `+${wf.surplusDeficit.toLocaleString()} surplus beds (${wf.habitatCount} habs)` : (wf.surplusDeficit < 0 ? `${wf.surplusDeficit.toLocaleString()} shortage` : `0 balance (${wf.habitatCount} habs)`)}
+                </strong>
+              </div>
+              ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+              <div class="construction-pill-item" style="grid-column: span 2;">
+                <span>Sustainable Workers:</span>
+                <strong style="color:${wf.lifeSupport.sustainableWorkers >= wf.totalOptimalWorkforce ? '#34d399' : '#fbbf24'};">
+                  ${wf.lifeSupport.sustainableWorkers.toLocaleString()} (${wf.lifeSupport.sustainableCoveragePercent}% self-sufficient)
+                </strong>
+              </div>
+              ` : ''}
             </div>
-            <div class="construction-pill-item">
-              <span>EC:</span>
-              <strong style="color:#34d399;">${totalECBuild.toLocaleString()}</strong>
-            </div>
-            ${(totalCompSubstrate > 0 || state.factionConstructionMethod === 'terran') ? `
-            <div class="construction-pill-item">
-              <span>Comp Sub:</span>
-              <strong style="color:#f472b6;">${totalCompSubstrate.toLocaleString()}</strong>
-            </div>` : ''}
-            ${(totalSilCarbide > 0 || state.factionConstructionMethod === 'terran') ? `
-            <div class="construction-pill-item">
-              <span>Sil Carbide:</span>
-              <strong style="color:#a7f3d0;">${totalSilCarbide.toLocaleString()}</strong>
-            </div>` : ''}
-            ${(totalMetMicrolatt > 0 || state.factionConstructionMethod === 'terran') ? `
-            <div class="construction-pill-item">
-              <span>Met Micro:</span>
-              <strong style="color:#94a3b8;">${totalMetMicrolatt.toLocaleString()}</strong>
-            </div>` : ''}
-            ${totalProtectyonBuild > 0 ? `
-            <div class="construction-pill-item">
-              <span>Protectyon:</span>
-              <strong style="color:#f472b6;">${totalProtectyonBuild.toLocaleString()}</strong>
-            </div>` : ''}
-            ${(totalWaterBuild > 0 || state.factionConstructionMethod === 'boron') ? `
-            <div class="construction-pill-item">
-              <span>Water:</span>
-              <strong style="color:#38bdf8;">${totalWaterBuild.toLocaleString()}</strong>
-            </div>` : ''}
           </div>
         </div>
       </div>
+
+      <div class="add-macro-box" style="margin:0; display:flex; align-items:center; gap:0.4rem; width:100%; flex-wrap:nowrap;">
+        <label style="font-size:0.73rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.3rem; cursor:pointer; user-select:none; background:rgba(56,189,248,0.1); padding:0.2rem 0.45rem; border-radius:5px; border:1px solid rgba(56,189,248,0.25); white-space:nowrap; flex-shrink:0;" title="Once checked, signifies that the selected ware may have upstream providers. If the ware is L2 or L3, populates the display with those upstream wares and displays the number required to satisfy the upstream demands of each ware.">
+          <input type="checkbox" id="chkPopulateMatrix" ${state.populateMatrix ? 'checked' : ''} style="width:13px; height:13px; accent-color:#38bdf8; cursor:pointer; margin:0;" />
+          ⚡ Populate Needs
+        </label>
+        <label style="font-size:0.73rem; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:0.3rem; white-space:nowrap; flex-shrink:0;">
+          Method:
+          <select id="selectFactionMethod" class="select-preset" style="padding:0.2rem 0.4rem; font-size:0.73rem; border-radius:5px;">
+            <option value="commonwealth" ${state.factionConstructionMethod === 'commonwealth' ? 'selected' : ''}>🏛️ Commonwealth</option>
+            <option value="terran" ${state.factionConstructionMethod === 'terran' ? 'selected' : ''}>🪐 Terran Protectorate</option>
+            <option value="boron" ${state.factionConstructionMethod === 'boron' ? 'selected' : ''}>🌊 Boron Kingdom</option>
+          </select>
+        </label>
+        <select id="addMacroSelect" class="select-macro" style="padding:0.2rem 0.45rem; font-size:0.73rem; min-width:140px; max-width:240px; flex:1 1 auto;">
+          <option value="">-- Select Station Module to Add ${searchQuery ? `(${filteredMacrosList.length} found)` : ''} --</option>
+          ${filteredMacrosList.map(macro => {
+            const friendly = getFriendlyModuleName(macro);
+            const isSelected = (state.selectedWareId && mapMacroToWare(macro) === state.selectedWareId);
+            return `<option value="${escapeHtml(macro)}" ${isSelected ? 'selected' : ''}>${escapeHtml(friendly)} (${escapeHtml(macro)})</option>`;
+          }).join('')}
+          ${(searchQuery && filteredMacrosList.length === 0) ? `
+            <option value="" disabled style="color:#94a3b8; font-style:italic;">No station modules match "${escapeHtml(searchQuery)}"</option>
+          ` : ''}
+        </select>
+        <button class="btn-add-macro" id="btnAddMacro" style="padding:0.2rem 0.55rem; font-size:0.73rem; white-space:nowrap; flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add Module
+        </button>
+        <div class="planned-filter-checkboxes" style="margin-left:auto; display:flex; align-items:center; gap:0.35rem; flex-shrink:0;">
+          <label style="font-size:0.73rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.25rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.2rem 0.45rem; border-radius:5px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;" title="When checked, hides agricultural & food provision modules from table and dropdown (medical supplies are considered wares and remain visible)">
+            <input type="checkbox" id="chkHideFoodAgri" ${state.hideFoodAgriPlanned ? 'checked' : ''} style="width:13px; height:13px; accent-color:#38bdf8; cursor:pointer; margin:0;" />
+            🌾 Exclude Food & Agri Modules
+          </label>
+          <label style="font-size:0.73rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.25rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.2rem 0.45rem; border-radius:5px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;" title="When checked, lists only ware production modules (including medical supplies)">
+            <input type="checkbox" id="chkFilterWares" ${state.filterWaresPlanned ? 'checked' : ''} style="width:13px; height:13px; accent-color:#38bdf8; cursor:pointer; margin:0;" />
+            📦 Wares
+          </label>
+          <label style="font-size:0.73rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.25rem; cursor:pointer; user-select:none; background:rgba(255,255,255,0.04); padding:0.2rem 0.45rem; border-radius:5px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;" title="When checked, unchecks Wares checkbox and populates only station structures">
+            <input type="checkbox" id="chkFilterStructures" ${state.filterStructuresPlanned ? 'checked' : ''} style="width:13px; height:13px; accent-color:#38bdf8; cursor:pointer; margin:0;" />
+            🏗️ Structures
+          </label>
+        </div>
+      </div>
+    </div>
 
       <div class="macro-table-card">
         <div class="macro-table-container">
@@ -239,7 +303,7 @@ export function renderPlannedTabHTML() {
               ${macroEntries.length > 0 ? macroEntries.map(([macro, qty]) => {
                 const wareId = mapMacroToWare(macro);
                 const ware = wareId ? WARES_DB[wareId] : null;
-                const friendlyName = getFriendlyModuleName(macro);
+                const friendlyName = getFriendlyModuleName(macro, state.factionConstructionMethod);
 
                 // Single Unit Component Cost
                 const singleCost = getModuleBuildCost(macro, 1, state.factionConstructionMethod);
@@ -270,7 +334,46 @@ export function renderPlannedTabHTML() {
                 const origQty = (state.originalBlueprint && state.originalBlueprint.rawMacros && state.originalBlueprint.rawMacros[macro]) || 0;
                 const isChanged = qty !== origQty;
                 const wareCat = (ware && ware.cat) ? ware.cat : '';
-                const purpose = ware ? `${ware.name} (Level ${ware.level} ${ware.cat})` : 'Station Structure / Utility';
+                let purpose = ware ? `${ware.name} (Level ${ware.level} ${ware.cat})` : 'Station Structure / Utility';
+                let displayWareName = ware ? ware.name : 'Station Structure / Utility';
+                let displayWareSub = ware ? `(Level ${ware.level} ${ware.cat})` : '';
+
+                const isGenRecycler = (macro === 'prod_gen_scrap_recycler_macro' || macro === 'prod_gen_scraprecycler_macro' || macro === 'prod_bor_scrap_recycler_macro' || macro === 'prod_bor_scraprecycler_macro');
+                const isTerRecycler = (macro === 'prod_ter_scrap_recycler_macro' || macro === 'prod_ter_scraprecycler_macro');
+
+                if (isGenRecycler && state.activeBlueprint && state.activeBlueprint.modules) {
+                  const hasHull = (state.activeBlueprint.modules['ScrapHullParts'] || 0) > 0;
+                  const hasClay = (state.activeBlueprint.modules['ScrapClaytronics'] || 0) > 0;
+                  if (hasHull && hasClay) {
+                    displayWareName = 'Hull Parts & Claytronics';
+                    displayWareSub = '(Scrap Recycling)';
+                    purpose = 'Hull Parts & Claytronics (Scrap Recycling)';
+                  } else if (hasClay) {
+                    displayWareName = 'Claytronics (Scrap)';
+                    displayWareSub = '(Level 3 Nanotech Assemblies)';
+                    purpose = 'Claytronics (Scrap) (Level 3 Nanotech Assemblies)';
+                  } else if (hasHull) {
+                    displayWareName = 'Hull Parts (Scrap)';
+                    displayWareSub = '(Level 2 Refined Construction Materials)';
+                    purpose = 'Hull Parts (Scrap) (Level 2 Refined Construction Materials)';
+                  }
+                } else if (isTerRecycler && state.activeBlueprint && state.activeBlueprint.modules) {
+                  const hasSubstrate = (state.activeBlueprint.modules['TerCompSubstrate'] || 0) > 0;
+                  const hasCarbide = (state.activeBlueprint.modules['TerSilCarbide'] || 0) > 0;
+                  if (hasSubstrate && hasCarbide) {
+                    displayWareName = 'Computronic Substrate & Silicon Carbide';
+                    displayWareSub = '(TER Scrap Recycling)';
+                    purpose = 'Computronic Substrate & Silicon Carbide (TER Scrap Recycling)';
+                  } else if (hasSubstrate) {
+                    displayWareName = 'Computronic Substrate (TER)';
+                    displayWareSub = '(TER Scrap Recycling)';
+                    purpose = 'Computronic Substrate (TER) (TER Scrap Recycling)';
+                  } else if (hasCarbide) {
+                    displayWareName = 'Silicon Carbide (TER)';
+                    displayWareSub = '(TER Scrap Recycling)';
+                    purpose = 'Silicon Carbide (TER) (TER Scrap Recycling)';
+                  }
+                }
                 const matchesSearch = matchesModuleQuery(macro, searchQuery);
 
                 return `
@@ -282,7 +385,7 @@ export function renderPlannedTabHTML() {
                       <div style="margin-top:0.2rem;"><span class="macro-name-tag">${escapeHtml(macro)}</span></div>
                     </td>
                     <td>
-                      ${ware ? `<div style="font-weight:600; color:#cbd5e1;">${ware.name} <span style="font-size:0.75rem; color:#94a3b8;">(Level ${ware.level} ${ware.cat})</span></div>` : '<div style="color:#38bdf8; font-weight:600; font-size:0.85rem;">Station Structure / Utility</div>'}
+                      ${ware ? `<div style="font-weight:600; color:#cbd5e1;">${displayWareName} <span style="font-size:0.75rem; color:#94a3b8;">${displayWareSub}</span></div>` : '<div style="color:#38bdf8; font-weight:600; font-size:0.85rem;">Station Structure / Utility</div>'}
                       <div style="margin-top:0.35rem; font-size:0.78rem; color:#94a3b8; background:rgba(255,255,255,0.03); padding:0.25rem 0.5rem; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
                         <span style="font-weight:700; color:#38bdf8;">1x Module Cost:</span> ${singleCostStr}
                       </div>
@@ -341,13 +444,19 @@ export function filterPlannedModules() {
 
     let matches = true;
     if (query) {
+      const catWords = catName ? catName.split(/[\s/()]+/) : [];
+      const catMatches = catWords.some(w => w.startsWith(query)) || (catName.includes(query) && query.includes(' '));
+      const combinedText = `${commonName} ${macroName} ${wareName} ${catName} ${purpose} ${rowText}`;
+      const queryWords = query.split(/\s+/).filter(Boolean);
+      const allWordsMatch = queryWords.length > 1 && queryWords.every(w => combinedText.includes(w));
       const contains = (matchesModuleQuery(macro, query) === true) ||
         commonName.includes(query) ||
         macroName.includes(query) ||
         wareName.includes(query) ||
-        catName.includes(query) ||
+        catMatches ||
         purpose.includes(query) ||
-        rowText.includes(query);
+        rowText.includes(query) ||
+        allWordsMatch;
       matches = isNegated ? !contains : contains;
     }
 
