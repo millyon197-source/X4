@@ -1,6 +1,5 @@
-<#
 .SYNOPSIS
-    Installs required modules, builds, and executes the X4 Vite Explorer application.
+    Installs required modules, builds, and executes the X4 Supply Matrix application.
 .DESCRIPTION
     Automates the steps outlined in Installation.md:
     1. Verifies/Installs Node.js & npm environment.
@@ -17,11 +16,11 @@
 .PARAMETER Port
     Optional custom port to bind Vite to (defaults to 5173).
 .EXAMPLE
-    .\setup_x4_vite_explorer.ps1
+    .\setup_x4_supply_matrix.ps1
 .EXAMPLE
-    .\setup_x4_vite_explorer.ps1 -BuildOnly
+    .\setup_x4_supply_matrix.ps1 -BuildOnly
 .EXAMPLE
-    .\setup_x4_vite_explorer.ps1 -Clean -Mode dev
+    .\setup_x4_supply_matrix.ps1 -Clean -Mode dev
 #>
 
 [CmdletBinding()]
@@ -56,7 +55,7 @@ if ($ScriptDir) {
 }
 
 Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "   X4 Vite Explorer: Setup, Build & Launch Utility   " -ForegroundColor Cyan
+Write-Host "   X4 Supply Matrix: Setup, Build & Launch Utility   " -ForegroundColor Cyan
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host "Working Directory: $PWD`n" -ForegroundColor DarkGray
 

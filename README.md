@@ -75,6 +75,11 @@ x4-vite-explorer/
 
 ## 🛠️ Quick Start
 
+Create directory to house codebase and cd to it
+Run the powershell script: setup_x4_supply_matrix.ps1
+
+OR follow below
+
 ### Prerequisites
 Make sure **Node.js** (v18+) and **npm** are installed on your system.
 
@@ -82,8 +87,8 @@ Make sure **Node.js** (v18+) and **npm** are installed on your system.
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/wfbrown53-source/x4-vite-explorer.git
-cd x4-vite-explorer
+git clone https://github.com/millyon-source/x4-supply-matrix.git
+cd x4-supply-matrix
 npm install
 ```
 
@@ -95,7 +100,7 @@ npm run build
 
 ### 3. Run Local Development Server
 Start the local Vite development server:
-```bash
+```bash, cmd or powershell
 npm run dev
 ```
 Open your browser to: **http://localhost:5173/**
