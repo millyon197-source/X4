@@ -36,32 +36,39 @@ I would like to acknowledge the prior efforts of previous authors that inspired 
 x4-vite-explorer/
 ├── index.html                    # Main HTML5 entry point & Google Fonts
 ├── package.json                  # Vite build scripts & dependency manifest
+├── package-lock.json             # Locked dependency tree
+├── vite.config.js                # Vite build and development configuration
 ├── README.md                     # Complete project documentation & guide
+├── Installation.md               # Environment setup & installation guide
+├── setup_x4_vite_explorer.ps1    # Automated PowerShell environment configuration script
 ├── public/                       # Static public assets (favicons, SVG sprites)
 │   ├── favicon.svg               # Application browser tab icon
 │   └── icons.svg                 # SVG icon sprite sheet
 └── src/
     ├── main.js                   # Application lifecycle entry point & tab routing
     ├── style.css                 # Glassmorphic dark mode styling & layout
+    ├── html.js                   # HTML string escaping utility
+    ├── crissian_build_costs.json # 343 verified module construction resource recipes
+    ├── crissian_modules_master.json # Master module catalog and dimensions (247 modules)
+    ├── macro_costs.json          # Macro construction resource cost database
+    ├── macro_names.json          # 334 human-readable friendly module names
     ├── assets/                   # Static UI images & vector icons
     │   ├── hero.png              # Header banner asset
     │   ├── javascript.svg        # JS logo
     │   └── vite.svg              # Vite logo
-    ├── data/                     # Game constants, ware databases & sector sunlight
+    ├── data/                     # Game constants, ware databases, presets & sector sunlight
     │   ├── wares.js              # 5-Level WARES_DB, DEPENDENCIES & MACRO_TO_WARE mappings
     │   ├── sectors.js            # Sector sunlight percentages & solar formula calculators
-    │   └── sunlight.json         # Verified X4 sector sunlight database
+    │   ├── sunlight.json         # Verified X4 sector sunlight database
+    │   ├── modules_workforce.json# Station module workforce requirements & capacities
+    │   └── preset_prod_max.json  # Production Maximum complex preset blueprint definition
     ├── engine/                   # Core math, XML parsing & reactive state
     │   ├── calculator.js         # Downstream demand cascades, mining requirements & layer totals
-    │   ├── state.js              # Centralized reactive application state management
+    │   ├── state.js              # Centralized reactive application state management & persistence
     │   └── xmlParser.js          # Universal X4 station blueprint XML parser
-    ├── ui/                       # Dynamic modular UI renderers
-    │   ├── matrixView.js         # Interactive 5-Level Supply Chain Matrix & Blueprint Inspector
-    │   └── plannedView.js        # Station Module Planner, build cost breakdowns & filters
-    ├── crissian_build_costs.json # 338 verified module construction resource recipes
-    ├── crissian_modules_master.json # Master module catalog and dimensions
-    ├── macro_costs.json          # Macro construction resource cost database
-    └── macro_names.json          # 329 human-readable friendly module names
+    └── ui/                       # Dynamic modular UI renderers
+        ├── matrixView.js         # Interactive 5-Level Supply Chain Matrix & Blueprint Inspector
+        └── plannedView.js        # Station Module Planner, build cost breakdowns & filters
 ```
 
 ---
