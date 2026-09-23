@@ -1,0 +1,1820 @@
+{
+  "struct_arg_base_01_macro": {
+    "claytronics": 14,
+    "energycells": 27,
+    "hullparts": 50
+  },
+  "struct_arg_base_02_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 62
+  },
+  "struct_arg_base_03_macro": {
+    "claytronics": 18,
+    "energycells": 37,
+    "hullparts": 68
+  },
+  "struct_arg_cross_01_macro": {
+    "claytronics": 12,
+    "energycells": 24,
+    "hullparts": 44
+  },
+  "struct_arg_vertical_01_macro": {
+    "claytronics": 10,
+    "energycells": 20,
+    "hullparts": 36
+  },
+  "struct_arg_vertical_02_macro": {
+    "claytronics": 13,
+    "energycells": 26,
+    "hullparts": 48
+  },
+  "defence_arg_claim_01_macro": {
+    "claytronics": 137,
+    "energycells": 274,
+    "hullparts": 501
+  },
+  "defence_arg_disc_01_macro": {
+    "claytronics": 98,
+    "energycells": 196,
+    "hullparts": 359
+  },
+  "defence_arg_tube_01_macro": {
+    "claytronics": 85,
+    "energycells": 170,
+    "hullparts": 312
+  },
+  "dockarea_arg_m_station_01_macro": {
+    "claytronics": 54,
+    "energycells": 108,
+    "hullparts": 198
+  },
+  "dockarea_arg_m_station_01_hightech_macro": {
+    "claytronics": 58,
+    "energycells": 116,
+    "hullparts": 212
+  },
+  "dockarea_arg_m_station_01_lowtech_macro": {
+    "claytronics": 51,
+    "energycells": 101,
+    "hullparts": 185
+  },
+  "dockarea_arg_m_station_02_macro": {
+    "claytronics": 78,
+    "energycells": 155,
+    "hullparts": 284
+  },
+  "dockarea_arg_m_station_02_hightech_macro": {
+    "claytronics": 80,
+    "energycells": 161,
+    "hullparts": 294
+  },
+  "dockarea_arg_m_station_02_lowtech_macro": {
+    "claytronics": 75,
+    "energycells": 150,
+    "hullparts": 274
+  },
+  "dockarea_arg_m_02_tradestation_01_macro": {
+    "claytronics": 116,
+    "energycells": 232,
+    "hullparts": 424
+  },
+  "hab_arg_l_01_macro": {
+    "claytronics": 191,
+    "energycells": 383,
+    "hullparts": 700
+  },
+  "hab_arg_m_01_macro": {
+    "claytronics": 135,
+    "energycells": 271,
+    "hullparts": 495
+  },
+  "hab_arg_s_01_macro": {
+    "claytronics": 94,
+    "energycells": 188,
+    "hullparts": 343
+  },
+  "landmarks_arg_antigonepillar_01_macro": {
+    "claytronics": 117,
+    "energycells": 6627,
+    "hullparts": 888
+  },
+  "landmarks_arg_antigonespire_01_macro": {
+    "claytronics": 165,
+    "energycells": 9375,
+    "hullparts": 1256
+  },
+  "hab_arg_antigonepillar_01_macro": {
+    "claytronics": 117,
+    "energycells": 6627,
+    "hullparts": 888
+  },
+  "hab_arg_antigonespire_01_macro": {
+    "claytronics": 165,
+    "energycells": 9375,
+    "hullparts": 1256
+  },
+  "pier_arg_harbor_01_macro": {
+    "claytronics": 542,
+    "energycells": 1083,
+    "hullparts": 1980
+  },
+  "pier_arg_harbor_02_macro": {
+    "claytronics": 313,
+    "energycells": 625,
+    "hullparts": 1143
+  },
+  "pier_arg_harbor_03_macro": {
+    "claytronics": 625,
+    "energycells": 1250,
+    "hullparts": 2287
+  },
+  "prod_arg_foodrations_macro": {
+    "claytronics": 262,
+    "energycells": 525,
+    "hullparts": 961
+  },
+  "prod_arg_meat_macro": {
+    "claytronics": 248,
+    "energycells": 497,
+    "hullparts": 910
+  },
+  "prod_arg_medicalsupplies_macro": {
+    "claytronics": 225,
+    "energycells": 450,
+    "hullparts": 823
+  },
+  "prod_arg_spacefuel_macro": {
+    "claytronics": 319,
+    "energycells": 638,
+    "hullparts": 1168
+  },
+  "prod_arg_wheat_macro": {
+    "claytronics": 296,
+    "energycells": 592,
+    "hullparts": 1084
+  },
+  "storage_arg_l_container_01_macro": {
+    "claytronics": 115,
+    "energycells": 230,
+    "hullparts": 421
+  },
+  "storage_arg_m_container_01_macro": {
+    "claytronics": 82,
+    "energycells": 163,
+    "hullparts": 299
+  },
+  "storage_arg_s_container_01_macro": {
+    "claytronics": 52,
+    "energycells": 103,
+    "hullparts": 189
+  },
+  "storage_arg_l_liquid_01_macro": {
+    "claytronics": 115,
+    "energycells": 230,
+    "hullparts": 421
+  },
+  "storage_arg_m_liquid_01_macro": {
+    "claytronics": 82,
+    "energycells": 163,
+    "hullparts": 299
+  },
+  "storage_arg_s_liquid_01_macro": {
+    "claytronics": 52,
+    "energycells": 103,
+    "hullparts": 189
+  },
+  "storage_arg_l_solid_01_macro": {
+    "claytronics": 115,
+    "energycells": 230,
+    "hullparts": 421
+  },
+  "storage_arg_m_solid_01_macro": {
+    "claytronics": 82,
+    "energycells": 163,
+    "hullparts": 299
+  },
+  "storage_arg_s_solid_01_macro": {
+    "claytronics": 52,
+    "energycells": 103,
+    "hullparts": 189
+  },
+  "buildmodule_gen_ships_m_dockarea_01_macro": {
+    "claytronics": 3312,
+    "energycells": 6620,
+    "hullparts": 12112
+  },
+  "buildmodule_gen_ships_l_macro": {
+    "claytronics": 1866,
+    "energycells": 3731,
+    "hullparts": 6826
+  },
+  "buildmodule_gen_ships_xl_macro": {
+    "claytronics": 2434,
+    "energycells": 4866,
+    "hullparts": 8902
+  },
+  "buildmodule_gen_equip_m_dockarea_01_macro": {
+    "claytronics": 1604,
+    "energycells": 3312,
+    "hullparts": 6620
+  },
+  "buildmodule_gen_equip_l_macro": {
+    "claytronics": 931,
+    "energycells": 1866,
+    "hullparts": 3731
+  },
+  "buildmodule_gen_equip_xl_macro": {
+    "claytronics": 1212,
+    "energycells": 2434,
+    "hullparts": 4866
+  },
+  "proc_gen_scrapworks_macro": {
+    "claytronics": 178,
+    "energycells": 162,
+    "hullparts": 733
+  },
+  "prod_gen_advancedcomposites_macro": {
+    "claytronics": 648,
+    "energycells": 1296,
+    "hullparts": 2373
+  },
+  "prod_gen_advancedelectronics_macro": {
+    "claytronics": 482,
+    "energycells": 965,
+    "hullparts": 1767
+  },
+  "prod_gen_antimattercells_macro": {
+    "claytronics": 69,
+    "energycells": 138,
+    "hullparts": 253
+  },
+  "prod_gen_antimatterconverters_macro": {
+    "claytronics": 1780,
+    "energycells": 3560,
+    "hullparts": 6516
+  },
+  "prod_gen_claytronics_macro": {
+    "claytronics": 2822,
+    "energycells": 5642,
+    "hullparts": 10327
+  },
+  "prod_gen_dronecomponents_macro": {
+    "claytronics": 1225,
+    "energycells": 2449,
+    "hullparts": 4483
+  },
+  "prod_gen_energycells_macro": {
+    "claytronics": 260,
+    "energycells": 520,
+    "hullparts": 951
+  },
+  "prod_gen_engineparts_macro": {
+    "claytronics": 389,
+    "energycells": 779,
+    "hullparts": 1426
+  },
+  "prod_gen_fieldcoils_macro": {
+    "claytronics": 1735,
+    "energycells": 3470,
+    "hullparts": 6351
+  },
+  "prod_gen_graphene_macro": {
+    "claytronics": 28,
+    "energycells": 57,
+    "hullparts": 104
+  },
+  "prod_gen_hullparts_macro": {
+    "claytronics": 614,
+    "energycells": 1229,
+    "hullparts": 2249
+  },
+  "prod_gen_microchips_macro": {
+    "claytronics": 758,
+    "energycells": 1516,
+    "hullparts": 2774
+  },
+  "prod_gen_missilecomponents_macro": {
+    "claytronics": 35,
+    "energycells": 71,
+    "hullparts": 131
+  },
+  "prod_gen_plasmaconductors_macro": {
+    "claytronics": 473,
+    "energycells": 946,
+    "hullparts": 1732
+  },
+  "prod_gen_quantumtubes_macro": {
+    "claytronics": 380,
+    "energycells": 761,
+    "hullparts": 1394
+  },
+  "prod_gen_refinedmetals_macro": {
+    "claytronics": 36,
+    "energycells": 73,
+    "hullparts": 135
+  },
+  "prod_gen_scanningarrays_macro": {
+    "claytronics": 629,
+    "energycells": 1259,
+    "hullparts": 2305
+  },
+  "prod_gen_scrap_recycler_macro": {
+    "claytronics": 300,
+    "energycells": 600,
+    "hullparts": 1100
+  },
+  "prod_gen_scrap_recyclerkhaak_macro": {
+    "claytronics": 300,
+    "energycells": 600,
+    "hullparts": 1100
+  },
+  "prod_gen_shieldcomponents_macro": {
+    "claytronics": 432,
+    "energycells": 865,
+    "hullparts": 1583
+  },
+  "prod_gen_siliconwafers_macro": {
+    "claytronics": 74,
+    "energycells": 149,
+    "hullparts": 273
+  },
+  "prod_gen_smartchips_macro": {
+    "claytronics": 126,
+    "energycells": 253,
+    "hullparts": 464
+  },
+  "prod_gen_spices_macro": {
+    "claytronics": 139,
+    "energycells": 278,
+    "hullparts": 510
+  },
+  "prod_gen_superfluidcoolant_macro": {
+    "claytronics": 25,
+    "energycells": 51,
+    "hullparts": 94
+  },
+  "prod_gen_turretcomponents_macro": {
+    "claytronics": 475,
+    "energycells": 951,
+    "hullparts": 1741
+  },
+  "prod_gen_water_macro": {
+    "claytronics": 36,
+    "energycells": 72,
+    "hullparts": 132
+  },
+  "prod_gen_weaponcomponents_macro": {
+    "claytronics": 396,
+    "energycells": 793,
+    "hullparts": 1452
+  },
+  "struct_par_base_01_macro": {
+    "claytronics": 12,
+    "energycells": 23,
+    "hullparts": 42
+  },
+  "struct_par_base_02_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 61
+  },
+  "struct_par_base_03_macro": {
+    "claytronics": 21,
+    "energycells": 43,
+    "hullparts": 78
+  },
+  "struct_par_cross_01_macro": {
+    "claytronics": 10,
+    "energycells": 21,
+    "hullparts": 38
+  },
+  "struct_par_cross_02_macro": {
+    "claytronics": 21,
+    "energycells": 43,
+    "hullparts": 78
+  },
+  "struct_par_cross_03_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 61
+  },
+  "struct_par_vertical_01_macro": {
+    "claytronics": 10,
+    "energycells": 20,
+    "hullparts": 36
+  },
+  "struct_par_vertical_02_macro": {
+    "claytronics": 13,
+    "energycells": 26,
+    "hullparts": 48
+  },
+  "defence_par_claim_01_macro": {
+    "claytronics": 140,
+    "energycells": 279,
+    "hullparts": 511
+  },
+  "defence_par_disc_01_macro": {
+    "claytronics": 98,
+    "energycells": 196,
+    "hullparts": 359
+  },
+  "defence_par_tube_01_macro": {
+    "claytronics": 85,
+    "energycells": 170,
+    "hullparts": 312
+  },
+  "hab_par_l_01_macro": {
+    "claytronics": 210,
+    "energycells": 419,
+    "hullparts": 767
+  },
+  "hab_par_m_01_macro": {
+    "claytronics": 135,
+    "energycells": 271,
+    "hullparts": 495
+  },
+  "hab_par_s_01_macro": {
+    "claytronics": 94,
+    "energycells": 188,
+    "hullparts": 343
+  },
+  "pier_par_harbor_01_macro": {
+    "claytronics": 563,
+    "energycells": 1125,
+    "hullparts": 2058
+  },
+  "pier_par_harbor_02_macro": {
+    "claytronics": 325,
+    "energycells": 650,
+    "hullparts": 1188
+  },
+  "pier_par_harbor_03_macro": {
+    "claytronics": 650,
+    "energycells": 1299,
+    "hullparts": 2377
+  },
+  "prod_par_majadust_macro": {
+    "claytronics": 373,
+    "energycells": 746,
+    "hullparts": 1366
+  },
+  "prod_par_majasnails_macro": {
+    "claytronics": 248,
+    "energycells": 497,
+    "hullparts": 910
+  },
+  "prod_par_medicalsupplies_macro": {
+    "claytronics": 226,
+    "energycells": 451,
+    "hullparts": 827
+  },
+  "prod_par_sojabeans_macro": {
+    "claytronics": 296,
+    "energycells": 592,
+    "hullparts": 1084
+  },
+  "prod_par_sojahusk_macro": {
+    "claytronics": 316,
+    "energycells": 633,
+    "hullparts": 1159
+  },
+  "storage_par_l_container_01_macro": {
+    "claytronics": 124,
+    "energycells": 247,
+    "hullparts": 453
+  },
+  "storage_par_m_container_01_macro": {
+    "claytronics": 84,
+    "energycells": 169,
+    "hullparts": 309
+  },
+  "storage_par_s_container_01_macro": {
+    "claytronics": 56,
+    "energycells": 112,
+    "hullparts": 204
+  },
+  "storage_par_l_liquid_01_macro": {
+    "claytronics": 124,
+    "energycells": 247,
+    "hullparts": 453
+  },
+  "storage_par_m_liquid_01_macro": {
+    "claytronics": 84,
+    "energycells": 169,
+    "hullparts": 309
+  },
+  "storage_par_s_liquid_01_macro": {
+    "claytronics": 56,
+    "energycells": 112,
+    "hullparts": 204
+  },
+  "storage_par_l_solid_01_macro": {
+    "claytronics": 124,
+    "energycells": 247,
+    "hullparts": 453
+  },
+  "storage_par_m_solid_01_macro": {
+    "claytronics": 84,
+    "energycells": 169,
+    "hullparts": 309
+  },
+  "storage_par_s_solid_01_macro": {
+    "claytronics": 56,
+    "energycells": 112,
+    "hullparts": 204
+  },
+  "struct_tel_base_01_macro": {
+    "claytronics": 14,
+    "energycells": 27,
+    "hullparts": 50
+  },
+  "struct_tel_base_02_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 62
+  },
+  "struct_tel_base_03_macro": {
+    "claytronics": 18,
+    "energycells": 37,
+    "hullparts": 68
+  },
+  "struct_tel_cross_01_macro": {
+    "claytronics": 12,
+    "energycells": 24,
+    "hullparts": 44
+  },
+  "struct_tel_vertical_01_macro": {
+    "claytronics": 10,
+    "energycells": 20,
+    "hullparts": 36
+  },
+  "struct_tel_vertical_02_macro": {
+    "claytronics": 13,
+    "energycells": 26,
+    "hullparts": 48
+  },
+  "defence_tel_claim_01_macro": {
+    "claytronics": 138,
+    "energycells": 275,
+    "hullparts": 503
+  },
+  "defence_tel_disc_01_macro": {
+    "claytronics": 98,
+    "energycells": 196,
+    "hullparts": 359
+  },
+  "defence_tel_tube_01_macro": {
+    "claytronics": 85,
+    "energycells": 170,
+    "hullparts": 312
+  },
+  "hab_tel_l_01_macro": {
+    "claytronics": 182,
+    "energycells": 363,
+    "hullparts": 664
+  },
+  "hab_tel_m_01_macro": {
+    "claytronics": 121,
+    "energycells": 242,
+    "hullparts": 443
+  },
+  "hab_tel_s_01_macro": {
+    "claytronics": 86,
+    "energycells": 171,
+    "hullparts": 313
+  },
+  "pier_tel_harbor_01_macro": {
+    "claytronics": 542,
+    "energycells": 1083,
+    "hullparts": 1980
+  },
+  "pier_tel_harbor_02_macro": {
+    "claytronics": 313,
+    "energycells": 625,
+    "hullparts": 1143
+  },
+  "pier_tel_harbor_03_macro": {
+    "claytronics": 625,
+    "energycells": 1250,
+    "hullparts": 2287
+  },
+  "prod_tel_advancedcomposites_macro": {
+    "claytronics": 628,
+    "energycells": 1241,
+    "hullparts": 2300
+  },
+  "prod_tel_engineparts_macro": {
+    "claytronics": 394,
+    "energycells": 778,
+    "hullparts": 1443
+  },
+  "prod_tel_hullparts_macro": {
+    "claytronics": 614,
+    "energycells": 1213,
+    "hullparts": 2249
+  },
+  "prod_tel_medicalsupplies_macro": {
+    "claytronics": 224,
+    "energycells": 448,
+    "hullparts": 822
+  },
+  "prod_tel_nostropoil_macro": {
+    "claytronics": 289,
+    "energycells": 579,
+    "hullparts": 1063
+  },
+  "prod_tel_scanningarrays_macro": {
+    "claytronics": 637,
+    "energycells": 1259,
+    "hullparts": 2333
+  },
+  "prod_tel_spaceweed_macro": {
+    "claytronics": 639,
+    "energycells": 1277,
+    "hullparts": 2338
+  },
+  "prod_tel_sunriseflowers_macro": {
+    "claytronics": 296,
+    "energycells": 592,
+    "hullparts": 1087
+  },
+  "prod_tel_swampplant_macro": {
+    "claytronics": 639,
+    "energycells": 1277,
+    "hullparts": 2338
+  },
+  "prod_tel_teladianium_macro": {
+    "claytronics": 50,
+    "energycells": 101,
+    "hullparts": 185
+  },
+  "storage_tel_l_container_01_macro": {
+    "claytronics": 112,
+    "energycells": 223,
+    "hullparts": 408
+  },
+  "storage_tel_m_container_01_macro": {
+    "claytronics": 78,
+    "energycells": 156,
+    "hullparts": 285
+  },
+  "storage_tel_s_container_01_macro": {
+    "claytronics": 51,
+    "energycells": 102,
+    "hullparts": 187
+  },
+  "storage_tel_l_liquid_01_macro": {
+    "claytronics": 112,
+    "energycells": 223,
+    "hullparts": 408
+  },
+  "storage_tel_m_liquid_01_macro": {
+    "claytronics": 78,
+    "energycells": 156,
+    "hullparts": 285
+  },
+  "storage_tel_s_liquid_01_macro": {
+    "claytronics": 51,
+    "energycells": 102,
+    "hullparts": 187
+  },
+  "storage_tel_l_solid_01_macro": {
+    "claytronics": 112,
+    "energycells": 223,
+    "hullparts": 408
+  },
+  "storage_tel_m_solid_01_macro": {
+    "claytronics": 78,
+    "energycells": 156,
+    "hullparts": 285
+  },
+  "storage_tel_s_solid_01_macro": {
+    "claytronics": 51,
+    "energycells": 102,
+    "hullparts": 187
+  },
+  "struct_spl_base_01_macro": {
+    "claytronics": 14,
+    "energycells": 27,
+    "hullparts": 50
+  },
+  "struct_spl_base_02_macro": {
+    "claytronics": 17,
+    "energycells": 34,
+    "hullparts": 62
+  },
+  "struct_spl_base_03_macro": {
+    "claytronics": 18,
+    "energycells": 37,
+    "hullparts": 68
+  },
+  "struct_spl_cross_01_macro": {
+    "claytronics": 12,
+    "energycells": 24,
+    "hullparts": 44
+  },
+  "struct_spl_vertical_01_macro": {
+    "claytronics": 10,
+    "energycells": 20,
+    "hullparts": 36
+  },
+  "struct_spl_vertical_02_macro": {
+    "claytronics": 13,
+    "energycells": 26,
+    "hullparts": 48
+  },
+  "defence_spl_claim_01_macro": {
+    "claytronics": 138,
+    "energycells": 276,
+    "hullparts": 505
+  },
+  "defence_spl_disc_01_macro": {
+    "claytronics": 105,
+    "energycells": 210,
+    "hullparts": 384
+  },
+  "defence_spl_tube_01_macro": {
+    "claytronics": 105,
+    "energycells": 210,
+    "hullparts": 384
+  },
+  "hab_spl_l_01_macro": {
+    "claytronics": 191,
+    "energycells": 383,
+    "hullparts": 700
+  },
+  "hab_spl_m_01_macro": {
+    "claytronics": 135,
+    "energycells": 271,
+    "hullparts": 495
+  },
+  "hab_spl_s_01_macro": {
+    "claytronics": 94,
+    "energycells": 188,
+    "hullparts": 343
+  },
+  "pier_spl_harbor_01_macro": {
+    "claytronics": 542,
+    "energycells": 1083,
+    "hullparts": 1980
+  },
+  "pier_spl_harbor_02_macro": {
+    "claytronics": 313,
+    "energycells": 625,
+    "hullparts": 1143
+  },
+  "pier_spl_harbor_03_macro": {
+    "claytronics": 625,
+    "energycells": 1250,
+    "hullparts": 2287
+  },
+  "prod_spl_cheltmeat_macro": {
+    "claytronics": 282,
+    "energycells": 256,
+    "hullparts": 1158
+  },
+  "prod_spl_medicalsupplies_macro": {
+    "claytronics": 248,
+    "energycells": 451,
+    "hullparts": 910
+  },
+  "prod_spl_scruffinfruit_macro": {
+    "claytronics": 335,
+    "energycells": 305,
+    "hullparts": 1377
+  },
+  "storage_spl_l_container_01_macro": {
+    "claytronics": 135,
+    "energycells": 270,
+    "hullparts": 494
+  },
+  "storage_spl_m_container_01_macro": {
+    "claytronics": 90,
+    "energycells": 180,
+    "hullparts": 329
+  },
+  "storage_spl_s_container_01_macro": {
+    "claytronics": 61,
+    "energycells": 121,
+    "hullparts": 222
+  },
+  "storage_spl_l_liquid_01_macro": {
+    "claytronics": 135,
+    "energycells": 270,
+    "hullparts": 494
+  },
+  "storage_spl_m_liquid_01_macro": {
+    "claytronics": 90,
+    "energycells": 180,
+    "hullparts": 329
+  },
+  "storage_spl_s_liquid_01_macro": {
+    "claytronics": 61,
+    "energycells": 121,
+    "hullparts": 222
+  },
+  "storage_spl_l_solid_01_macro": {
+    "claytronics": 135,
+    "energycells": 270,
+    "hullparts": 494
+  },
+  "storage_spl_m_solid_01_macro": {
+    "claytronics": 90,
+    "energycells": 180,
+    "hullparts": 329
+  },
+  "storage_spl_s_solid_01_macro": {
+    "claytronics": 61,
+    "energycells": 121,
+    "hullparts": 222
+  },
+  "buildmodule_ter_ships_m_dockarea_01_macro": {
+    "computronicsubstrate": 895,
+    "energycells": 6620,
+    "siliconcarbide": 1843
+  },
+  "buildmodule_ter_ships_l_macro": {
+    "computronicsubstrate": 505,
+    "energycells": 3731,
+    "siliconcarbide": 1039
+  },
+  "buildmodule_ter_ships_xl_macro": {
+    "computronicsubstrate": 658,
+    "energycells": 4866,
+    "siliconcarbide": 1354
+  },
+  "struct_ter_base_01_macro": {
+    "computronicsubstrate": 3,
+    "energycells": 19,
+    "siliconcarbide": 5
+  },
+  "struct_ter_base_02_macro": {
+    "computronicsubstrate": 4,
+    "energycells": 27,
+    "siliconcarbide": 8
+  },
+  "struct_ter_base_03_macro": {
+    "computronicsubstrate": 5,
+    "energycells": 38,
+    "siliconcarbide": 11
+  },
+  "struct_ter_cross_01_macro": {
+    "computronicsubstrate": 5,
+    "energycells": 38,
+    "siliconcarbide": 11
+  },
+  "struct_ter_vertical_01_macro": {
+    "computronicsubstrate": 3,
+    "energycells": 19,
+    "siliconcarbide": 5
+  },
+  "struct_ter_vertical_02_macro": {
+    "computronicsubstrate": 4,
+    "energycells": 27,
+    "siliconcarbide": 8
+  },
+  "defence_ter_claim_01_macro": {
+    "computronicsubstrate": 80,
+    "energycells": 593,
+    "siliconcarbide": 165
+  },
+  "defence_ter_disc_01_macro": {
+    "computronicsubstrate": 57,
+    "energycells": 419,
+    "siliconcarbide": 117
+  },
+  "defence_ter_tube_01_macro": {
+    "computronicsubstrate": 40,
+    "energycells": 296,
+    "siliconcarbide": 83
+  },
+  "dockarea_ter_m_station_01_hightech_macro": {
+    "computronicsubstrate": 11,
+    "energycells": 81,
+    "siliconcarbide": 23
+  },
+  "buildmodule_ter_equip_m_dockarea_01_macro": {
+    "computronicsubstrate": 447,
+    "energycells": 3312,
+    "siliconcarbide": 921
+  },
+  "buildmodule_ter_equip_l_macro": {
+    "computronicsubstrate": 252,
+    "energycells": 1866,
+    "siliconcarbide": 519
+  },
+  "buildmodule_ter_equip_xl_macro": {
+    "computronicsubstrate": 329,
+    "energycells": 2434,
+    "siliconcarbide": 677
+  },
+  "hab_ter_l_01_macro": {
+    "computronicsubstrate": 80,
+    "energycells": 593,
+    "siliconcarbide": 165
+  },
+  "hab_ter_m_01_macro": {
+    "computronicsubstrate": 57,
+    "energycells": 419,
+    "siliconcarbide": 117
+  },
+  "hab_ter_s_01_macro": {
+    "computronicsubstrate": 40,
+    "energycells": 296,
+    "siliconcarbide": 83
+  },
+  "pier_ter_harbor_01_macro": {
+    "computronicsubstrate": 146,
+    "energycells": 1083,
+    "siliconcarbide": 301
+  },
+  "pier_ter_harbor_02_macro": {
+    "computronicsubstrate": 85,
+    "energycells": 625,
+    "siliconcarbide": 174
+  },
+  "pier_ter_harbor_03_macro": {
+    "computronicsubstrate": 169,
+    "energycells": 1250,
+    "siliconcarbide": 348
+  },
+  "pier_ter_harbor_04_macro": {
+    "computronicsubstrate": 85,
+    "energycells": 625,
+    "siliconcarbide": 174
+  },
+  "pier_ter_tradestation_01_macro": {
+    "computronicsubstrate": 239,
+    "energycells": 1768,
+    "siliconcarbide": 492
+  },
+  "prod_ter_computronicsubstrate_macro": {
+    "computronicsubstrate": 238,
+    "energycells": 688,
+    "siliconcarbide": 155
+  },
+  "prod_ter_energycells_macro": {
+    "computronicsubstrate": 24,
+    "energycells": 100,
+    "siliconcarbide": 20
+  },
+  "prod_ter_medicalsupplies_macro": {
+    "computronicsubstrate": 17,
+    "energycells": 50,
+    "siliconcarbide": 11
+  },
+  "prod_ter_metallicmicrolattice_macro": {
+    "computronicsubstrate": 6,
+    "energycells": 18,
+    "siliconcarbide": 4
+  },
+  "prod_ter_proteinpaste_macro": {
+    "computronicsubstrate": 73,
+    "energycells": 211,
+    "siliconcarbide": 47
+  },
+  "prod_ter_scrap_recycler_macro": {
+    "computronicsubstrate": 99,
+    "energycells": 131,
+    "siliconcarbide": 21
+  },
+  "prod_ter_siliconcarbide_macro": {
+    "computronicsubstrate": 40,
+    "energycells": 117,
+    "siliconcarbide": 26
+  },
+  "prod_ter_stimulants_macro": {
+    "computronicsubstrate": 140,
+    "energycells": 407,
+    "siliconcarbide": 92
+  },
+  "prod_ter_mre_macro": {
+    "computronicsubstrate": 30,
+    "energycells": 89,
+    "siliconcarbide": 20
+  },
+  "storage_ter_l_container_01_macro": {
+    "computronicsubstrate": 36,
+    "energycells": 265,
+    "siliconcarbide": 74
+  },
+  "storage_ter_m_container_01_macro": {
+    "computronicsubstrate": 24,
+    "energycells": 178,
+    "siliconcarbide": 50
+  },
+  "storage_ter_s_container_01_macro": {
+    "computronicsubstrate": 14,
+    "energycells": 103,
+    "siliconcarbide": 29
+  },
+  "storage_ter_l_liquid_01_macro": {
+    "computronicsubstrate": 36,
+    "energycells": 265,
+    "siliconcarbide": 74
+  },
+  "storage_ter_m_liquid_01_macro": {
+    "computronicsubstrate": 24,
+    "energycells": 178,
+    "siliconcarbide": 50
+  },
+  "storage_ter_s_liquid_01_macro": {
+    "computronicsubstrate": 14,
+    "energycells": 103,
+    "siliconcarbide": 29
+  },
+  "storage_ter_l_solid_01_macro": {
+    "computronicsubstrate": 36,
+    "energycells": 265,
+    "siliconcarbide": 74
+  },
+  "storage_ter_m_solid_01_macro": {
+    "computronicsubstrate": 24,
+    "energycells": 178,
+    "siliconcarbide": 50
+  },
+  "storage_ter_s_solid_01_macro": {
+    "computronicsubstrate": 14,
+    "energycells": 103,
+    "siliconcarbide": 29
+  },
+  "hab_pir_l_01_macro": {
+    "claytronics": 420,
+    "energycells": 383,
+    "hullparts": 1729
+  },
+  "hab_pir_m_01_macro": {
+    "claytronics": 297,
+    "energycells": 271,
+    "hullparts": 1222
+  },
+  "hab_pir_s_01_macro": {
+    "claytronics": 206,
+    "energycells": 188,
+    "hullparts": 847
+  },
+  "storage_pir_l_condensate_01_macro": {
+    "claytronics": 291,
+    "energycells": 265,
+    "hullparts": 1198
+  },
+  "buildmodule_bor_ships_m_dockarea_01_macro": {
+    "claytronics": 818,
+    "energycells": 8696,
+    "hullparts": 2663,
+    "water": 7875
+  },
+  "buildmodule_bor_ships_l_macro": {
+    "claytronics": 1714,
+    "energycells": 18213,
+    "hullparts": 5577,
+    "water": 16495
+  },
+  "buildmodule_bor_ships_xl_macro": {
+    "claytronics": 1744,
+    "energycells": 18526,
+    "hullparts": 5673,
+    "water": 16778
+  },
+  "struct_bor_base_01_macro": {
+    "claytronics": 9,
+    "energycells": 275,
+    "hullparts": 63,
+    "water": 166
+  },
+  "struct_bor_base_02_macro": {
+    "claytronics": 11,
+    "energycells": 336,
+    "hullparts": 77,
+    "water": 203
+  },
+  "struct_bor_base_03_macro": {
+    "claytronics": 11,
+    "energycells": 360,
+    "hullparts": 83,
+    "water": 217
+  },
+  "struct_bor_base_04_macro": {
+    "claytronics": 12,
+    "energycells": 380,
+    "hullparts": 87,
+    "water": 230
+  },
+  "struct_bor_base_05_macro": {
+    "claytronics": 13,
+    "energycells": 417,
+    "hullparts": 96,
+    "water": 252
+  },
+  "struct_bor_cross_01_macro": {
+    "claytronics": 7,
+    "energycells": 238,
+    "hullparts": 55,
+    "water": 144
+  },
+  "struct_bor_cross_02_macro": {
+    "claytronics": 9,
+    "energycells": 296,
+    "hullparts": 68,
+    "water": 179
+  },
+  "struct_bor_vertical_01_macro": {
+    "claytronics": 6,
+    "energycells": 197,
+    "hullparts": 45,
+    "water": 119
+  },
+  "struct_bor_vertical_02_macro": {
+    "claytronics": 8,
+    "energycells": 258,
+    "hullparts": 59,
+    "water": 156
+  },
+  "defence_bor_claim_01_macro": {
+    "claytronics": 85,
+    "energycells": 2711,
+    "hullparts": 623,
+    "water": 1637
+  },
+  "defence_bor_disc_01_macro": {
+    "claytronics": 61,
+    "energycells": 1940,
+    "hullparts": 446,
+    "water": 1172
+  },
+  "defence_bor_tube_01_macro": {
+    "claytronics": 53,
+    "energycells": 1684,
+    "hullparts": 387,
+    "water": 1017
+  },
+  "dockarea_bor_m_station_01_standard_macro": {
+    "claytronics": 52,
+    "energycells": 1647,
+    "hullparts": 378,
+    "water": 995
+  },
+  "buildmodule_bor_equip_m_dockarea_01_macro": {
+    "claytronics": 595,
+    "energycells": 6322,
+    "hullparts": 1936,
+    "water": 5725
+  },
+  "buildmodule_bor_equip_l_macro": {
+    "claytronics": 872,
+    "energycells": 9260,
+    "hullparts": 2836,
+    "water": 8387
+  },
+  "buildmodule_bor_equip_xl_macro": {
+    "claytronics": 1125,
+    "energycells": 11958,
+    "hullparts": 3662,
+    "water": 10830
+  },
+  "hab_bor_l_01_macro": {
+    "claytronics": 114,
+    "energycells": 3631,
+    "hullparts": 834,
+    "water": 2192
+  },
+  "hab_bor_m_01_macro": {
+    "claytronics": 81,
+    "energycells": 2567,
+    "hullparts": 590,
+    "water": 1550
+  },
+  "hab_bor_s_01_macro": {
+    "claytronics": 56,
+    "energycells": 1785,
+    "hullparts": 410,
+    "water": 1078
+  },
+  "pier_bor_harbor_01_macro": {
+    "claytronics": 336,
+    "energycells": 10723,
+    "hullparts": 2463,
+    "water": 6474
+  },
+  "pier_bor_harbor_02_macro": {
+    "claytronics": 194,
+    "energycells": 6192,
+    "hullparts": 1422,
+    "water": 3738
+  },
+  "pier_bor_harbor_03_macro": {
+    "claytronics": 388,
+    "energycells": 12371,
+    "hullparts": 2841,
+    "water": 7470
+  },
+  "pier_bor_harbor_04_macro": {
+    "claytronics": 273,
+    "energycells": 8715,
+    "hullparts": 2002,
+    "water": 5262
+  },
+  "pier_bor_tradestation_01_macro": {
+    "claytronics": 417,
+    "energycells": 13303,
+    "hullparts": 3055,
+    "water": 8032
+  },
+  "prod_bor_bofu_macro": {
+    "claytronics": 163,
+    "energycells": 5190,
+    "hullparts": 1192,
+    "water": 3133
+  },
+  "prod_bor_bogas_macro": {
+    "claytronics": 154,
+    "energycells": 4913,
+    "hullparts": 1128,
+    "water": 2966
+  },
+  "prod_bor_medicalsupplies_macro": {
+    "claytronics": 140,
+    "energycells": 4453,
+    "hullparts": 1023,
+    "water": 2689
+  },
+  "prod_bor_plankton_macro": {
+    "claytronics": 96,
+    "energycells": 3048,
+    "hullparts": 700,
+    "water": 1840
+  },
+  "storage_bor_l_container_01_macro": {
+    "claytronics": 71,
+    "energycells": 2277,
+    "hullparts": 523,
+    "water": 1375
+  },
+  "storage_bor_m_container_01_macro": {
+    "claytronics": 51,
+    "energycells": 1621,
+    "hullparts": 372,
+    "water": 979
+  },
+  "storage_bor_s_container_01_macro": {
+    "claytronics": 32,
+    "energycells": 1027,
+    "hullparts": 236,
+    "water": 620
+  },
+  "storage_bor_l_liquid_01_macro": {
+    "claytronics": 71,
+    "energycells": 2277,
+    "hullparts": 523,
+    "water": 1375
+  },
+  "storage_bor_m_liquid_01_macro": {
+    "claytronics": 51,
+    "energycells": 1621,
+    "hullparts": 372,
+    "water": 979
+  },
+  "storage_bor_s_liquid_01_macro": {
+    "claytronics": 32,
+    "energycells": 1027,
+    "hullparts": 236,
+    "water": 620
+  },
+  "storage_bor_l_solid_01_macro": {
+    "claytronics": 71,
+    "energycells": 2277,
+    "hullparts": 523,
+    "water": 1375
+  },
+  "storage_bor_m_solid_01_macro": {
+    "claytronics": 51,
+    "energycells": 1621,
+    "hullparts": 372,
+    "water": 979
+  },
+  "storage_bor_s_solid_01_macro": {
+    "claytronics": 32,
+    "energycells": 1027,
+    "hullparts": 236,
+    "water": 620
+  },
+  "radar_arg_dish_01_macro": {
+    "claytronics": 161,
+    "energycells": 147,
+    "hullparts": 662
+  },
+  "dockarea_xen_m_station_01_macro": {
+    "energycells": 180,
+    "ore": 450,
+    "silicon": 260
+  },
+  "struct_arg_arc_01_macro": {
+    "claytronics": 15,
+    "energycells": 30,
+    "hullparts": 55
+  },
+  "xenon_small_station_01_base_macro": {
+    "energycells": 100,
+    "ore": 250,
+    "silicon": 150
+  },
+  "struct_arg_cross_02_macro": {
+    "claytronics": 14,
+    "energycells": 28,
+    "hullparts": 52
+  },
+  "struct_arg_cross_05_macro": {
+    "claytronics": 18,
+    "energycells": 36,
+    "hullparts": 64
+  },
+  "buildmodule_xen_ships_xl_macro": {
+    "energycells": 1200,
+    "ore": 3000,
+    "silicon": 1800
+  },
+  "struct_arg_cross_04_macro": {
+    "claytronics": 16,
+    "energycells": 32,
+    "hullparts": 58
+  },
+  "xenon_small_station_01_solarpanel_01_macro": {
+    "energycells": 200,
+    "ore": 500,
+    "silicon": 300
+  },
+  "xenon_small_station_01_storage_01_macro": {
+    "energycells": 300,
+    "ore": 750,
+    "silicon": 450
+  },
+  "welfare_gen_gamblinghall_01_macro": {
+    "claytronics": 140,
+    "energycells": 280,
+    "hullparts": 520
+  },
+  "welfare_bor_artacademy_01_macro": {
+    "claytronics": 150,
+    "energycells": 300,
+    "hullparts": 550
+  },
+  "struct_gen_observationdeck_03_macro": {
+    "claytronics": 25,
+    "energycells": 1433,
+    "hullparts": 192
+  },
+  "struct_gen_observationdeck_02_macro": {
+    "claytronics": 23,
+    "energycells": 1325,
+    "hullparts": 177
+  },
+  "struct_gen_observationdeck_01_macro": {
+    "claytronics": 12,
+    "energycells": 688,
+    "hullparts": 92
+  },
+  "pier_arg_harbor_04_macro": {
+    "claytronics": 715,
+    "energycells": 1430,
+    "hullparts": 2615
+  },
+  "defence_par_claim_story_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_par_admin_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_arg_admin_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_tel_admin_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_split_admin_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_bor_admin_01_macro": {
+    "claytronics": 1500,
+    "hullparts": 5000,
+    "energycells": 25000
+  },
+  "struct_ter_admin_01_macro": {
+    "computronicsubstrate": 500,
+    "siliconcarbide": 1200,
+    "metallicmicrolattice": 2500,
+    "energycells": 20000
+  },
+  "struct_xen_admin_01_macro": {
+    "energycells": 25000,
+    "ore": 60000,
+    "silicon": 35000
+  },
+  "proc_ter_scrapworks_macro": {
+    "computronicsubstrate": 76,
+    "siliconcarbide": 266,
+    "metallicmicrolattice": 533,
+    "energycells": 229
+  },
+  "proc_bor_scrapworks_macro": {
+    "claytronics": 178,
+    "energycells": 162,
+    "hullparts": 733,
+    "water": 416
+  },
+  "prod_ter_advancedcomposites_macro": {
+    "computronicsubstrate": 264,
+    "siliconcarbide": 840,
+    "metallicmicrolattice": 1681,
+    "energycells": 1136
+  },
+  "prod_bor_advancedcomposites_macro": {
+    "claytronics": 648,
+    "energycells": 1296,
+    "hullparts": 2373,
+    "water": 1236
+  },
+  "prod_ter_advancedelectronics_macro": {
+    "computronicsubstrate": 197,
+    "siliconcarbide": 628,
+    "metallicmicrolattice": 1256,
+    "energycells": 872
+  },
+  "prod_bor_advancedelectronics_macro": {
+    "claytronics": 482,
+    "energycells": 965,
+    "hullparts": 1767,
+    "water": 933
+  },
+  "prod_ter_antimattercells_macro": {
+    "computronicsubstrate": 32,
+    "siliconcarbide": 98,
+    "metallicmicrolattice": 197,
+    "energycells": 210
+  },
+  "prod_bor_antimattercells_macro": {
+    "claytronics": 69,
+    "energycells": 138,
+    "hullparts": 253,
+    "water": 176
+  },
+  "prod_ter_antimatterconverters_macro": {
+    "computronicsubstrate": 717,
+    "siliconcarbide": 2290,
+    "metallicmicrolattice": 4581,
+    "energycells": 2948
+  },
+  "prod_bor_antimatterconverters_macro": {
+    "claytronics": 1780,
+    "energycells": 3560,
+    "hullparts": 6516,
+    "water": 3308
+  },
+  "prod_ter_claytronics_macro": {
+    "computronicsubstrate": 1133,
+    "siliconcarbide": 3624,
+    "metallicmicrolattice": 7248,
+    "energycells": 4613
+  },
+  "prod_bor_claytronics_macro": {
+    "claytronics": 2822,
+    "energycells": 5642,
+    "hullparts": 10327,
+    "water": 5213
+  },
+  "prod_ter_dronecomponents_macro": {
+    "computronicsubstrate": 495,
+    "siliconcarbide": 1579,
+    "metallicmicrolattice": 3158,
+    "energycells": 2059
+  },
+  "prod_bor_dronecomponents_macro": {
+    "claytronics": 1225,
+    "energycells": 2449,
+    "hullparts": 4483,
+    "water": 2291
+  },
+  "prod_bor_energycells_macro": {
+    "claytronics": 260,
+    "energycells": 520,
+    "hullparts": 951,
+    "water": 525
+  },
+  "prod_ter_engineparts_macro": {
+    "computronicsubstrate": 160,
+    "siliconcarbide": 509,
+    "metallicmicrolattice": 1018,
+    "energycells": 723
+  },
+  "prod_bor_engineparts_macro": {
+    "claytronics": 389,
+    "energycells": 779,
+    "hullparts": 1426,
+    "water": 763
+  },
+  "prod_ter_fieldcoils_macro": {
+    "computronicsubstrate": 699,
+    "siliconcarbide": 2232,
+    "metallicmicrolattice": 4465,
+    "energycells": 2876
+  },
+  "prod_bor_fieldcoils_macro": {
+    "claytronics": 1735,
+    "energycells": 3470,
+    "hullparts": 6351,
+    "water": 3225
+  },
+  "prod_ter_graphene_macro": {
+    "computronicsubstrate": 16,
+    "siliconcarbide": 46,
+    "metallicmicrolattice": 92,
+    "energycells": 145
+  },
+  "prod_bor_graphene_macro": {
+    "claytronics": 28,
+    "energycells": 57,
+    "hullparts": 104,
+    "water": 102
+  },
+  "prod_ter_hullparts_macro": {
+    "computronicsubstrate": 250,
+    "siliconcarbide": 797,
+    "metallicmicrolattice": 1594,
+    "energycells": 1083
+  },
+  "prod_bor_hullparts_macro": {
+    "claytronics": 614,
+    "energycells": 1229,
+    "hullparts": 2249,
+    "water": 1174
+  },
+  "prod_ter_microchips_macro": {
+    "computronicsubstrate": 308,
+    "siliconcarbide": 980,
+    "metallicmicrolattice": 1961,
+    "energycells": 1312
+  },
+  "prod_bor_microchips_macro": {
+    "claytronics": 758,
+    "energycells": 1516,
+    "hullparts": 2774,
+    "water": 1437
+  },
+  "prod_ter_missilecomponents_macro": {
+    "computronicsubstrate": 19,
+    "siliconcarbide": 55,
+    "metallicmicrolattice": 111,
+    "energycells": 156
+  },
+  "prod_bor_missilecomponents_macro": {
+    "claytronics": 35,
+    "energycells": 71,
+    "hullparts": 131,
+    "water": 115
+  },
+  "prod_ter_plasmaconductors_macro": {
+    "computronicsubstrate": 194,
+    "siliconcarbide": 616,
+    "metallicmicrolattice": 1232,
+    "energycells": 856
+  },
+  "prod_bor_plasmaconductors_macro": {
+    "claytronics": 473,
+    "energycells": 946,
+    "hullparts": 1732,
+    "water": 916
+  },
+  "prod_ter_quantumtubes_macro": {
+    "computronicsubstrate": 157,
+    "siliconcarbide": 497,
+    "metallicmicrolattice": 995,
+    "energycells": 708
+  },
+  "prod_bor_quantumtubes_macro": {
+    "claytronics": 380,
+    "energycells": 761,
+    "hullparts": 1394,
+    "water": 747
+  },
+  "prod_ter_refinedmetals_macro": {
+    "computronicsubstrate": 19,
+    "siliconcarbide": 57,
+    "metallicmicrolattice": 114,
+    "energycells": 158
+  },
+  "prod_bor_refinedmetals_macro": {
+    "claytronics": 36,
+    "energycells": 73,
+    "hullparts": 135,
+    "water": 117
+  },
+  "prod_ter_scanningarrays_macro": {
+    "computronicsubstrate": 256,
+    "siliconcarbide": 816,
+    "metallicmicrolattice": 1633,
+    "energycells": 1107
+  },
+  "prod_bor_scanningarrays_macro": {
+    "claytronics": 629,
+    "energycells": 1259,
+    "hullparts": 2305,
+    "water": 1202
+  },
+  "prod_bor_scrap_recycler_macro": {
+    "claytronics": 300,
+    "energycells": 600,
+    "hullparts": 1100,
+    "water": 600
+  },
+  "prod_ter_shieldcomponents_macro": {
+    "computronicsubstrate": 177,
+    "siliconcarbide": 564,
+    "metallicmicrolattice": 1128,
+    "energycells": 792
+  },
+  "prod_bor_shieldcomponents_macro": {
+    "claytronics": 432,
+    "energycells": 865,
+    "hullparts": 1583,
+    "water": 841
+  },
+  "prod_ter_siliconwafers_macro": {
+    "computronicsubstrate": 34,
+    "siliconcarbide": 105,
+    "metallicmicrolattice": 211,
+    "energycells": 219
+  },
+  "prod_bor_siliconwafers_macro": {
+    "claytronics": 74,
+    "energycells": 149,
+    "hullparts": 273,
+    "water": 186
+  },
+  "prod_ter_smartchips_macro": {
+    "computronicsubstrate": 55,
+    "siliconcarbide": 172,
+    "metallicmicrolattice": 344,
+    "energycells": 302
+  },
+  "prod_bor_smartchips_macro": {
+    "claytronics": 126,
+    "energycells": 253,
+    "hullparts": 464,
+    "water": 282
+  },
+  "prod_ter_spices_macro": {
+    "computronicsubstrate": 60,
+    "siliconcarbide": 188,
+    "metallicmicrolattice": 377,
+    "energycells": 322
+  },
+  "prod_bor_spices_macro": {
+    "claytronics": 139,
+    "energycells": 278,
+    "hullparts": 510,
+    "water": 305
+  },
+  "prod_ter_superfluidcoolant_macro": {
+    "computronicsubstrate": 15,
+    "siliconcarbide": 42,
+    "metallicmicrolattice": 85,
+    "energycells": 140
+  },
+  "prod_bor_superfluidcoolant_macro": {
+    "claytronics": 25,
+    "energycells": 51,
+    "hullparts": 94,
+    "water": 97
+  },
+  "prod_ter_turretcomponents_macro": {
+    "computronicsubstrate": 195,
+    "siliconcarbide": 619,
+    "metallicmicrolattice": 1238,
+    "energycells": 860
+  },
+  "prod_bor_turretcomponents_macro": {
+    "claytronics": 475,
+    "energycells": 951,
+    "hullparts": 1741,
+    "water": 920
+  },
+  "prod_ter_water_macro": {
+    "computronicsubstrate": 19,
+    "siliconcarbide": 56,
+    "metallicmicrolattice": 112,
+    "energycells": 157
+  },
+  "prod_bor_water_macro": {
+    "claytronics": 36,
+    "energycells": 72,
+    "hullparts": 132,
+    "water": 116
+  },
+  "prod_ter_weaponcomponents_macro": {
+    "computronicsubstrate": 163,
+    "siliconcarbide": 518,
+    "metallicmicrolattice": 1036,
+    "energycells": 734
+  },
+  "prod_bor_weaponcomponents_macro": {
+    "claytronics": 396,
+    "energycells": 793,
+    "hullparts": 1452,
+    "water": 776
+  },
+  "welfare_ter_gamblinghall_01_macro": {
+    "computronicsubstrate": 61,
+    "siliconcarbide": 192,
+    "metallicmicrolattice": 384,
+    "energycells": 324
+  },
+  "welfare_bor_gamblinghall_01_macro": {
+    "claytronics": 140,
+    "energycells": 280,
+    "hullparts": 520,
+    "water": 310
+  },
+  "struct_ter_observationdeck_03_macro": {
+    "computronicsubstrate": 14,
+    "siliconcarbide": 84,
+    "metallicmicrolattice": 168,
+    "energycells": 1560
+  },
+  "struct_bor_observationdeck_03_macro": {
+    "claytronics": 32,
+    "hullparts": 240,
+    "energycells": 1800,
+    "water": 120
+  },
+  "struct_ter_observationdeck_02_macro": {
+    "computronicsubstrate": 10,
+    "siliconcarbide": 62,
+    "metallicmicrolattice": 124,
+    "energycells": 1150
+  },
+  "struct_bor_observationdeck_02_macro": {
+    "claytronics": 23,
+    "hullparts": 177,
+    "energycells": 1325,
+    "water": 88
+  },
+  "struct_ter_observationdeck_01_macro": {
+    "computronicsubstrate": 7,
+    "siliconcarbide": 42,
+    "metallicmicrolattice": 84,
+    "energycells": 780
+  },
+  "struct_bor_observationdeck_01_macro": {
+    "claytronics": 16,
+    "hullparts": 120,
+    "energycells": 900,
+    "water": 60
+  },
+  "struct_gen_observationdeck_04_macro": {
+    "claytronics": 25,
+    "energycells": 1433,
+    "hullparts": 192
+  },
+  "struct_ter_observationdeck_04_macro": {
+    "computronicsubstrate": 12,
+    "siliconcarbide": 74,
+    "metallicmicrolattice": 147,
+    "energycells": 1360
+  },
+  "struct_bor_observationdeck_04_macro": {
+    "claytronics": 28,
+    "hullparts": 210,
+    "energycells": 1575,
+    "water": 105
+  },
+  "struct_xen_observationdeck_01_macro": {
+    "energycells": 900,
+    "ore": 2100,
+    "silicon": 1200
+  },
+  "struct_xen_observationdeck_02_macro": {
+    "energycells": 1325,
+    "ore": 3100,
+    "silicon": 1800
+  },
+  "struct_xen_observationdeck_03_macro": {
+    "energycells": 1800,
+    "ore": 4200,
+    "silicon": 2400
+  },
+  "struct_xen_observationdeck_04_macro": {
+    "energycells": 1575,
+    "ore": 3700,
+    "silicon": 2100
+  }
+}

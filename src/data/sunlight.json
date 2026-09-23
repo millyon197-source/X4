@@ -1,0 +1,1066 @@
+[
+  {
+    "cluster": "Adventures Promise",
+    "sector": "Adventures Promise",
+    "faction": "ownerless",
+    "sunlight": 71,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Antigone Memorial",
+    "sector": "Antigone Memorial",
+    "faction": "Antigone Republic",
+    "sunlight": 126,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Argon Prime",
+    "sector": "Argon Prime",
+    "faction": "Argon Federation",
+    "sunlight": 100,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Asteroid Belt",
+    "faction": "Terran Protectorate",
+    "sunlight": 13,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Atiyas Misfortune",
+    "sector": "Atiyas Misfortune I",
+    "faction": "Xenon",
+    "sunlight": 101,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Atiyas Misfortune",
+    "sector": "Atiyas Misfortune III",
+    "faction": "Xenon",
+    "sunlight": 101,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Atreus Clouds",
+    "sector": "Atreus Clouds",
+    "faction": "Queendom of Boron",
+    "sunlight": 41,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Avarice",
+    "sector": "Avarice I",
+    "faction": "Riptide Rakers",
+    "sunlight": 1390,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Avarice",
+    "sector": "Avarice IV",
+    "faction": "Civilian",
+    "sunlight": 1390,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Avarice",
+    "sector": "Avarice V Dead End",
+    "faction": "Riptide Rakers",
+    "sunlight": 1390,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Barren Shores",
+    "sector": "Barren Shores",
+    "faction": "Queendom of Boron",
+    "sunlight": 83,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Black Hole Sun",
+    "sector": "Black Hole Sun IV",
+    "faction": "Argon Federation",
+    "sunlight": 117.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Black Hole Sun",
+    "sector": "Black Hole Sun V",
+    "faction": "Argon Federation",
+    "sunlight": 117.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Brennans Triumph",
+    "sector": "Brennans Triumph",
+    "faction": "Segaris Pioneers",
+    "sunlight": 122,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Bright Promise",
+    "sector": "Bright Promise",
+    "faction": "Teladi Company",
+    "sunlight": 204,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Cardinals Domain",
+    "sector": "Cardinals Domain",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 124,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Cardinals Redress",
+    "sector": "Cardinals Redress",
+    "faction": "Holy Order of the Pontifex",
+    "sunlight": 88,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "CEOs Doubt",
+    "sector": "CEOs Doubt",
+    "faction": "Teladi Company",
+    "sunlight": 82,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Circle of Deceit",
+    "sector": "Circle of Deceit",
+    "faction": "unknown",
+    "sunlight": 142,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Company Regard",
+    "sector": "Company Regard",
+    "faction": "Teladi Company",
+    "sunlight": 83,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Earth",
+    "faction": "Terran Protectorate",
+    "sunlight": 102.5,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Eighteen Billion",
+    "sector": "Eighteen Billion",
+    "faction": "Teladi Company",
+    "sunlight": 90,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Eleventh Hour",
+    "sector": "Eleventh Hour",
+    "faction": "Argon Federation",
+    "sunlight": 118,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Emperors Pride",
+    "sector": "Emperors Pride IV",
+    "faction": "Xenon",
+    "sunlight": 68,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Emperors Pride",
+    "sector": "Emperors Pride VI",
+    "faction": "Xenon",
+    "sunlight": 68,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Family Kritt",
+    "sector": "Family Kritt",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 239,
+    "environment": "Asteroids"
+  },
+  {
+    "cluster": "Family Nhuut",
+    "sector": "Family Nhuut",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 85,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Family Tkr",
+    "sector": "Family Tkr",
+    "faction": "Free Families",
+    "sunlight": 89,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Family Zhin",
+    "sector": "Family Zhin",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 71,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Faulty Logic",
+    "sector": "Faulty Logic I",
+    "faction": "Xenon",
+    "sunlight": 162,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Faulty Logic",
+    "sector": "Faulty Logic VII",
+    "faction": "Xenon",
+    "sunlight": 162,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Fires of Defeat",
+    "sector": "Fires of Defeat",
+    "faction": "Free Families",
+    "sunlight": 81,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Freedoms Reach",
+    "sector": "Freedoms Reach",
+    "faction": "Teladi Company",
+    "sunlight": 221,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Frontier Edge",
+    "sector": "Frontier Edge",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 172,
+    "environment": "Asteroids"
+  },
+  {
+    "cluster": "Gaian Prophecy",
+    "sector": "Gaian Prophecy",
+    "faction": "Segaris Pioneers",
+    "sunlight": 208,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Getsu Fune",
+    "sector": "Getsu Fune",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 93,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Grand Exchange",
+    "sector": "Grand Exchange I",
+    "faction": "Teladi Company",
+    "sunlight": 129,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Grand Exchange",
+    "sector": "Grand Exchange III",
+    "faction": "Teladi Company",
+    "sunlight": 129,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Grand Exchange",
+    "sector": "Grand Exchange IV",
+    "faction": "Teladi Company",
+    "sunlight": 129,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Great Reef",
+    "sector": "Great Reef",
+    "faction": "Queendom of Boron",
+    "sunlight": 128,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Guiding Star",
+    "sector": "Guiding Star V",
+    "faction": "Argon Federation",
+    "sunlight": 77,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Guiding Star",
+    "sector": "Guiding Star VII",
+    "faction": "Argon Federation",
+    "sunlight": 77,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hatikvahs Choice",
+    "sector": "Hatikvahs Choice I",
+    "faction": "Hatikvah Free League",
+    "sunlight": 101.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hatikvahs Choice",
+    "sector": "Hatikvahs Choice III",
+    "faction": "Argon Federation",
+    "sunlight": 101.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hatikvahs Faith",
+    "sector": "Hatikvahs Faith",
+    "faction": "Scale Plate Pact",
+    "sunlight": 88,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Heart of Acrimony",
+    "sector": "Heart of Acrimony I The Boneyard",
+    "faction": "Xenon",
+    "sunlight": 64,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Heart of Acrimony",
+    "sector": "Heart of Acrimony II",
+    "faction": "Free Families",
+    "sunlight": 245,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Heretics End",
+    "sector": "Heretics End",
+    "faction": "Hatikvah Free League",
+    "sunlight": 181,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hewas Twin",
+    "sector": "Hewas Twin I",
+    "faction": "Teladi Company",
+    "sunlight": 109,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hewas Twin",
+    "sector": "Hewas Twin II",
+    "faction": "Teladi Company",
+    "sunlight": 109,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Hewas Twin",
+    "sector": "Hewas Twin III",
+    "faction": "Teladi Company",
+    "sunlight": 88.5,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Hewas Twin",
+    "sector": "Hewas Twin IV The Cove",
+    "faction": "Scale Plate Pact",
+    "sunlight": 88.5,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Hewas Twin",
+    "sector": "Hewas Twin V",
+    "faction": "Teladi Company",
+    "sunlight": 82,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Holy Vision",
+    "sector": "Holy Vision",
+    "faction": "Holy Order of the Pontifex",
+    "sunlight": 208,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Ianamus Zura",
+    "sector": "Ianamus Zura IV",
+    "faction": "Teladi Company",
+    "sunlight": 124,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Ianamus Zura",
+    "sector": "Ianamus Zura VII",
+    "faction": "Teladi Company",
+    "sunlight": 124,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Jupiter",
+    "faction": "Terran Protectorate",
+    "sunlight": 10,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Kingdom End",
+    "sector": "Kingdom End I",
+    "faction": "Queendom of Boron",
+    "sunlight": 118,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Lasting Vengeance",
+    "sector": "Lasting Vengeance",
+    "faction": "Holy Order of the Pontifex",
+    "sunlight": 100,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Litany of Fury",
+    "sector": "Litany of Fury IX",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 37,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Litany of Fury",
+    "sector": "Litany of Fury XII",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 37,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Loomanckstrats Legacy",
+    "sector": "Loomanckstrats Legacy",
+    "faction": "Scale Plate Pact",
+    "sunlight": 2,
+    "environment": "Asteroids"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Mars",
+    "faction": "Terran Protectorate",
+    "sunlight": 44,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Matrix #101",
+    "sector": "Matrix #101",
+    "faction": "Xenon",
+    "sunlight": 408,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Matrix #451",
+    "sector": "Matrix #451",
+    "faction": "Xenon",
+    "sunlight": 201,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Matrix #598",
+    "sector": "Matrix #598",
+    "faction": "Xenon",
+    "sunlight": 77,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Matrix #79B",
+    "sector": "Matrix #79B",
+    "faction": "Xenon",
+    "sunlight": 239,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Matrix #9",
+    "sector": "Matrix #9",
+    "faction": "Xenon",
+    "sunlight": 100,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Memory of Profit",
+    "sector": "Memory of Profit IX",
+    "faction": "Teladi Company",
+    "sunlight": 115,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Memory of Profit",
+    "sector": "Memory of Profit X",
+    "faction": "Teladi Company",
+    "sunlight": 106,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Menelaus Oasis",
+    "sector": "Menelaus Oasis",
+    "faction": "Queendom of Boron",
+    "sunlight": 271,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Mercury",
+    "faction": "Terran Protectorate",
+    "sunlight": 714,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Mi Tons Refuge",
+    "sector": "Mi Tons Refuge",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 53,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Mists of Artemis",
+    "sector": "Mists of Artemis",
+    "faction": "Khaak",
+    "sunlight": 141,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Mitsunos Remembrance",
+    "sector": "Mitsunos Defiance",
+    "faction": "Quettanauts",
+    "sunlight": 111,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Mitsunos Remembrance",
+    "sector": "Mitsunos Revelation",
+    "faction": "Quettanauts",
+    "sunlight": 118,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Mitsunos Remembrance",
+    "sector": "Mitsunos Sacrifice",
+    "faction": "Quettanauts",
+    "sunlight": 106,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Moo-Kyes Revenge",
+    "sector": "Moo-Kyes Revenge",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 93,
+    "environment": "Asteroids"
+  },
+  {
+    "cluster": "Morning Star",
+    "sector": "Morning Star III",
+    "faction": "Argon Federation",
+    "sunlight": 76,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Morning Star",
+    "sector": "Morning Star IV",
+    "faction": "Argon Federation",
+    "sunlight": 65,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Neptune",
+    "faction": "Terran Protectorate",
+    "sunlight": 6,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Nopileos Fortune",
+    "sector": "Nopileos Fortune II",
+    "faction": "Teladi Company",
+    "sunlight": 80,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Nopileos Memorial",
+    "sector": "Nopileos Memorial",
+    "faction": "Scale Plate Pact",
+    "sunlight": 163,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Nopileos Fortune",
+    "sector": "Nopileos' Fortune VI / Duke's Awakening",
+    "faction": "Teladi Company",
+    "sunlight": 78,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Ocean of Fantasy",
+    "sector": "Ocean of Fantasy",
+    "faction": "Queendom of Boron",
+    "sunlight": 12,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Oort Cloud",
+    "faction": "Terran Protectorate",
+    "sunlight": 2,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Open Market",
+    "sector": "Open Market",
+    "faction": "Teladi Company",
+    "sunlight": 88,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Ore Belt",
+    "sector": "Ore Belt",
+    "faction": "Civilian",
+    "sunlight": 134,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Path to Profit",
+    "sector": "Path to Profit",
+    "faction": "Teladi Company",
+    "sunlight": 143,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Pious Mists",
+    "sector": "Pious Mists II",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 136,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Pious Mists",
+    "sector": "Pious Mists IV",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 89,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Pious Mists",
+    "sector": "Pious Mists XI",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 118,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Pluto",
+    "faction": "Terran Protectorate",
+    "sunlight": 5,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Pontifexs Claim",
+    "sector": "Pontifexs Claim",
+    "faction": "Holy Order of the Pontifex",
+    "sunlight": 194,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Presidents End",
+    "sector": "Presidents End",
+    "faction": "Argon Federation",
+    "sunlight": 71,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Profit Center Alpha",
+    "sector": "Profit Center Alpha",
+    "faction": "Teladi Company",
+    "sunlight": 79,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Kingdom End",
+    "sector": "Reflected Stars",
+    "faction": "Queendom of Boron",
+    "sunlight": 118,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Rhys Defiance",
+    "sector": "Rhys Defiance",
+    "faction": "Xenon",
+    "sunlight": 163,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Rolks Demise",
+    "sector": "Rolks Demise",
+    "faction": "Queendom of Boron",
+    "sunlight": 15,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sacred Relic",
+    "sector": "Sacred Relic",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 71,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sanctuary of Darkness",
+    "sector": "Sanctuary of Darkness",
+    "faction": "Queendom of Boron",
+    "sunlight": 174,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Sanctum Verge",
+    "sector": "Sanctum Verge",
+    "faction": "Civilian",
+    "sunlight": 89,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Saturn 1",
+    "faction": "Terran Protectorate",
+    "sunlight": 8,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Saturn 2",
+    "faction": "Terran Protectorate",
+    "sunlight": 8,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Savage Spur",
+    "sector": "Savage Spur I",
+    "faction": "Xenon",
+    "sunlight": 121,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Savage Spur",
+    "sector": "Savage Spur II",
+    "faction": "Xenon",
+    "sunlight": 121,
+    "environment": "Heavy Radiation"
+  },
+  {
+    "cluster": "Scale Plate Green",
+    "sector": "Scale Plate Green I",
+    "faction": "Xenon",
+    "sunlight": 120.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Scale Plate Green",
+    "sector": "Scale Plate Green VII",
+    "faction": "Xenon",
+    "sunlight": 120.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Scarlet Star",
+    "sector": "Scarlet Star",
+    "faction": "unknown",
+    "sunlight": 266,
+    "environment": "Emission Nebula"
+  },
+  {
+    "cluster": "Second Contact",
+    "sector": "Second Contact II Flashpoint",
+    "faction": "Antigone Republic",
+    "sunlight": 59,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Second Contact",
+    "sector": "Second Contact VII",
+    "faction": "Antigone Republic",
+    "sunlight": 55,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Second Contact",
+    "sector": "Second Contact XI",
+    "faction": "Antigone Republic",
+    "sunlight": 47,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Segaris",
+    "sector": "Segaris",
+    "faction": "Segaris Pioneers",
+    "sunlight": 187,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Silent Witness",
+    "sector": "Silent Witness I",
+    "faction": "Argon Federation",
+    "sunlight": 98,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Silent Witness",
+    "sector": "Silent Witness XI",
+    "faction": "Hatikvah Free League",
+    "sunlight": 118,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Silent Witness",
+    "sector": "Silent Witness XII",
+    "faction": "Scale Plate Pact",
+    "sunlight": 147,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Tempting Fumes",
+    "sector": "Tempting Fumes",
+    "faction": "ownerless",
+    "sunlight": 166,
+    "environment": "Emission Nebula"
+  },
+  {
+    "cluster": "Tharkas Cascade",
+    "sector": "Tharkas Cascade XV",
+    "faction": "Xenon",
+    "sunlight": 135.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Tharkas Cascade",
+    "sector": "Tharkas Cascade XVII",
+    "faction": "Xenon",
+    "sunlight": 135.5,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Tharkas Ravine",
+    "sector": "Tharkas Ravine IV Tharkas Fall",
+    "faction": "Xenon",
+    "sunlight": 131,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Tharkas Ravine",
+    "sector": "Tharkas Ravine VIII",
+    "faction": "Free Families",
+    "sunlight": 126,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Tharkas Ravine",
+    "sector": "Tharkas Ravine XVI",
+    "faction": "Free Families",
+    "sunlight": 117,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Tharkas Ravine",
+    "sector": "Tharkas Ravine XXIV",
+    "faction": "Free Families",
+    "sunlight": 109,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "The Moon",
+    "faction": "Terran Protectorate",
+    "sunlight": 102.5,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "The Reach",
+    "sector": "The Reach",
+    "faction": "Argon Federation",
+    "sunlight": 367,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "The Void",
+    "sector": "The Void",
+    "faction": "Antigone Republic",
+    "sunlight": 164,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Third Redemption",
+    "sector": "Third Redemption",
+    "faction": "ownerless",
+    "sunlight": 100,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Thuruks Demise",
+    "sector": "Thuruks Demise II First Impact",
+    "faction": "Free Families",
+    "sunlight": 65,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Thuruks Demise",
+    "sector": "Thuruks Demise III",
+    "faction": "Free Families",
+    "sunlight": 65,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Titan",
+    "faction": "Terran Protectorate",
+    "sunlight": 8,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Kingdom End",
+    "sector": "Towering Wave",
+    "faction": "Queendom of Boron",
+    "sunlight": 118,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Trinity Sanctum",
+    "sector": "Trinity Sanctum III",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 133,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Trinity Sanctum",
+    "sector": "Trinity Sanctum VII",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 106,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "True Sight",
+    "sector": "True Sight",
+    "faction": "Holy Order of the Pontifex",
+    "sunlight": 71,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Turquoise Sea",
+    "sector": "Turquoise Sea IX",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 134.5,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Turquoise Sea",
+    "sector": "Turquoise Sea X",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 134.5,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Two Grand",
+    "sector": "Two Grand",
+    "faction": "Teladi Company",
+    "sunlight": 133,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Unholy Retribution",
+    "sector": "Unholy Retribution",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 163,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Unknown System",
+    "sector": "Unknown System",
+    "faction": "ownerless",
+    "sunlight": 5,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Uranus",
+    "faction": "Terran Protectorate",
+    "sunlight": 7,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Sol",
+    "sector": "Venus",
+    "faction": "Terran Protectorate",
+    "sunlight": 189,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Void of Opportunity",
+    "sector": "Void of Opportunity",
+    "faction": "Civilian",
+    "sunlight": 83,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Watchful Gaze",
+    "sector": "Watchful Gaze",
+    "faction": "unknown",
+    "sunlight": 41,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Windfall",
+    "sector": "Windfall I Union Summit",
+    "faction": "Vigor Syndicate",
+    "sunlight": 20,
+    "environment": "Nebula"
+  },
+  {
+    "cluster": "Windfall",
+    "sector": "Windfall III The Hoard",
+    "faction": "Vigor Syndicate",
+    "sunlight": 16,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Windfall",
+    "sector": "Windfall IV Auroras Dream",
+    "faction": "Vigor Syndicate",
+    "sunlight": 11,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Wretched Skies",
+    "sector": "Wretched Skies IV Family Valka",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 130,
+    "environment": "Thin Nebula"
+  },
+  {
+    "cluster": "Wretched Skies",
+    "sector": "Wretched Skies V Family Phi",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 123,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Wretched Skies",
+    "sector": "Wretched Skies X",
+    "faction": "Godrealm of the Paranid",
+    "sunlight": 108,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Zyarths Dominion",
+    "sector": "Zyarths Dominion I",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 142,
+    "environment": "Clear Space"
+  },
+  {
+    "cluster": "Zyarths Dominion",
+    "sector": "Zyarths Dominion IV",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 210,
+    "environment": "Unknown"
+  },
+  {
+    "cluster": "Zyarths Dominion",
+    "sector": "Zyarths Dominion X",
+    "faction": "Zyarth Patriarchy",
+    "sunlight": 151,
+    "environment": "Unknown"
+  }
+]

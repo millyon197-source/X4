@@ -1,0 +1,15 @@
+{
+  "name": "x4-supply-matrix",
+  "version": "1.0.1",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dhcp-client": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.2.1"
+  }
+}
