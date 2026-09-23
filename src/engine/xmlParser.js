@@ -1,5 +1,5 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
-import { state, saveActiveBlueprintToStorage } from './state.js';
+import { state, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './state.js';
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;
@@ -145,6 +145,10 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       }
     });
 
+    if (isHostedMode()) {
+      clearBlueprintInternalStorage();
+    }
+
     state.originalBlueprint = {
       name: planName,
       rawMacros: { ...rawMacroCounts }
@@ -168,19 +172,32 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
 
     rebuildBlueprintFromMacros();
 
-    // Shift previous blueprints to the right by adding new blueprint at the front (index 0)
-    if (!state.loadedBlueprints) state.loadedBlueprints = [];
-    state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== planName);
-    state.loadedBlueprints.unshift({
-      name: planName,
-      totalModules: state.activeBlueprint.totalModules,
-      modules: { ...state.activeBlueprint.modules },
-      rawMacros: { ...state.activeBlueprint.rawMacros },
-      rootMacros: { ...state.activeBlueprint.rootMacros },
-      sector: null,
-      workforceBonus: 0,
-      ppStates: {}
-    });
+    if (isHostedMode()) {
+      state.loadedBlueprints = [{
+        name: planName,
+        totalModules: state.activeBlueprint.totalModules,
+        modules: { ...state.activeBlueprint.modules },
+        rawMacros: { ...state.activeBlueprint.rawMacros },
+        rootMacros: { ...state.activeBlueprint.rootMacros },
+        sector: null,
+        workforceBonus: 0,
+        ppStates: {}
+      }];
+    } else {
+      // Shift previous blueprints to the right by adding new blueprint at the front (index 0)
+      if (!state.loadedBlueprints) state.loadedBlueprints = [];
+      state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== planName);
+      state.loadedBlueprints.unshift({
+        name: planName,
+        totalModules: state.activeBlueprint.totalModules,
+        modules: { ...state.activeBlueprint.modules },
+        rawMacros: { ...state.activeBlueprint.rawMacros },
+        rootMacros: { ...state.activeBlueprint.rootMacros },
+        sector: null,
+        workforceBonus: 0,
+        ppStates: {}
+      });
+    }
 
     state.currentPreset = 'blueprint';
     state.selectedWareId = null;
@@ -266,6 +283,7 @@ export function reloadActiveBlueprint(onRender) {
 }
 
 export function switchLoadedBlueprint(name, onRender) {
+  if (isHostedMode()) return;
   if (!state.loadedBlueprints || state.loadedBlueprints.length === 0) return;
   const targetBp = state.loadedBlueprints.find(b => b.name === name);
   if (!targetBp) return;
@@ -317,6 +335,18 @@ export function switchLoadedBlueprint(name, onRender) {
 }
 
 export function removeLoadedBlueprint(name, onRender) {
+  if (isHostedMode()) {
+    clearBlueprintInternalStorage();
+    state.activeBlueprint = null;
+    state.originalBlueprint = null;
+    state.currentPreset = 'all';
+    state.selectedWareId = null;
+    state.calculatedDemand = {};
+    saveActiveBlueprintToStorage();
+    if (typeof onRender === 'function') onRender();
+    return;
+  }
+
   if (!state.loadedBlueprints) state.loadedBlueprints = [];
   const wasActive = state.activeBlueprint && state.activeBlueprint.name === name;
   state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== name);
@@ -361,6 +391,18 @@ export function removeLoadedBlueprint(name, onRender) {
 }
 
 export function removeActiveBlueprint(onRender) {
+  if (isHostedMode()) {
+    clearBlueprintInternalStorage();
+    state.activeBlueprint = null;
+    state.originalBlueprint = null;
+    state.currentPreset = 'all';
+    state.selectedWareId = null;
+    state.calculatedDemand = {};
+    saveActiveBlueprintToStorage();
+    if (typeof onRender === 'function') onRender();
+    return;
+  }
+
   if (state.activeBlueprint) {
     const activeName = state.activeBlueprint.name;
     removeLoadedBlueprint(activeName, onRender);

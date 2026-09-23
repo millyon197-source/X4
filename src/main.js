@@ -1,6 +1,6 @@
 import './style.css';
 import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
-import { state, saveActiveBlueprintToStorage } from './engine/state.js';
+import { state, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './engine/state.js';
 import { calculateFactoryRequirements, syncPopulatedMatrix, getPrimaryMacroForWare } from './engine/calculator.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
 import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId } from './ui/matrixView.js';
@@ -14,6 +14,17 @@ if (typeof window !== 'undefined') {
   window.calculateFactoryRequirements = calculateFactoryRequirements;
   window.renderMatrixTabHTML = renderMatrixTabHTML;
   window.updateInspector = updateInspector;
+  window.isHostedMode = isHostedMode;
+  window.clearBlueprintInternalStorage = clearBlueprintInternalStorage;
+  try {
+    if (typeof __IS_HOSTED__ !== 'undefined') {
+      window.__IS_HOSTED__ = Boolean(__IS_HOSTED__);
+    }
+  } catch (e) {}
+}
+
+if (isHostedMode()) {
+  console.log("This build/server was explicitly started with hosted mode enabled (__IS_HOSTED__ = true). Multiple blueprints internal storage is disabled.");
 }
 
 export function savePlannedPositions() {
@@ -227,7 +238,7 @@ function renderApp() {
                   <button id="btnRemoveActiveBP" class="btn-remove-bp-tag" title="Remove active blueprint">&times;</button>
                 </div>
 
-                ${(state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
+                ${(!isHostedMode() && state.loadedBlueprints) ? (state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
                   const encName = encodeURIComponent(b.name);
                   return `
                     <div class="bp-tag prev-bp-tag">
@@ -236,10 +247,10 @@ function renderApp() {
                       <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
                     </div>
                   `;
-                }).join('')}
+                }).join('') : ''}
               </div>
             ` : `
-              ${(state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
+              ${(!isHostedMode() && state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
                 <div class="bp-tags-list">
                   ${state.loadedBlueprints.map(b => {
                     const encName = encodeURIComponent(b.name);
@@ -799,6 +810,9 @@ function setupEvents(searchFocusState = {}) {
         return;
       }
 
+      if (isHostedMode()) {
+        clearBlueprintInternalStorage();
+      }
       state.previousBlueprint = null;
       state.previousPreset = null;
       state.currentPreset = presetKey;
@@ -807,7 +821,7 @@ function setupEvents(searchFocusState = {}) {
       state.calculatedDemand = {};
       if (PRESET_BLUEPRINTS[state.currentPreset]) {
         const p = PRESET_BLUEPRINTS[state.currentPreset];
-        const existingLb = (state.loadedBlueprints || []).find(b => b && b.name === p.name);
+        const existingLb = !isHostedMode() ? (state.loadedBlueprints || []).find(b => b && b.name === p.name) : null;
         const presetSector = existingLb ? (existingLb.sector || null) : null;
         const presetWf = existingLb && typeof existingLb.workforceBonus === 'number' ? existingLb.workforceBonus : 0;
         const presetPP = existingLb && existingLb.ppStates ? { ...existingLb.ppStates } : {};
@@ -835,9 +849,8 @@ function setupEvents(searchFocusState = {}) {
         state.subdueEcCalc = true;
         state.subdueLevel4 = true;
 
-        if (!state.loadedBlueprints) state.loadedBlueprints = [];
-        if (!existingLb) {
-          state.loadedBlueprints.unshift({
+        if (isHostedMode()) {
+          state.loadedBlueprints = [{
             name: p.name,
             totalModules: p.totalModules,
             modules: { ...p.modules },
@@ -846,7 +859,21 @@ function setupEvents(searchFocusState = {}) {
             sector: null,
             workforceBonus: 0,
             ppStates: {}
-          });
+          }];
+        } else {
+          if (!state.loadedBlueprints) state.loadedBlueprints = [];
+          if (!existingLb) {
+            state.loadedBlueprints.unshift({
+              name: p.name,
+              totalModules: p.totalModules,
+              modules: { ...p.modules },
+              rawMacros: { ...(p.rawMacros || {}) },
+              rootMacros: { ...(p.rawMacros || {}) },
+              sector: null,
+              workforceBonus: 0,
+              ppStates: {}
+            });
+          }
         }
       }
       saveActiveBlueprintToStorage();

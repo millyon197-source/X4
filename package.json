@@ -1,10 +1,11 @@
 {
   "name": "x4-vite-explorer",
-  "version": "1.0.0",
+  "version": "1.0.0b",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dhcp-client": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },

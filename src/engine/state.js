@@ -2,6 +2,43 @@ import { mapMacroToWare, PRESET_BLUEPRINTS, WARES_DB } from '../data/wares.js';
 
 // Application Reactive State Management
 
+export function isHostedMode() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.__IS_HOSTED__ !== 'undefined') {
+      return Boolean(window.__IS_HOSTED__);
+    }
+    return typeof __IS_HOSTED__ !== 'undefined' && Boolean(__IS_HOSTED__);
+  } catch (e) {
+    return false;
+  }
+}
+
+export function clearBlueprintInternalStorage() {
+  try {
+    localStorage.removeItem('x4_active_blueprint');
+    localStorage.removeItem('x4_original_blueprint');
+    localStorage.removeItem('x4_loaded_blueprints');
+    localStorage.removeItem('x4_selected_sector');
+    localStorage.removeItem('x4_workforce_bonus');
+    sessionStorage.removeItem('x4_previous_blueprint');
+    sessionStorage.removeItem('x4_previous_preset');
+    sessionStorage.removeItem('x4_last_focused_ware');
+  } catch (e) {
+    console.error('Error clearing blueprint storage', e);
+  }
+  state.loadedBlueprints = [];
+  state.activeBlueprint = null;
+  state.originalBlueprint = null;
+  state.previousBlueprint = null;
+  state.previousPreset = null;
+  state.selectedSector = null;
+  state.workforceBonus = 0;
+  state.selectedWareId = null;
+  state.lastFocusedWareId = null;
+  state.ppStates = {};
+  state.calculatedDemand = {};
+}
+
 let savedBlueprint = null;
 let savedOriginalBlueprint = null;
 let savedLoadedBlueprints = [];
@@ -26,6 +63,19 @@ try {
   }
 } catch (e) {
   console.error('Error loading initial state from localStorage', e);
+}
+
+if (isHostedMode()) {
+  // In hosted mode, internal storage of multiple blueprints is not allowed.
+  // At most one blueprint is stored at a time.
+  if (Array.isArray(savedLoadedBlueprints) && savedLoadedBlueprints.length > 1) {
+    savedLoadedBlueprints = savedBlueprint
+      ? [savedBlueprint]
+      : (savedLoadedBlueprints.length > 0 ? [savedLoadedBlueprints[0]] : []);
+    try {
+      localStorage.setItem('x4_loaded_blueprints', JSON.stringify(savedLoadedBlueprints));
+    } catch (e) {}
+  }
 }
 
 function rebuildModulesFromRawMacros(bp) {
@@ -176,7 +226,7 @@ if (Array.isArray(savedLoadedBlueprints)) {
 
 // Ensure savedBlueprint is at least in loadedBlueprints
 if (savedBlueprint && !savedLoadedBlueprints.some(b => b.name === savedBlueprint.name)) {
-  savedLoadedBlueprints.unshift({
+  const bpEntry = {
     name: savedBlueprint.name,
     totalModules: savedBlueprint.totalModules || 0,
     modules: { ...(savedBlueprint.modules || {}) },
@@ -184,7 +234,14 @@ if (savedBlueprint && !savedLoadedBlueprints.some(b => b.name === savedBlueprint
     sector: savedBlueprint.sector || null,
     workforceBonus: typeof savedBlueprint.workforceBonus === 'number' ? savedBlueprint.workforceBonus : 0,
     ppStates: { ...(savedBlueprint.ppStates || {}) }
-  });
+  };
+  if (isHostedMode()) {
+    savedLoadedBlueprints = [bpEntry];
+  } else {
+    savedLoadedBlueprints.unshift(bpEntry);
+  }
+} else if (isHostedMode() && savedLoadedBlueprints.length > 1) {
+  savedLoadedBlueprints = savedBlueprint ? [savedBlueprint] : [savedLoadedBlueprints[0]];
 }
 
 let savedSector = null;
@@ -250,6 +307,11 @@ try {
   if (collapsedStr) savedBpLevelCollapsed = JSON.parse(collapsedStr);
 } catch (e) {}
 
+if (savedPreset === 'all' && savedBlueprint && !savedPreviousBlueprint) {
+  savedPreviousBlueprint = savedBlueprint;
+  savedBlueprint = null;
+}
+
 export const state = {
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
@@ -289,51 +351,103 @@ export const state = {
 };
 
 export function saveActiveBlueprintToStorage() {
+  const hosted = isHostedMode();
   try {
-    if (state.activeBlueprint) {
-      state.activeBlueprint.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
-      localStorage.setItem('x4_active_blueprint', JSON.stringify(state.activeBlueprint));
+    const bpToSave = state.activeBlueprint || state.previousBlueprint;
+    if (bpToSave) {
+      if (state.activeBlueprint) {
+        state.activeBlueprint.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
+      }
+      localStorage.setItem('x4_active_blueprint', JSON.stringify(bpToSave));
       localStorage.setItem('x4_current_preset', state.currentPreset);
-      if (state.originalBlueprint) {
-        localStorage.setItem('x4_original_blueprint', JSON.stringify(state.originalBlueprint));
+      const origToSave = state.originalBlueprint || (state.previousBlueprint ? { name: state.previousBlueprint.name, rawMacros: state.previousBlueprint.rawMacros } : null);
+      if (origToSave) {
+        localStorage.setItem('x4_original_blueprint', JSON.stringify(origToSave));
       }
     } else {
       localStorage.removeItem('x4_active_blueprint');
       localStorage.removeItem('x4_original_blueprint');
       localStorage.setItem('x4_current_preset', state.currentPreset);
     }
-    if (state.selectedSector) {
-      localStorage.setItem('x4_selected_sector', state.selectedSector);
-    } else {
+
+    const sectorToSave = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || (state.previousBlueprint && state.previousBlueprint.sector) || null;
+    if (sectorToSave) {
+      localStorage.setItem('x4_selected_sector', sectorToSave);
+    } else if (!state.previousBlueprint) {
       localStorage.removeItem('x4_selected_sector');
     }
-    if (state.loadedBlueprints && state.loadedBlueprints.length > 0) {
-      if (state.activeBlueprint) {
-        const currentLb = state.loadedBlueprints.find(b => b && b.name === state.activeBlueprint.name);
-        if (currentLb) {
-          currentLb.sector = state.activeBlueprint.sector || state.selectedSector || null;
-          currentLb.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
-          currentLb.ppStates = { ...(state.activeBlueprint.ppStates || {}) };
-          currentLb.rawMacros = { ...(state.activeBlueprint.rawMacros || {}) };
-          currentLb.rootMacros = { ...(state.activeBlueprint.rootMacros || {}) };
-          currentLb.modules = { ...(state.activeBlueprint.modules || {}) };
-          currentLb.totalModules = state.activeBlueprint.totalModules;
-        }
-      }
-      localStorage.setItem('x4_loaded_blueprints', JSON.stringify(state.loadedBlueprints));
-    } else {
-      localStorage.removeItem('x4_loaded_blueprints');
+
+    const wfToSave = (typeof state.workforceBonus === 'number' && state.workforceBonus > 0)
+      ? state.workforceBonus
+      : (state.previousBlueprint && typeof state.previousBlueprint.workforceBonus === 'number' ? state.previousBlueprint.workforceBonus : 0);
+    if (wfToSave > 0) {
+      localStorage.setItem('x4_workforce_bonus', String(wfToSave));
+    } else if (!state.previousBlueprint) {
+      localStorage.removeItem('x4_workforce_bonus');
     }
-    if (state.previousBlueprint) {
-      sessionStorage.setItem('x4_previous_blueprint', JSON.stringify(state.previousBlueprint));
-      if (state.previousPreset) {
-        sessionStorage.setItem('x4_previous_preset', state.previousPreset);
+
+    if (hosted) {
+      // In hosted mode, internal storage of multiple blueprints is not allowed.
+      // Just one blueprint is active at a time.
+      // When in STM, do not clear the internal storage of the current loaded blueprint!
+      const singleBp = state.activeBlueprint || state.previousBlueprint;
+      if (singleBp) {
+        state.loadedBlueprints = [{
+          name: singleBp.name,
+          totalModules: singleBp.totalModules,
+          modules: { ...(singleBp.modules || {}) },
+          rawMacros: { ...(singleBp.rawMacros || {}) },
+          rootMacros: { ...(singleBp.rootMacros || {}) },
+          sector: singleBp.sector || sectorToSave || null,
+          workforceBonus: (typeof singleBp.workforceBonus === 'number') ? singleBp.workforceBonus : wfToSave,
+          ppStates: { ...(singleBp.ppStates || {}) }
+        }];
+        localStorage.setItem('x4_loaded_blueprints', JSON.stringify(state.loadedBlueprints));
       } else {
+        state.loadedBlueprints = [];
+        localStorage.removeItem('x4_loaded_blueprints');
+      }
+
+      if (state.previousBlueprint) {
+        sessionStorage.setItem('x4_previous_blueprint', JSON.stringify(state.previousBlueprint));
+        if (state.previousPreset) {
+          sessionStorage.setItem('x4_previous_preset', state.previousPreset);
+        } else {
+          sessionStorage.removeItem('x4_previous_preset');
+        }
+      } else {
+        sessionStorage.removeItem('x4_previous_blueprint');
         sessionStorage.removeItem('x4_previous_preset');
       }
     } else {
-      sessionStorage.removeItem('x4_previous_blueprint');
-      sessionStorage.removeItem('x4_previous_preset');
+      if (state.loadedBlueprints && state.loadedBlueprints.length > 0) {
+        if (state.activeBlueprint) {
+          const currentLb = state.loadedBlueprints.find(b => b && b.name === state.activeBlueprint.name);
+          if (currentLb) {
+            currentLb.sector = state.activeBlueprint.sector || state.selectedSector || null;
+            currentLb.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
+            currentLb.ppStates = { ...(state.activeBlueprint.ppStates || {}) };
+            currentLb.rawMacros = { ...(state.activeBlueprint.rawMacros || {}) };
+            currentLb.rootMacros = { ...(state.activeBlueprint.rootMacros || {}) };
+            currentLb.modules = { ...(state.activeBlueprint.modules || {}) };
+            currentLb.totalModules = state.activeBlueprint.totalModules;
+          }
+        }
+        localStorage.setItem('x4_loaded_blueprints', JSON.stringify(state.loadedBlueprints));
+      } else {
+        localStorage.removeItem('x4_loaded_blueprints');
+      }
+      if (state.previousBlueprint) {
+        sessionStorage.setItem('x4_previous_blueprint', JSON.stringify(state.previousBlueprint));
+        if (state.previousPreset) {
+          sessionStorage.setItem('x4_previous_preset', state.previousPreset);
+        } else {
+          sessionStorage.removeItem('x4_previous_preset');
+        }
+      } else {
+        sessionStorage.removeItem('x4_previous_blueprint');
+        sessionStorage.removeItem('x4_previous_preset');
+      }
     }
     if (state.lastFocusedWareId) {
       sessionStorage.setItem('x4_last_focused_ware', state.lastFocusedWareId);
