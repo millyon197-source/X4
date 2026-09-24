@@ -2,7 +2,7 @@
 
 A high-performance interactive web application built with **Vite, HTML5, and Vanilla CSS** for analyzing material production chains, station blueprint XML files, per-module construction resource requirements, and workforce-adjusted logistics in **X4: Foundations**.
 
-I would like to acknowledge the prior efforts of previous authors that inspired this effort: Crissian, suurflieg, www.qsna.eu and www.x4-game.com along with all the sites and Reddit conversations providing insights. Any omissions of various points of contribution are entirely my own.
+I would like to acknowledge the prior efforts of previous authors that inspired this effort: Crissian of www.x4-game.com , suurflieg, www.qsna.eu along with all the sites and Reddit conversations providing insights. Any omissions of various points of contribution are entirely my own.
 ---
 
 ## 🚀 Key Features

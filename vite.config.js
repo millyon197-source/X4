@@ -13,7 +13,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     // Inject the variable into the client-side code
     define: {
-      __IS_HOSTED__: JSON.stringify(!Boolean(hasHostFlag))
+      __IS_HOSTED__: JSON.stringify(Boolean(hasHostFlag))
     },
   base: '/X4/',
   }
