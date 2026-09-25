@@ -598,7 +598,7 @@ export function computeLayerTotals() {
       totals.totalECProduced = ecSolarPerModule;
       state.calculatedDemand['EC'] = { modulesNeeded: 1, rateNeeded: ecSolarPerModule };
       state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (state.selectedWareId && isTerranWare(state.selectedWareId)) {
+    } else if (state.selectedWareId && isTerranWare(state.selectedWareId) && WARES_DB[state.selectedWareId] && WARES_DB[state.selectedWareId].level !== 4) {
       state.calculatedDemand['TerEC'] = { modulesNeeded: totals.terSolarModulesNeeded, rateNeeded: totals.totalECNeeded };
       state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
     } else if (state.selectedWareId && totals.totalECNeeded > 0) {
@@ -811,7 +811,11 @@ export function calculateFactoryRequirements() {
     const selectedWare = WARES_DB[state.selectedWareId];
 
     if (selectedWare.level === 4) {
-      // If "Subdue Level 4" is unchecked, do not recalculate any cards only highlight cards associated.
+      // Level 4 cards are application/build sinks and never impose upstream demands
+      Object.keys(WARES_DB).forEach(id => {
+        state.calculatedDemand[id] = { rateNeeded: 0, modulesNeeded: 0 };
+      });
+      accumulateRawMiningRates();
       computeLayerTotals();
       return;
     } else {

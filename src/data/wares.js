@@ -1,5 +1,5 @@
-import MODULE_BUILD_COSTS from '../crissian_build_costs.json' with { type: 'json' };
-import MODULE_NAMES from '../macro_names.json' with { type: 'json' };
+import MODULE_BUILD_COSTS from './crissian_build_costs.json' with { type: 'json' };
+import MODULE_NAMES from './macro_names.json' with { type: 'json' };
 import PROD_MAX_PRESET from './preset_prod_max.json' with { type: 'json' };
 
 export { MODULE_BUILD_COSTS, MODULE_NAMES };
@@ -457,11 +457,13 @@ export const PRESET_BLUEPRINTS = {
 
 // Filter out deleted presets from localStorage
 try {
-  const deletedPresets = JSON.parse(localStorage.getItem('x4_deleted_presets') || '[]');
-  if (Array.isArray(deletedPresets)) {
-    deletedPresets.forEach(key => {
-      delete PRESET_BLUEPRINTS[key];
-    });
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const deletedPresets = JSON.parse(localStorage.getItem('x4_deleted_presets') || '[]');
+    if (Array.isArray(deletedPresets)) {
+      deletedPresets.forEach(key => {
+        delete PRESET_BLUEPRINTS[key];
+      });
+    }
   }
 } catch (e) {
   console.error('Error reading localStorage deleted presets', e);

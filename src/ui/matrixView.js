@@ -362,7 +362,7 @@ export function renderMatrixTabHTML() {
                     } else if (ware.level === 0) {
                       rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
                     }
-                    if (ware.recipe && ware.recipe['EC']) {
+                    if (ware.level !== 4 && ware.recipe && ware.recipe['EC']) {
                       ecConsRate = activeCount * ware.recipe['EC'];
                     }
                   }

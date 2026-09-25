@@ -45,21 +45,23 @@ let savedLoadedBlueprints = [];
 let savedPreset = 'all';
 
 try {
-  const bpStr = localStorage.getItem('x4_active_blueprint');
-  if (bpStr) {
-    savedBlueprint = JSON.parse(bpStr);
-  }
-  const origStr = localStorage.getItem('x4_original_blueprint');
-  if (origStr) {
-    savedOriginalBlueprint = JSON.parse(origStr);
-  }
-  const loadedStr = localStorage.getItem('x4_loaded_blueprints');
-  if (loadedStr) {
-    savedLoadedBlueprints = JSON.parse(loadedStr);
-  }
-  const presetStr = localStorage.getItem('x4_current_preset');
-  if (presetStr) {
-    savedPreset = presetStr;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const bpStr = localStorage.getItem('x4_active_blueprint');
+    if (bpStr) {
+      savedBlueprint = JSON.parse(bpStr);
+    }
+    const origStr = localStorage.getItem('x4_original_blueprint');
+    if (origStr) {
+      savedOriginalBlueprint = JSON.parse(origStr);
+    }
+    const loadedStr = localStorage.getItem('x4_loaded_blueprints');
+    if (loadedStr) {
+      savedLoadedBlueprints = JSON.parse(loadedStr);
+    }
+    const presetStr = localStorage.getItem('x4_current_preset');
+    if (presetStr) {
+      savedPreset = presetStr;
+    }
   }
 } catch (e) {
   console.error('Error loading initial state from localStorage', e);
@@ -73,7 +75,9 @@ if (isHostedMode()) {
       ? [savedBlueprint]
       : (savedLoadedBlueprints.length > 0 ? [savedLoadedBlueprints[0]] : []);
     try {
-      localStorage.setItem('x4_loaded_blueprints', JSON.stringify(savedLoadedBlueprints));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('x4_loaded_blueprints', JSON.stringify(savedLoadedBlueprints));
+      }
     } catch (e) {}
   }
 }
@@ -297,14 +301,16 @@ let savedPreviousPreset = null;
 let savedLastFocusedWare = null;
 let savedBpLevelCollapsed = { 1: true, 2: true, 3: true };
 try {
-  const prevBpStr = sessionStorage.getItem('x4_previous_blueprint');
-  if (prevBpStr) savedPreviousBlueprint = JSON.parse(prevBpStr);
-  const prevPrStr = sessionStorage.getItem('x4_previous_preset');
-  if (prevPrStr) savedPreviousPreset = prevPrStr;
-  const lastFocStr = sessionStorage.getItem('x4_last_focused_ware');
-  if (lastFocStr) savedLastFocusedWare = lastFocStr;
-  const collapsedStr = sessionStorage.getItem('x4_bp_level_collapsed');
-  if (collapsedStr) savedBpLevelCollapsed = JSON.parse(collapsedStr);
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    const prevBpStr = sessionStorage.getItem('x4_previous_blueprint');
+    if (prevBpStr) savedPreviousBlueprint = JSON.parse(prevBpStr);
+    const prevPrStr = sessionStorage.getItem('x4_previous_preset');
+    if (prevPrStr) savedPreviousPreset = prevPrStr;
+    const lastFocStr = sessionStorage.getItem('x4_last_focused_ware');
+    if (lastFocStr) savedLastFocusedWare = lastFocStr;
+    const collapsedStr = sessionStorage.getItem('x4_bp_level_collapsed');
+    if (collapsedStr) savedBpLevelCollapsed = JSON.parse(collapsedStr);
+  }
 } catch (e) {}
 
 if (savedPreset === 'all' && savedBlueprint && !savedPreviousBlueprint) {
