@@ -49,6 +49,7 @@ let savedBlueprint = null;
 let savedOriginalBlueprint = null;
 let savedLoadedBlueprints = [];
 let savedPreset = 'all';
+let savedPriceType = 'avg';
 
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -67,6 +68,10 @@ try {
     const presetStr = localStorage.getItem('x4_current_preset');
     if (presetStr) {
       savedPreset = presetStr;
+    }
+    const priceStr = localStorage.getItem('x4_price_type');
+    if (priceStr && ['min', 'avg', 'max'].includes(priceStr)) {
+      savedPriceType = priceStr;
     }
   }
 } catch (e) {
@@ -259,6 +264,7 @@ export const DEFAULT_STATE = {
   sunlightPct: 100,      // Sector sunlight percentage (e.g. 100%, 150%)
   constructionMethod: 'commonwealth', // 'commonwealth' | 'terran' | 'boron'
   activeTab: 'matrix',   // 'matrix' | 'planned'
+  priceType: 'avg',      // 'min' | 'avg' | 'max'
 };
 
 export const state = {
@@ -266,6 +272,7 @@ export const state = {
   workforceCount: 0,
   sunlightPct: 100,
   constructionMethod: 'commonwealth',
+  priceType: savedPriceType || 'avg',
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
   originalBlueprint: savedOriginalBlueprint,
@@ -524,6 +531,20 @@ export class StationStore extends EventTarget {
     this._notify();
   }
 
+  setPriceType(priceType) {
+    const valid = ['min', 'avg', 'max'].includes(priceType) ? priceType : 'avg';
+    this.state.priceType = valid;
+    state.priceType = valid;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('x4_price_type', valid);
+      } catch (e) {}
+    }
+    this._saveState();
+    this._notify();
+    this.notify('price:updated', { priceType: valid });
+  }
+
   /* --- Subscription System --- */
 
   subscribe(callback) {
@@ -579,6 +600,7 @@ export class StationStore extends EventTarget {
           workforceCount: this.state.workforceCount || 0,
           sunlightPct: this.state.sunlightPct || 100,
           constructionMethod: this.state.constructionMethod || this.state.factionConstructionMethod || 'commonwealth',
+          priceType: this.state.priceType || 'avg',
           activeTab: this.state.activeTab || 'matrix'
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));

@@ -2,6 +2,8 @@ import { getFriendlyModuleName, mapMacroToWare, isFoodOrAgriMacro, isWareMacro, 
 import MODULES_WORKFORCE from '../data/modules_workforce.json' with { type: 'json' };
 import { calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { readAndParseBlueprintFile } from '../engine/xmlParser.js';
+import { calculateBuildCosts } from '../engine/buildCost.js';
+import { getWareUnitPrice, WARE_PRICES } from '../engine/prices.js';
 import { state, store } from '../state/store.js';
 import { escapeHtml } from '../html.js';
 
@@ -130,6 +132,13 @@ export function renderPlannedTabHTML() {
     totalWaterBuild += c.water || 0;
   });
 
+  const effectiveModules = (state.modules && Object.keys(state.modules).length > 0)
+    ? state.modules
+    : rawMacrosMap;
+  const currentPriceType = state.priceType || 'avg';
+  const method = state.constructionMethod || state.factionConstructionMethod || 'commonwealth';
+  const buildResult = calculateBuildCosts(effectiveModules, method, currentPriceType);
+
   const hasAnyVisible = !searchQuery || macroEntries.some(([macro]) => matchesModuleQuery(macro, searchQuery));
   const wf = calculateBlueprintWorkforce(state.activeBlueprint);
   const hasWorkforce = wf && (wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0);
@@ -192,6 +201,10 @@ export function renderPlannedTabHTML() {
                 <span>Water:</span>
                 <strong style="color:#38bdf8;">${totalWaterBuild.toLocaleString()}</strong>
               </div>` : ''}
+              <div class="construction-pill-item" style="grid-column: span 2; border-top: 1px solid rgba(56,189,248,0.25); padding-top: 0.25rem; margin-top: 0.15rem; display:flex; justify-content:space-between; align-items:center;">
+                <span>Est. Station Cost (${currentPriceType.toUpperCase()}):</span>
+                <strong style="color:#34d399; font-size:0.82rem;">${buildResult.totals.totalCredits.toLocaleString()} Cr</strong>
+              </div>
             </div>
           </div>
 
@@ -423,6 +436,125 @@ export function renderPlannedTabHTML() {
           </table>
         </div>
       </div>
+      ${renderConstructionCosts(state, state.priceType || 'avg')}
+    </div>
+  `;
+}
+
+/**
+ * Renders the Construction Resource Budget table with Min / Avg / Max price tier toggles.
+ * @param {Object} state - Application state
+ * @param {'min'|'avg'|'max'} [priceType='avg'] - Selected price evaluation tier
+ * @returns {string} HTML string for the construction resource budget card
+ */
+export function renderConstructionCosts(state = {}, priceType = 'avg') {
+  const currentPriceType = priceType || state.priceType || 'avg';
+  const method = state.constructionMethod || state.factionConstructionMethod || 'commonwealth';
+  const rawModules = (state.modules && Object.keys(state.modules).length > 0)
+    ? state.modules
+    : ((state.activeBlueprint && state.activeBlueprint.rawMacros) || {});
+
+  const buildResult = calculateBuildCosts(rawModules, method, currentPriceType);
+  const resourceEntries = Object.entries(buildResult.resources);
+
+  const formatWareName = (ware) => {
+    const wMap = {
+      hullparts: 'Hull Parts',
+      claytronics: 'Claytronics',
+      energycells: 'Energy Cells',
+      ec: 'Energy Cells',
+      computronicsubstrate: 'Computronic Substrate',
+      siliconcarbide: 'Silicon Carbide',
+      metallicmicrolattice: 'Metallic Microlattice',
+      water: 'Water',
+      protectyon: 'Protectyon',
+      advancedcomposites: 'Advanced Composites',
+      engineparts: 'Engine Parts',
+      ore: 'Ore',
+      silicon: 'Silicon'
+    };
+    return wMap[ware.toLowerCase()] || (ware.charAt(0).toUpperCase() + ware.slice(1));
+  };
+
+  if (resourceEntries.length === 0) {
+    return `
+      <div class="macro-table-card construction-budget-card" style="margin-top: 1.25rem;">
+        <div class="construction-budget-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; padding: 0.85rem 1rem 0.65rem 1rem; border-bottom: 1px solid var(--border-card);">
+          <h3 style="margin:0; font-size:1.05rem; color:#38bdf8; display:flex; align-items:center; gap:0.5rem;">
+            <span>💰 Construction Resource Budget</span>
+            <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">(${currentPriceType.toUpperCase()} Price Evaluation)</span>
+          </h3>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.35rem; background:rgba(15, 23, 42, 0.6); padding:0.2rem 0.35rem; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+            <span style="font-size:0.72rem; color:#94a3b8; font-weight:600; margin-right:0.2rem;">Price Tier:</span>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.2rem 0.55rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min Price</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.2rem 0.55rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg Price</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.2rem 0.55rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max Price</button>
+          </div>
+        </div>
+        <p style="color:#94a3b8; font-style:italic; padding: 1.5rem; text-align:center;">No construction resources required.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="macro-table-card construction-budget-card" style="margin-top: 1.25rem;">
+      <div class="construction-budget-card-header" style="display:flex; justify-content:space-between; align-items:center; padding: 0.85rem 1rem 0.65rem 1rem; border-bottom: 1px solid var(--border-card); flex-wrap:wrap; gap:0.6rem;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; color:#38bdf8; display:flex; align-items:center; gap:0.5rem;">
+            <span>💰 Construction Resource Budget</span>
+            <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">(${currentPriceType.toUpperCase()} Market Cr Valuation)</span>
+          </h3>
+          <p style="margin:0.2rem 0 0 0; font-size:0.75rem; color:#94a3b8;">
+            Aggregated station construction materials and total estimated credit costs across all planned modules.
+          </p>
+        </div>
+        <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.35rem; background:rgba(15, 23, 42, 0.6); padding:0.2rem 0.35rem; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:0.72rem; color:#94a3b8; font-weight:600; margin-right:0.2rem;">Price Tier:</span>
+          <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.22rem 0.6rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700; transition:all 0.15s ease;">Min Price</button>
+          <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.22rem 0.6rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700; transition:all 0.15s ease;">Avg Price</button>
+          <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.22rem 0.6rem; font-size:0.72rem; border-radius:4px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700; transition:all 0.15s ease;">Max Price</button>
+        </div>
+      </div>
+
+      <div class="macro-table-container">
+        <table class="macro-table">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Construction Ware</th>
+              <th style="text-align:right;">Required Quantity</th>
+              <th style="text-align:right;">Est. Unit Price (${currentPriceType.toUpperCase()})</th>
+              <th style="text-align:right;">Total Cost (Cr)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${resourceEntries.map(([ware, data]) => `
+              <tr>
+                <td style="text-align:left;">
+                  <div style="font-weight:700; color:#f8fafc; font-size:0.9rem;">${escapeHtml(formatWareName(ware))}</div>
+                  <div style="font-size:0.75rem; color:#64748b; font-family:monospace; margin-top:2px;">${escapeHtml(ware)}</div>
+                </td>
+                <td style="text-align:right;">
+                  <strong style="color:#38bdf8; font-size:0.9rem;">${data.quantity.toLocaleString()}</strong> <span style="font-size:0.75rem; color:#94a3b8;">units</span>
+                </td>
+                <td style="text-align:right; color:#cbd5e1; font-family:monospace; font-size:0.85rem;">
+                  ${data.unitPrice.toLocaleString()} Cr
+                </td>
+                <td style="text-align:right;">
+                  <strong style="color:#fbbf24; font-size:0.9rem; font-family:monospace;">${data.totalCredits.toLocaleString()} Cr</strong>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top: 1px solid rgba(56, 189, 248, 0.35); background: rgba(30, 41, 59, 0.5);">
+              <th style="text-align:left; color:#f8fafc; font-size:0.95rem;">Grand Total</th>
+              <th style="text-align:right; color:#38bdf8; font-size:0.95rem;">${buildResult.totals.totalWareUnits.toLocaleString()} units</th>
+              <th style="text-align:right; color:#94a3b8;">—</th>
+              <th style="text-align:right; color:#34d399; font-size:1.05rem; font-weight:800; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()} Cr</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -504,6 +636,29 @@ export function initPlannedView(rootElement) {
       }
     }
   });
+
+  // Attach price tier toggle listener to rootElement container
+  if (containerEl && typeof containerEl.addEventListener === 'function' && !containerEl._priceTierListenerAttached) {
+    containerEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-price-tier');
+      if (btn) {
+        const tier = btn.dataset.priceTier;
+        if (tier && ['min', 'avg', 'max'].includes(tier)) {
+          if (store && typeof store.setPriceType === 'function') {
+            store.setPriceType(tier);
+          } else {
+            state.priceType = tier;
+            if (typeof window !== 'undefined' && typeof window.renderApp === 'function') {
+              window.renderApp();
+            } else if (containerEl) {
+              containerEl.innerHTML = renderPlannedTabHTML();
+            }
+          }
+        }
+      }
+    });
+    containerEl._priceTierListenerAttached = true;
+  }
 
   // Initial render
   if (containerEl) {

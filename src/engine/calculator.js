@@ -6,6 +6,8 @@ import { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMe
 
 export { calculateBlueprintWorkforce, calculateRequiredWorkforce, calculateWorkforceEfficiency };
 export { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand, calculateMiningRequirements, RAW_MINERAL_WARES };
+export { WARE_PRICES, getWareUnitPrice } from './prices.js';
+export { calculateBuildCosts } from './buildCost.js';
 
 export function getPPDownstreamWares() {
   const suppressedSet = new Set();

@@ -1122,6 +1122,20 @@ function setupEvents(searchFocusState = {}) {
     });
   });
 
+  document.querySelectorAll('.btn-price-tier').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tier = btn.dataset.priceTier;
+      if (tier && ['min', 'avg', 'max'].includes(tier)) {
+        if (store && typeof store.setPriceType === 'function') {
+          store.setPriceType(tier);
+        } else {
+          state.priceType = tier;
+        }
+        renderApp();
+      }
+    });
+  });
+
   // Matrix View Events
   if (state.activeTab === 'matrix') {
     setupMatrixEvents();
