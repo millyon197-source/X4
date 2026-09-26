@@ -2,6 +2,8 @@ import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareH
 import { state, store, saveActiveBlueprintToStorage } from '../state/store.js';
 import { rebuildBlueprintFromMacros, reloadActiveBlueprint } from '../engine/xmlParser.js';
 import { calculateFactoryRequirements, calculateMatrix, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
+import { calculateBuildCosts } from '../engine/buildCost.js';
+import { getWareUnitPrice } from '../engine/prices.js';
 import { SECTORS_SUNLIGHT, getSectorInfo, getSectorSunlight, getSolarDynamicCycles, calculateSolarOutput } from '../data/sectors.js';
 import { escapeHtml } from '../html.js';
 
@@ -869,12 +871,205 @@ export function selectWare(id, onRender) {
   }
 }
 
+/**
+ * Renders the Construction Resource Budget card for the Blueprint Inspector sidebar.
+ * @param {Object} [currentState=state] - Application state
+ * @returns {string} HTML markup
+ */
+export function renderConstructionBudgetInspectorHTML(currentState = state) {
+  const isExpanded = Boolean(currentState.showConstructionBudget);
+  const currentPriceType = currentState.priceType || 'avg';
+  const method = currentState.constructionMethod || currentState.factionConstructionMethod || 'commonwealth';
+  const rawModules = (currentState.modules && Object.keys(currentState.modules).length > 0)
+    ? currentState.modules
+    : (currentState.activeBlueprint?.rawMacros && Object.keys(currentState.activeBlueprint.rawMacros).length > 0)
+      ? currentState.activeBlueprint.rawMacros
+      : ((currentState.activeBlueprint && (currentState.activeBlueprint.modules || currentState.activeBlueprint.rawMacros)) || {});
+
+  const buildResult = calculateBuildCosts(rawModules, method, currentPriceType);
+  const resourceEntries = Object.entries(buildResult.resources);
+
+  const formatWareName = (ware) => {
+    const wMap = {
+      hullparts: 'Hull Parts',
+      claytronics: 'Claytronics',
+      energycells: 'Energy Cells',
+      ec: 'Energy Cells',
+      computronicsubstrate: 'Computronic Substrate',
+      siliconcarbide: 'Silicon Carbide',
+      metallicmicrolattice: 'Metallic Microlattice',
+      water: 'Water',
+      protectyon: 'Protectyon',
+      advancedcomposites: 'Advanced Composites',
+      engineparts: 'Engine Parts',
+      ore: 'Ore',
+      silicon: 'Silicon'
+    };
+    return wMap[ware.toLowerCase()] || (ware.charAt(0).toUpperCase() + ware.slice(1));
+  };
+
+  if (resourceEntries.length === 0) {
+    return `
+      <div class="bp-level-panel construction-budget-panel" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+        <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget">
+          <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-level-arrow bp-cb-arrow">${isExpanded ? '▼' : '▶'}</span>
+            <span style="font-size:0.9rem;">💰</span>
+            <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Construction Resource Budget</strong>
+          </div>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.25rem;">
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
+          </div>
+        </div>
+        <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:${isExpanded ? 'block' : 'none'};">
+          <p style="color:#94a3b8; font-style:italic; margin:0; font-size:0.75rem;">No construction resources required.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="bp-level-panel construction-budget-panel" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+      <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget">
+        <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
+          <span class="bp-level-arrow bp-cb-arrow">${isExpanded ? '▼' : '▶'}</span>
+          <span style="font-size:0.9rem;">💰</span>
+          <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Construction Resource Budget</strong>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.4rem;">
+          <span class="bp-cb-collapsed-preview" style="font-size:0.72rem; color:#34d399; font-weight:700; font-family:monospace; background:rgba(52,211,153,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(52,211,153,0.25); display:${isExpanded ? 'none' : 'inline-block'};" title="Total station construction valuation">
+            ${buildResult.totals.totalCredits.toLocaleString()} Cr
+          </span>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.25rem;">
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
+          </div>
+        </div>
+      </div>
+      <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:${isExpanded ? 'block' : 'none'};">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="color:#94a3b8; font-size:0.72rem;">Total Station Valuation (${currentPriceType.toUpperCase()}):</span>
+          <strong style="color:#34d399; font-size:0.88rem; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()} Cr</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.45rem; font-size:0.72rem;">
+          <span style="color:#94a3b8;">Total Construction Units:</span>
+          <strong style="color:#38bdf8;">${buildResult.totals.totalWareUnits.toLocaleString()} units</strong>
+        </div>
+        <table class="bp-calc-table" style="width:100%; border-collapse:collapse; font-size:0.72rem;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color:#94a3b8;">
+              <th style="text-align:left; padding:2px 0;">Ware</th>
+              <th style="text-align:right; padding:2px 0;">Qty</th>
+              <th style="text-align:right; padding:2px 0;">Unit (Cr)</th>
+              <th style="text-align:right; padding:2px 0;">Total (Cr)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${resourceEntries.map(([ware, data]) => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <td style="text-align:left; padding:3px 0; color:#f8fafc; font-weight:600;">
+                  ${escapeHtml(formatWareName(ware))}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#38bdf8;">
+                  ${data.quantity.toLocaleString()}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#cbd5e1; font-family:monospace;">
+                  ${data.unitPrice.toLocaleString()}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#fbbf24; font-weight:700; font-family:monospace;">
+                  ${data.totalCredits.toLocaleString()}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top: 1px solid rgba(56,189,248,0.3); font-weight:700;">
+              <td style="text-align:left; padding:4px 0; color:#f8fafc;">Total</td>
+              <td style="text-align:right; padding:4px 0; color:#38bdf8;">${buildResult.totals.totalWareUnits.toLocaleString()}</td>
+              <td style="text-align:right; padding:4px 0; color:#94a3b8;">—</td>
+              <td style="text-align:right; padding:4px 0; color:#34d399; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Attaches in-place interactive listeners to the Construction Resource Budget panel,
+ * ensuring price tier switches and collapse/expand do NOT cause a refresh of the BI panel.
+ * @param {HTMLElement} panel - The .construction-budget-panel container
+ */
+export function bindCrbListeners(panel) {
+  if (!panel) return;
+
+  const header = panel.querySelector('.bp-cb-header');
+  if (header) {
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-price-tier')) return;
+      state.showConstructionBudget = !state.showConstructionBudget;
+      if (store && typeof store.setShowConstructionBudget === 'function') {
+        store.setShowConstructionBudget(state.showConstructionBudget);
+      }
+
+      const arrow = header.querySelector('.bp-cb-arrow');
+      const body = panel.querySelector('.bp-cb-body');
+      const preview = header.querySelector('.bp-cb-collapsed-preview');
+      const isExpanded = state.showConstructionBudget;
+
+      if (arrow) arrow.textContent = isExpanded ? '▼' : '▶';
+      if (body) body.style.display = isExpanded ? 'block' : 'none';
+      if (preview) preview.style.display = isExpanded ? 'none' : 'inline-block';
+      header.title = `Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget`;
+    });
+  }
+
+  panel.querySelectorAll('.btn-price-tier').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const tier = btn.dataset.priceTier;
+      if (tier && ['min', 'avg', 'max'].includes(tier)) {
+        state.priceType = tier;
+        if (store && typeof store.setPriceType === 'function') {
+          store.setPriceType(tier, true);
+        } else {
+          try {
+            localStorage.setItem('x4_price_type', tier);
+          } catch (err) {}
+        }
+        // In-place refresh of ONLY the CRB panel without refreshing the BI panel
+        const insBody = panel.closest('#insBody');
+        const curScroll = insBody ? insBody.scrollTop : null;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = renderConstructionBudgetInspectorHTML(state);
+        const newPanel = temp.firstElementChild;
+        if (panel.parentNode) {
+          panel.parentNode.replaceChild(newPanel, panel);
+          bindCrbListeners(newPanel);
+        }
+
+        if (insBody && curScroll !== null) {
+          insBody.scrollTop = curScroll;
+        }
+      }
+    });
+  });
+}
+
 export function updateInspector(id, onRender) {
   const insTitle = document.getElementById('insTitle');
   const insSub = document.getElementById('insSub');
   const insBody = document.getElementById('insBody');
 
   if (!insTitle || !insSub || !insBody) return;
+
+  const prevInsScrollTop = insBody.scrollTop;
 
   const effMultiplier = 1 + (state.workforceBonus / 100);
 
@@ -1206,79 +1401,102 @@ export function updateInspector(id, onRender) {
 
     const wf = calculateBlueprintWorkforce(state.activeBlueprint);
     const hasWorkforce = wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0;
+    const isWfCollapsed = Boolean(state.workforceSummaryCollapsed);
+    const isNcCollapsed = Boolean(state.nonContributingCollapsed);
+
+    const redShortages = [];
+    if (wf.surplusDeficit < 0) {
+      redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Workforce Bed Shortage: ${wf.surplusDeficit.toLocaleString()} beds">🛏️ ${wf.surplusDeficit.toLocaleString()} beds</span>`);
+    }
+    if (wf.lifeSupport && wf.lifeSupport.foodBalance < 0) {
+      redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Food Rations Shortage: ${Math.round(wf.lifeSupport.foodBalance).toLocaleString()} / hr">🍞 ${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}/hr</span>`);
+    }
+    if (wf.lifeSupport && wf.lifeSupport.medBalance < 0) {
+      redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Medical Supplies Shortage: ${Math.round(wf.lifeSupport.medBalance).toLocaleString()} / hr">💊 ${Math.round(wf.lifeSupport.medBalance).toLocaleString()}/hr</span>`);
+    }
 
     insBody.innerHTML = `
-      ${hasWorkforce ? `
-        <div class="workforce-box" style="border-color:#10b981; margin-bottom:0.6rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-            <h4 style="margin:0; color:#34d399; font-size:0.8rem;">👥 Station Workforce Summary</h4>
-            <span style="font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:4px; background:${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}; color:${wf.coveragePercent >= 100 ? '#34d399' : '#fbbf24'}; border:1px solid ${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'};">
-              ${wf.coveragePercent}% Coverage
-            </span>
-          </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.35rem 0.6rem; font-size:0.76rem;">
-            <div><span style="color:#94a3b8;">Optimal Needed:</span> <strong style="color:#38bdf8;">${wf.totalOptimalWorkforce.toLocaleString()}</strong></div>
-            <div><span style="color:#94a3b8;">Hab Capacity:</span> <strong style="color:#34d399;">${wf.totalHabitationCapacity.toLocaleString()}</strong></div>
-            <div><span style="color:#94a3b8;">Production:</span> <strong style="color:#cbd5e1;">${wf.productionWorkforce.toLocaleString()}</strong></div>
-            <div><span style="color:#94a3b8;">Shipyards:</span> <strong style="color:#cbd5e1;">${wf.shipyardWorkforce.toLocaleString()}</strong></div>
-          </div>
-          <div style="margin-top:0.4rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.3rem;">
-            <span style="color:#94a3b8;">Workforce Balance:</span>
-            <strong style="color:${wf.surplusDeficit >= 0 ? '#34d399' : '#ef4444'};">
-              ${wf.surplusDeficit >= 0 ? `+${wf.surplusDeficit.toLocaleString()} surplus beds (${wf.habitatCount} habitats)` : `${wf.surplusDeficit.toLocaleString()} bed shortage`}
-            </strong>
-          </div>
-          ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
-          <div style="margin-top:0.35rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem;">
-            <span style="color:#94a3b8;">Sustainable Workers:</span>
-            <strong style="color:${wf.lifeSupport.sustainableWorkers >= wf.totalOptimalWorkforce ? '#34d399' : '#fbbf24'};">
-              ${wf.lifeSupport.sustainableWorkers.toLocaleString()} (${wf.lifeSupport.sustainableCoveragePercent}% self-sufficient)
-            </strong>
-          </div>
-          ` : ''}
-          ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
-          <div style="margin-top:0.35rem; font-size:0.72rem; background:rgba(0,0,0,0.2); padding:0.3rem 0.45rem; border-radius:4px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.2rem;">
-            <div style="display:flex; justify-content:space-between;">
-              <span style="color:#94a3b8;">🍞 Food Rations:</span>
-              <span><strong>${Math.round(wf.lifeSupport.totalFoodRationsProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.foodRationsDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.foodBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.foodBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}</span>)</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-              <span style="color:#94a3b8;">💊 Medical Supplies:</span>
-              <span><strong>${Math.round(wf.lifeSupport.totalArgMedSuppliesProd || wf.lifeSupport.totalAllMedSuppliesProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.medicalSuppliesDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.medBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.medBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.medBalance).toLocaleString()}</span>)</span>
-            </div>
-          </div>
-          ` : ''}
-          ${(wf.consumersList.length > 0 || wf.providersList.length > 0) ? `
-            <details style="margin-top:0.45rem; font-size:0.72rem; cursor:pointer;">
-              <summary style="color:#38bdf8; user-select:none; font-weight:600; outline:none;">🔍 View Workforce Breakdown (${wf.consumersList.length} consumers, ${wf.providersList.length} habitats)</summary>
-              <div style="margin-top:0.35rem; max-height:160px; overflow-y:auto; padding-right:4px; background:rgba(0,0,0,0.2); padding:0.3rem 0.4rem; border-radius:4px;">
-                <div style="font-weight:700; color:#cbd5e1; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Top Consumers:</div>
-                ${wf.consumersList.slice(0, 10).map(c => `
-                  <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
-                    <span>${c.count}x ${escapeHtml(c.name)}</span>
-                    <strong style="color:#38bdf8;">${c.total.toLocaleString()}</strong>
-                  </div>
-                `).join('')}
-                ${wf.providersList.length > 0 ? `
-                  <div style="font-weight:700; color:#cbd5e1; margin-top:0.35rem; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Habitation Modules:</div>
-                  ${wf.providersList.map(p => `
-                    <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
-                      <span>${p.count}x ${escapeHtml(p.name)}</span>
-                      <strong style="color:#34d399;">${p.total.toLocaleString()}</strong>
-                    </div>
-                  `).join('')}
-                ` : ''}
-              </div>
-            </details>
-          ` : ''}
-        </div>
-      ` : ''}
-
-      <div class="workforce-box" style="border-color:#38bdf8;">
+      <div class="workforce-box" style="border-color:#38bdf8; margin-bottom:0.6rem;">
         <h4>⛏️ Total Recalculated Raw Mining & Liquids</h4>
         <p><strong style="color:#34d399;">Total Active Raw Extraction:</strong> ${Math.round(totalRaw).toLocaleString()} / hr</p>
         <p style="margin-top:0.3rem;"><strong style="color:#fbbf24;">⚡ Energy Cells Demand:</strong> ${Math.round(ecTotal).toLocaleString()} / hr</p>
       </div>
+
+      ${hasWorkforce ? `
+        <div class="workforce-box bp-wf-panel" style="border-color:#10b981; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
+          <div class="bp-wf-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.5rem 0.65rem; background:rgba(16,185,129,0.08); user-select:none; gap:6px; flex-wrap:wrap;" title="Click to ${isWfCollapsed ? 'expand' : 'collapse'} Station Workforce Summary">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="bp-wf-arrow" style="font-size:0.75rem; color:#34d399; width:12px; display:inline-block;">${isWfCollapsed ? '▶' : '▼'}</span>
+              <h4 style="margin:0; color:#34d399; font-size:0.8rem;">👥 Station Workforce Summary</h4>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div class="bp-wf-collapsed-deficits" style="display:${isWfCollapsed ? 'inline-flex' : 'none'}; align-items:center; gap:4px; flex-wrap:wrap;">
+                ${redShortages.join('')}
+              </div>
+              <span style="font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:4px; background:${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}; color:${wf.coveragePercent >= 100 ? '#34d399' : '#ef4444'}; border:1px solid ${wf.coveragePercent >= 100 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'};">
+                ${wf.coveragePercent}% Coverage
+              </span>
+            </div>
+          </div>
+          <div class="bp-wf-body" style="padding:0.5rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); display:${isWfCollapsed ? 'none' : 'block'};">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.35rem 0.6rem; font-size:0.76rem;">
+              <div><span style="color:#94a3b8;">Optimal Needed:</span> <strong style="color:#38bdf8;">${wf.totalOptimalWorkforce.toLocaleString()}</strong></div>
+              <div><span style="color:#94a3b8;">Hab Capacity:</span> <strong style="color:#34d399;">${wf.totalHabitationCapacity.toLocaleString()}</strong></div>
+              <div><span style="color:#94a3b8;">Production:</span> <strong style="color:#cbd5e1;">${wf.productionWorkforce.toLocaleString()}</strong></div>
+              <div><span style="color:#94a3b8;">Shipyards:</span> <strong style="color:#cbd5e1;">${wf.shipyardWorkforce.toLocaleString()}</strong></div>
+            </div>
+            <div style="margin-top:0.4rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.3rem;">
+              <span style="color:#94a3b8;">Workforce Balance:</span>
+              <strong style="color:${wf.surplusDeficit >= 0 ? '#34d399' : '#ef4444'};">
+                ${wf.surplusDeficit >= 0 ? `+${wf.surplusDeficit.toLocaleString()} surplus beds (${wf.habitatCount} habitats)` : `${wf.surplusDeficit.toLocaleString()} bed shortage`}
+              </strong>
+            </div>
+            ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+            <div style="margin-top:0.35rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem;">
+              <span style="color:#94a3b8;">Sustainable Workers:</span>
+              <strong style="color:${wf.lifeSupport.sustainableWorkers >= wf.totalOptimalWorkforce ? '#34d399' : '#fbbf24'};">
+                ${wf.lifeSupport.sustainableWorkers.toLocaleString()} (${wf.lifeSupport.sustainableCoveragePercent}% self-sufficient)
+              </strong>
+            </div>
+            ` : ''}
+            ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+            <div style="margin-top:0.35rem; font-size:0.72rem; background:rgba(0,0,0,0.2); padding:0.3rem 0.45rem; border-radius:4px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.2rem;">
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:#94a3b8;">🍞 Food Rations:</span>
+                <span><strong>${Math.round(wf.lifeSupport.totalFoodRationsProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.foodRationsDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.foodBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.foodBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}</span>)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:#94a3b8;">💊 Medical Supplies:</span>
+                <span><strong>${Math.round(wf.lifeSupport.totalArgMedSuppliesProd || wf.lifeSupport.totalAllMedSuppliesProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.medicalSuppliesDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.medBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.medBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.medBalance).toLocaleString()}</span>)</span>
+              </div>
+            </div>
+            ` : ''}
+            ${(wf.consumersList.length > 0 || wf.providersList.length > 0) ? `
+              <details style="margin-top:0.45rem; font-size:0.72rem; cursor:pointer;">
+                <summary style="color:#38bdf8; user-select:none; font-weight:600; outline:none;">🔍 View Workforce Breakdown (${wf.consumersList.length} consumers, ${wf.providersList.length} habitats)</summary>
+                <div style="margin-top:0.35rem; max-height:160px; overflow-y:auto; padding-right:4px; background:rgba(0,0,0,0.2); padding:0.3rem 0.4rem; border-radius:4px;">
+                  <div style="font-weight:700; color:#cbd5e1; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Top Consumers:</div>
+                  ${wf.consumersList.slice(0, 10).map(c => `
+                    <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
+                      <span>${c.count}x ${escapeHtml(c.name)}</span>
+                      <strong style="color:#38bdf8;">${c.total.toLocaleString()}</strong>
+                    </div>
+                  `).join('')}
+                  ${wf.providersList.length > 0 ? `
+                    <div style="font-weight:700; color:#cbd5e1; margin-top:0.35rem; margin-bottom:0.2rem; text-transform:uppercase; font-size:0.68rem;">Habitation Modules:</div>
+                    ${wf.providersList.map(p => `
+                      <div style="display:flex; justify-content:space-between; padding:1px 0; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.03);">
+                        <span>${p.count}x ${escapeHtml(p.name)}</span>
+                        <strong style="color:#34d399;">${p.total.toLocaleString()}</strong>
+                      </div>
+                    `).join('')}
+                  ` : ''}
+                </div>
+              </details>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
 
       <div style="margin-top:0.6rem;">
         <div class="section-label">All Plan Modules & Recalculated Upstream Chains</div>
@@ -1295,12 +1513,17 @@ export function updateInspector(id, onRender) {
         </div>
       </div>
 
-      <div class="non-contributing-box" style="margin-top:0.65rem; padding:0.45rem 0.65rem; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem;">
-        <div style="font-weight:700; color:#94a3b8; margin-bottom:0.25rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center;">
-          <span>📦 Non-Contributing Ware Modules</span>
-          <span style="color:#38bdf8; font-weight:700;">Total: ${totalNonContributingCount}</span>
+      ${renderConstructionBudgetInspectorHTML(state)}
+
+      <div class="non-contributing-box bp-nc-panel" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
+        <div class="bp-nc-header" style="font-weight:700; color:#94a3b8; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(255,255,255,0.02); user-select:none;" title="Click to ${isNcCollapsed ? 'expand' : 'collapse'} Non-Contributing Ware Modules">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-nc-arrow" style="font-size:0.75rem; color:#38bdf8; width:12px; display:inline-block;">${isNcCollapsed ? '▶' : '▼'}</span>
+            <span>📦 Non-Contributing Ware Modules</span>
+          </div>
+          <span style="color:#38bdf8; font-weight:700; background:rgba(56,189,248,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(56,189,248,0.25);">Total: ${totalNonContributingCount}</span>
         </div>
-        <div style="color:#cbd5e1; line-height:1.45;">
+        <div class="bp-nc-body" style="padding:0.45rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); color:#cbd5e1; line-height:1.45; display:${isNcCollapsed ? 'none' : 'block'};">
           ${nonContributingList.length > 0 ? nonContributingList.join(', ') : '<span style="color:#64748b; font-style:italic;">None</span>'}
         </div>
       </div>
@@ -1376,6 +1599,48 @@ export function updateInspector(id, onRender) {
         if (e.key === 'Enter') {
           e.target.blur();
         }
+      });
+    });
+
+    insBody.querySelectorAll('.construction-budget-panel').forEach(panel => {
+      bindCrbListeners(panel);
+    });
+
+    insBody.querySelectorAll('.bp-wf-header').forEach(header => {
+      header.addEventListener('click', () => {
+        state.workforceSummaryCollapsed = !state.workforceSummaryCollapsed;
+        try {
+          localStorage.setItem('x4_wf_summary_collapsed', String(state.workforceSummaryCollapsed));
+        } catch (e) {}
+
+        const panel = header.closest('.bp-wf-panel');
+        const arrow = header.querySelector('.bp-wf-arrow');
+        const body = panel ? panel.querySelector('.bp-wf-body') : null;
+        const deficits = header.querySelector('.bp-wf-collapsed-deficits');
+        const isCollapsed = Boolean(state.workforceSummaryCollapsed);
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        if (deficits) deficits.style.display = isCollapsed ? 'inline-flex' : 'none';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Station Workforce Summary`;
+      });
+    });
+
+    insBody.querySelectorAll('.bp-nc-header').forEach(header => {
+      header.addEventListener('click', () => {
+        state.nonContributingCollapsed = !state.nonContributingCollapsed;
+        try {
+          localStorage.setItem('x4_nc_modules_collapsed', String(state.nonContributingCollapsed));
+        } catch (e) {}
+
+        const panel = header.closest('.bp-nc-panel');
+        const arrow = header.querySelector('.bp-nc-arrow');
+        const body = panel ? panel.querySelector('.bp-nc-body') : null;
+        const isCollapsed = Boolean(state.nonContributingCollapsed);
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Non-Contributing Ware Modules`;
       });
     });
 
@@ -1564,19 +1829,33 @@ export function updateInspector(id, onRender) {
     const chkSyncOptimum = document.getElementById('chkSyncOptimum');
     if (chkSyncOptimum) chkSyncOptimum.addEventListener('change', handleSyncOptimum);
 
+    if (prevInsScrollTop > 0) {
+      insBody.scrollTop = prevInsScrollTop;
+    }
+
     return;
   }
 
   // CASE 2: No active blueprint loaded & no card selected
   if (!id || !WARES_DB[id]) {
-    insTitle.innerText = 'Module Inspector';
-    insSub.innerText = 'Single Target Mode';
+    insTitle.innerText = 'Blueprint Inspector';
+    insSub.innerText = 'Station Construction Budget';
     insBody.innerHTML = `
+      ${renderConstructionBudgetInspectorHTML(state)}
       <div style="padding: 0.5rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.5;">
         <p>No station blueprint is currently active.</p>
         <p style="margin-top:0.5rem;">Click on any material card in the matrix to select it as a Single Production Target, or upload a station <code>.xml</code> blueprint file.</p>
       </div>
     `;
+
+    insBody.querySelectorAll('.construction-budget-panel').forEach(panel => {
+      bindCrbListeners(panel);
+    });
+
+    if (prevInsScrollTop > 0) {
+      insBody.scrollTop = prevInsScrollTop;
+    }
+
     return;
   }
 
@@ -2249,6 +2528,10 @@ export function updateInspector(id, onRender) {
       }
       updateInspector(id);
     });
+  }
+
+  if (prevInsScrollTop > 0) {
+    insBody.scrollTop = prevInsScrollTop;
   }
 }
 

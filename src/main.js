@@ -302,7 +302,11 @@ function renderApp() {
               ${(() => {
                 const isStmActive = Boolean(state.selectedWareId || !state.activeBlueprint || state.currentPreset === 'all');
                 return `
-                  <button class="btn-filter ${isStmActive ? 'active' : ''}" data-preset="all" id="btnToggleSTM" style="padding:0.25rem 0.65rem; font-size:0.8rem;" title="${isStmActive ? 'Click to exit Single Target Mode' : 'Click to clear active blueprint and switch to Single Target Mode'}">${isStmActive ? 'Exit STM' : 'Single Target Mode'}</button>
+                  <label id="lblToggleSTM" style="font-size:0.8rem; color:#38bdf8; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:${isStmActive ? 'rgba(56,189,248,0.2)' : 'rgba(56,189,248,0.08)'}; padding:0.25rem 0.65rem; border-radius:6px; border:1px solid ${isStmActive ? 'rgba(56,189,248,0.5)' : 'rgba(56,189,248,0.25)'}; user-select:none;" title="${isStmActive ? 'Checked: Single Target Mode is active. Uncheck to exit STM.' : 'Unchecked: Blueprint mode is active. Check to switch to Single Target Mode.'}">
+                    <input type="checkbox" id="chkToggleSTM" ${isStmActive ? 'checked' : ''} style="cursor:pointer;" />
+                    STM
+                  </label>
+                  <button class="btn-filter ${isStmActive ? 'active' : ''}" data-preset="all" id="btnToggleSTM" style="display:none;">${isStmActive ? 'Exit STM' : 'Single Target Mode'}</button>
                   ${isStmActive ? `
                     <span id="singleTargetModeWording" style="color:#94a3b8; font-style:italic; font-size:0.8rem;">(Single Target Mode)</span>
                   ` : ''}
@@ -747,6 +751,13 @@ function setupEvents(searchFocusState = {}) {
     });
   }
 
+  const chkToggleSTM = document.getElementById('chkToggleSTM');
+  if (chkToggleSTM) {
+    chkToggleSTM.addEventListener('change', () => {
+      document.getElementById('btnToggleSTM')?.click();
+    });
+  }
+
   document.querySelectorAll('.btn-filter[data-preset]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1122,7 +1133,7 @@ function setupEvents(searchFocusState = {}) {
     });
   });
 
-  document.querySelectorAll('.btn-price-tier').forEach(btn => {
+  document.querySelectorAll('#plannedView .btn-price-tier').forEach(btn => {
     btn.addEventListener('click', () => {
       const tier = btn.dataset.priceTier;
       if (tier && ['min', 'avg', 'max'].includes(tier)) {

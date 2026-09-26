@@ -436,7 +436,6 @@ export function renderPlannedTabHTML() {
           </table>
         </div>
       </div>
-      ${renderConstructionCosts(state, state.priceType || 'avg')}
     </div>
   `;
 }

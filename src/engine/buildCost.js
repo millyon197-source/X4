@@ -5,10 +5,22 @@
 
 import buildCostsCatalog from '../data/macro_costs.json' with { type: 'json' };
 import crissianCostsCatalog from '../data/crissian_build_costs.json' with { type: 'json' };
+import { MACRO_TO_WARE } from '../data/wares.js';
 import { getWareUnitPrice } from './prices.js';
 
 // Combine catalogs so all 343+ game macros are covered
 const mergedCostsCatalog = { ...crissianCostsCatalog, ...buildCostsCatalog };
+
+function resolveMacroKey(key) {
+  if (mergedCostsCatalog[key] || buildCostsCatalog[key]) return key;
+  const found = Object.keys(MACRO_TO_WARE).find(m => MACRO_TO_WARE[m] === key && (mergedCostsCatalog[m] || buildCostsCatalog[m]));
+  if (found) return found;
+  const lowerKey = key.toLowerCase();
+  for (const m of Object.keys(mergedCostsCatalog)) {
+    if (m.toLowerCase().includes(lowerKey)) return m;
+  }
+  return key;
+}
 
 /**
  * Calculates aggregate construction resources and estimated credits for planned modules.
@@ -32,9 +44,10 @@ export function calculateBuildCosts(
   let totalWareUnits = 0;
   let totalCredits = 0;
 
-  for (const [macro, count] of Object.entries(moduleMap)) {
+  for (const [macroOrWare, count] of Object.entries(moduleMap)) {
     if (!count || count <= 0) continue;
 
+    const macro = resolveMacroKey(macroOrWare);
     const moduleRecipe = mergedCostsCatalog[macro] || buildCostsCatalog[macro];
     if (!moduleRecipe) continue;
 

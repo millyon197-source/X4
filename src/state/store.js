@@ -50,6 +50,9 @@ let savedOriginalBlueprint = null;
 let savedLoadedBlueprints = [];
 let savedPreset = 'all';
 let savedPriceType = 'avg';
+let savedShowConstructionBudget = true;
+let savedWfCollapsed = false;
+let savedNcCollapsed = false;
 
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -72,6 +75,18 @@ try {
     const priceStr = localStorage.getItem('x4_price_type');
     if (priceStr && ['min', 'avg', 'max'].includes(priceStr)) {
       savedPriceType = priceStr;
+    }
+    const budgetStr = localStorage.getItem('x4_show_construction_budget');
+    if (budgetStr !== null) {
+      savedShowConstructionBudget = budgetStr === 'true';
+    }
+    const wfColStr = localStorage.getItem('x4_wf_summary_collapsed');
+    if (wfColStr !== null) {
+      savedWfCollapsed = wfColStr === 'true';
+    }
+    const ncColStr = localStorage.getItem('x4_nc_modules_collapsed');
+    if (ncColStr !== null) {
+      savedNcCollapsed = ncColStr === 'true';
     }
   }
 } catch (e) {
@@ -265,6 +280,9 @@ export const DEFAULT_STATE = {
   constructionMethod: 'commonwealth', // 'commonwealth' | 'terran' | 'boron'
   activeTab: 'matrix',   // 'matrix' | 'planned'
   priceType: 'avg',      // 'min' | 'avg' | 'max'
+  showConstructionBudget: true,
+  workforceSummaryCollapsed: false,
+  nonContributingCollapsed: false,
 };
 
 export const state = {
@@ -273,6 +291,9 @@ export const state = {
   sunlightPct: 100,
   constructionMethod: 'commonwealth',
   priceType: savedPriceType || 'avg',
+  showConstructionBudget: savedShowConstructionBudget !== undefined ? savedShowConstructionBudget : true,
+  workforceSummaryCollapsed: savedWfCollapsed !== undefined ? savedWfCollapsed : false,
+  nonContributingCollapsed: savedNcCollapsed !== undefined ? savedNcCollapsed : false,
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
   originalBlueprint: savedOriginalBlueprint,
@@ -531,7 +552,7 @@ export class StationStore extends EventTarget {
     this._notify();
   }
 
-  setPriceType(priceType) {
+  setPriceType(priceType, silent = false) {
     const valid = ['min', 'avg', 'max'].includes(priceType) ? priceType : 'avg';
     this.state.priceType = valid;
     state.priceType = valid;
@@ -541,8 +562,24 @@ export class StationStore extends EventTarget {
       } catch (e) {}
     }
     this._saveState();
-    this._notify();
-    this.notify('price:updated', { priceType: valid });
+    try {
+      this.dispatchEvent(new CustomEvent('price:updated', { detail: { priceType: valid } }));
+    } catch (e) {}
+    if (!silent) {
+      this._notify();
+    }
+  }
+
+  setShowConstructionBudget(show) {
+    const bool = Boolean(show);
+    this.state.showConstructionBudget = bool;
+    state.showConstructionBudget = bool;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('x4_show_construction_budget', String(bool));
+      } catch (e) {}
+    }
+    this._saveState();
   }
 
   /* --- Subscription System --- */
@@ -601,6 +638,7 @@ export class StationStore extends EventTarget {
           sunlightPct: this.state.sunlightPct || 100,
           constructionMethod: this.state.constructionMethod || this.state.factionConstructionMethod || 'commonwealth',
           priceType: this.state.priceType || 'avg',
+          showConstructionBudget: this.state.showConstructionBudget !== undefined ? this.state.showConstructionBudget : true,
           activeTab: this.state.activeTab || 'matrix'
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
