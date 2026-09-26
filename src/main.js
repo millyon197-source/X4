@@ -1,6 +1,6 @@
 import './style.css';
 import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
-import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './state/store.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents } from './state/store.js';
 import { calculateFactoryRequirements, syncPopulatedMatrix, getPrimaryMacroForWare } from './engine/calculator.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
 import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId } from './ui/matrixView.js';
@@ -894,6 +894,7 @@ function setupEvents(searchFocusState = {}) {
             });
           }
         }
+        collapseAllBiComponents();
       }
       saveActiveBlueprintToStorage();
       renderApp();

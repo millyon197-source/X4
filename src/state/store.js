@@ -53,6 +53,8 @@ let savedPriceType = 'avg';
 let savedShowConstructionBudget = true;
 let savedWfCollapsed = false;
 let savedNcCollapsed = false;
+let savedRawMiningCollapsed = false;
+let savedDiffCollapsed = false;
 
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -87,6 +89,14 @@ try {
     const ncColStr = localStorage.getItem('x4_nc_modules_collapsed');
     if (ncColStr !== null) {
       savedNcCollapsed = ncColStr === 'true';
+    }
+    const rawColStr = localStorage.getItem('x4_raw_mining_collapsed');
+    if (rawColStr !== null) {
+      savedRawMiningCollapsed = rawColStr === 'true';
+    }
+    const diffColStr = localStorage.getItem('x4_diff_collapsed');
+    if (diffColStr !== null) {
+      savedDiffCollapsed = diffColStr === 'true';
     }
   }
 } catch (e) {
@@ -283,6 +293,8 @@ export const DEFAULT_STATE = {
   showConstructionBudget: true,
   workforceSummaryCollapsed: false,
   nonContributingCollapsed: false,
+  rawMiningCollapsed: false,
+  moduleDiffCollapsed: false,
 };
 
 export const state = {
@@ -294,6 +306,8 @@ export const state = {
   showConstructionBudget: savedShowConstructionBudget !== undefined ? savedShowConstructionBudget : true,
   workforceSummaryCollapsed: savedWfCollapsed !== undefined ? savedWfCollapsed : false,
   nonContributingCollapsed: savedNcCollapsed !== undefined ? savedNcCollapsed : false,
+  rawMiningCollapsed: savedRawMiningCollapsed !== undefined ? savedRawMiningCollapsed : false,
+  moduleDiffCollapsed: savedDiffCollapsed !== undefined ? savedDiffCollapsed : false,
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
   originalBlueprint: savedOriginalBlueprint,
@@ -330,6 +344,34 @@ export const state = {
     solarModulesNeeded: 0
   }
 };
+
+/**
+ * Collapses or minimizes all Blueprint Inspector (BI) components.
+ * Called automatically after a blueprint reload.
+ */
+export function collapseAllBiComponents() {
+  state.rawMiningCollapsed = true;
+  state.workforceSummaryCollapsed = true;
+  state.bpLevelCollapsed = { 1: true, 2: true, 3: true };
+  state.moduleDiffCollapsed = true;
+  state.showConstructionBudget = false;
+  state.nonContributingCollapsed = true;
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('x4_raw_mining_collapsed', 'true');
+      localStorage.setItem('x4_wf_summary_collapsed', 'true');
+      sessionStorage.setItem('x4_bp_level_collapsed', JSON.stringify({ 1: true, 2: true, 3: true }));
+      localStorage.setItem('x4_diff_collapsed', 'true');
+      localStorage.setItem('x4_show_construction_budget', 'false');
+      localStorage.setItem('x4_nc_modules_collapsed', 'true');
+    } catch (e) {}
+  }
+
+  if (store && typeof store.setShowConstructionBudget === 'function') {
+    store.state.showConstructionBudget = false;
+  }
+}
 
 export function saveActiveBlueprintToStorage() {
   const hosted = isHostedMode();

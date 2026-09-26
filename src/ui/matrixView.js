@@ -1403,6 +1403,8 @@ export function updateInspector(id, onRender) {
     const hasWorkforce = wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0;
     const isWfCollapsed = Boolean(state.workforceSummaryCollapsed);
     const isNcCollapsed = Boolean(state.nonContributingCollapsed);
+    const isRawCollapsed = Boolean(state.rawMiningCollapsed);
+    const isDiffCollapsed = Boolean(state.moduleDiffCollapsed);
 
     const redShortages = [];
     if (wf.surplusDeficit < 0) {
@@ -1416,10 +1418,21 @@ export function updateInspector(id, onRender) {
     }
 
     insBody.innerHTML = `
-      <div class="workforce-box" style="border-color:#38bdf8; margin-bottom:0.6rem;">
-        <h4>⛏️ Total Recalculated Raw Mining & Liquids</h4>
-        <p><strong style="color:#34d399;">Total Active Raw Extraction:</strong> ${Math.round(totalRaw).toLocaleString()} / hr</p>
-        <p style="margin-top:0.3rem;"><strong style="color:#fbbf24;">⚡ Energy Cells Demand:</strong> ${Math.round(ecTotal).toLocaleString()} / hr</p>
+      <div class="workforce-box bp-raw-panel" style="border-color:#38bdf8; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
+        <div class="bp-raw-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.5rem 0.65rem; background:rgba(56,189,248,0.08); user-select:none; gap:6px; flex-wrap:wrap;" title="Click to ${isRawCollapsed ? 'expand' : 'collapse'} Total Recalculated Raw Mining & Liquids">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-raw-arrow" style="font-size:0.75rem; color:#38bdf8; width:12px; display:inline-block;">${isRawCollapsed ? '▶' : '▼'}</span>
+            <h4 style="margin:0; color:#38bdf8; font-size:0.8rem;">⛏️ Total Recalculated Raw Mining & Liquids</h4>
+          </div>
+          <div class="bp-raw-collapsed-preview" style="display:${isRawCollapsed ? 'inline-flex' : 'none'}; align-items:center; gap:6px; font-size:0.7rem;">
+            <span style="color:#34d399; font-weight:700;">${Math.round(totalRaw).toLocaleString()}/hr</span>
+            <span style="color:#fbbf24; font-weight:700;">⚡ ${Math.round(ecTotal).toLocaleString()}/hr</span>
+          </div>
+        </div>
+        <div class="bp-raw-body" style="padding:0.5rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); display:${isRawCollapsed ? 'none' : 'block'};">
+          <p><strong style="color:#34d399;">Total Active Raw Extraction:</strong> ${Math.round(totalRaw).toLocaleString()} / hr</p>
+          <p style="margin-top:0.3rem;"><strong style="color:#fbbf24;">⚡ Energy Cells Demand:</strong> ${Math.round(ecTotal).toLocaleString()} / hr</p>
+        </div>
       </div>
 
       ${hasWorkforce ? `
@@ -1503,12 +1516,15 @@ export function updateInspector(id, onRender) {
         ${[1, 2, 3].map(lvl => renderLevelPanel(lvl)).join('')}
       </div>
 
-      <div class="module-diff-box" style="margin-top:0.65rem; padding:0.45rem 0.65rem; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem;">
-        <div style="font-weight:700; color:#94a3b8; margin-bottom:0.25rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center;">
-          <span>⚖️ Plan vs Needs Module Differences</span>
-          <span style="color:#fbbf24; font-weight:700;">${diffList.length} Differences</span>
+      <div class="module-diff-box bp-diff-panel" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
+        <div class="bp-diff-header" style="font-weight:700; color:#94a3b8; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(255,255,255,0.02); user-select:none;" title="Click to ${isDiffCollapsed ? 'expand' : 'collapse'} Plan vs Needs Module Differences">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-diff-arrow" style="font-size:0.75rem; color:#fbbf24; width:12px; display:inline-block;">${isDiffCollapsed ? '▶' : '▼'}</span>
+            <span>⚖️ Plan vs Needs Module Differences</span>
+          </div>
+          <span style="color:#fbbf24; font-weight:700; background:rgba(251,191,36,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(251,191,36,0.25);">${diffList.length} Differences</span>
         </div>
-        <div style="color:#cbd5e1; line-height:1.45;">
+        <div class="bp-diff-body" style="padding:0.45rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); color:#cbd5e1; line-height:1.45; display:${isDiffCollapsed ? 'none' : 'block'};">
           ${diffList.length > 0 ? diffList.join(', ') : '<span style="color:#34d399; font-style:italic;">All active modules match Needs count!</span>'}
         </div>
       </div>
@@ -1602,6 +1618,26 @@ export function updateInspector(id, onRender) {
       });
     });
 
+    insBody.querySelectorAll('.bp-raw-header').forEach(header => {
+      header.addEventListener('click', () => {
+        state.rawMiningCollapsed = !state.rawMiningCollapsed;
+        try {
+          localStorage.setItem('x4_raw_mining_collapsed', String(state.rawMiningCollapsed));
+        } catch (e) {}
+
+        const panel = header.closest('.bp-raw-panel');
+        const arrow = header.querySelector('.bp-raw-arrow');
+        const body = panel ? panel.querySelector('.bp-raw-body') : null;
+        const preview = header.querySelector('.bp-raw-collapsed-preview');
+        const isCollapsed = Boolean(state.rawMiningCollapsed);
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        if (preview) preview.style.display = isCollapsed ? 'inline-flex' : 'none';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Total Recalculated Raw Mining & Liquids`;
+      });
+    });
+
     insBody.querySelectorAll('.construction-budget-panel').forEach(panel => {
       bindCrbListeners(panel);
     });
@@ -1623,6 +1659,24 @@ export function updateInspector(id, onRender) {
         if (body) body.style.display = isCollapsed ? 'none' : 'block';
         if (deficits) deficits.style.display = isCollapsed ? 'inline-flex' : 'none';
         header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Station Workforce Summary`;
+      });
+    });
+
+    insBody.querySelectorAll('.bp-diff-header').forEach(header => {
+      header.addEventListener('click', () => {
+        state.moduleDiffCollapsed = !state.moduleDiffCollapsed;
+        try {
+          localStorage.setItem('x4_diff_collapsed', String(state.moduleDiffCollapsed));
+        } catch (e) {}
+
+        const panel = header.closest('.bp-diff-panel');
+        const arrow = header.querySelector('.bp-diff-arrow');
+        const body = panel ? panel.querySelector('.bp-diff-body') : null;
+        const isCollapsed = Boolean(state.moduleDiffCollapsed);
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Plan vs Needs Module Differences`;
       });
     });
 

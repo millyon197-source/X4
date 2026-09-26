@@ -1,5 +1,5 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
-import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from '../state/store.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents } from '../state/store.js';
 import macroCatalog from '../data/macro_names.json' with { type: 'json' };
 
 export function rebuildBlueprintFromMacros() {
@@ -206,6 +206,7 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
     state.subdueEcCalc = true;
     state.subdueLevel4 = true;
 
+    collapseAllBiComponents();
     saveActiveBlueprintToStorage();
 
     if (typeof onRender === 'function') onRender();
@@ -277,6 +278,7 @@ export function reloadActiveBlueprint(onRender) {
   state.previousBlueprint = null;
   state.previousPreset = null;
 
+  collapseAllBiComponents();
   saveActiveBlueprintToStorage();
 
   if (typeof onRender === 'function') onRender();
@@ -330,6 +332,7 @@ export function switchLoadedBlueprint(name, onRender) {
   state.previousBlueprint = null;
   state.previousPreset = null;
 
+  collapseAllBiComponents();
   saveActiveBlueprintToStorage();
   if (typeof onRender === 'function') onRender();
 }
