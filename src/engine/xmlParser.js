@@ -1,5 +1,6 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './state.js';
+import { store } from '../state/store.js';
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;
@@ -418,3 +419,167 @@ export function removeActiveBlueprint(onRender) {
     if (typeof onRender === 'function') onRender();
   }
 }
+
+/**
+ * Parses an X4 XML station plan string.
+ * @param {string} xmlString - The raw string content of an X4 blueprint .xml file.
+ * @returns {{ id: string, name: string, modules: Map<string, number>, totalModules: number }}
+ */
+export function parseX4Blueprint(xmlString) {
+  if (!xmlString || typeof xmlString !== 'string') {
+    throw new Error('Invalid XML content: Expected a non-empty string.');
+  }
+
+  if (typeof DOMParser !== 'undefined') {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+    // Check for XML parsing errors
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) {
+      throw new Error(`XML Parsing Error: ${parseError.textContent}`);
+    }
+
+    // Extract root <plan> or <blueprint> metadata
+    const planNode = xmlDoc.querySelector('plan') || xmlDoc.querySelector('blueprint') || xmlDoc.documentElement;
+    const name = (planNode && planNode.getAttribute('name')) || 'Custom Station Plan';
+    const id = (planNode && planNode.getAttribute('id')) || 'unnamed_plan';
+
+    // Aggregate module macro counts
+    const entries = xmlDoc.querySelectorAll('entry');
+    const modulesMap = new Map();
+    let totalModules = 0;
+
+    entries.forEach((entry) => {
+      const macro = entry.getAttribute('macro');
+      if (!macro) return;
+
+      const countAttr = entry.getAttribute('count');
+      const count = countAttr ? parseInt(countAttr, 10) : 1;
+
+      if (!isNaN(count) && count > 0) {
+        const currentCount = modulesMap.get(macro) || 0;
+        modulesMap.set(macro, currentCount + count);
+        totalModules += count;
+      }
+    });
+
+    return {
+      id,
+      name,
+      modules: modulesMap,
+      totalModules
+    };
+  }
+
+  // Fallback regex parser for Node.js / non-browser test environments
+  const nameMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bname="([^"]*)"/i);
+  const idMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bid="([^"]*)"/i);
+  const name = nameMatch ? nameMatch[1] : 'Custom Station Plan';
+  const id = idMatch ? idMatch[1] : 'unnamed_plan';
+
+  const entryRegex = /<entry\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bcount="([^"]*)")?[^>]*?>/gi;
+  const modulesMap = new Map();
+  let totalModules = 0;
+  let match;
+
+  while ((match = entryRegex.exec(xmlString)) !== null) {
+    const macro = match[1];
+    const count = match[2] ? parseInt(match[2], 10) : 1;
+    if (macro && !isNaN(count) && count > 0) {
+      const currentCount = modulesMap.get(macro) || 0;
+      modulesMap.set(macro, currentCount + count);
+      totalModules += count;
+    }
+  }
+
+  return {
+    id,
+    name,
+    modules: modulesMap,
+    totalModules
+  };
+}
+
+/**
+ * Parses a blueprint XML string and automatically updates the reactive StationStore.
+ * @param {string} xmlString - The raw contents of an X4 blueprint .xml file.
+ * @returns {{ id: string, name: string, totalModules: number }} Metadata summary.
+ */
+export function loadBlueprintIntoStore(xmlString, targetStore = store) {
+  const parsed = parseX4Blueprint(xmlString);
+
+  const rawMacros = {};
+  parsed.modules.forEach((count, macro) => {
+    rawMacros[macro] = count;
+  });
+
+  const appState = (targetStore && targetStore.state) ? targetStore.state : state;
+  appState.originalBlueprint = {
+    name: parsed.name,
+    rawMacros: { ...rawMacros }
+  };
+
+  appState.activeBlueprint = {
+    name: parsed.name,
+    totalModules: parsed.totalModules,
+    modules: {},
+    rawMacros: { ...rawMacros },
+    rootMacros: { ...rawMacros },
+    sector: null,
+    workforceBonus: 0,
+    ppStates: {},
+    baselineDemand: null,
+    baselineLayerTotals: null
+  };
+
+  appState.activeModules = parsed.modules;
+  appState.xmlMetadata = {
+    id: parsed.id,
+    name: parsed.name,
+    totalModules: parsed.totalModules,
+    loadedAt: new Date().toISOString()
+  };
+
+  rebuildBlueprintFromMacros();
+
+  // Notify reactive subscribers (re-renders UI views)
+  if (targetStore && typeof targetStore.notify === 'function') {
+    targetStore.notify('BLUEPRINT_LOADED', parsed);
+  }
+
+  return {
+    id: parsed.id,
+    name: parsed.name,
+    totalModules: parsed.totalModules
+  };
+}
+
+/**
+ * Helper to read a File object (from drag-and-drop or file input) and load it into store.
+ * @param {File} file - HTML5 File object from dropzone or file picker.
+ * @param {Object} [targetStore=store] - Target reactive store
+ * @returns {Promise<{ id: string, name: string, totalModules: number }>}
+ */
+export function readAndLoadBlueprintFile(file, targetStore = store) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('No file provided.'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const result = loadBlueprintIntoStore(e.target.result, targetStore);
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read the blueprint file.'));
+    reader.readAsText(file);
+  });
+}
+
+
