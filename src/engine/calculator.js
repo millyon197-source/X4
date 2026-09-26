@@ -1,11 +1,11 @@
 import { WARES_DB, DEPENDENCIES, PRESET_BLUEPRINTS, getWareHourlyRatePerModule, getWareCycleYield, mapMacroToWare, MACRO_TO_WARE, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage } from '../state/store.js';
 import { getSectorSunlight, calculateSolarOutput } from '../data/sectors.js';
-import { calculateBlueprintWorkforce } from './workforce.js';
-import { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand } from './mining.js';
+import { calculateBlueprintWorkforce, calculateRequiredWorkforce, calculateWorkforceEfficiency } from './workforce.js';
+import { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand, calculateMiningRequirements, calculateSolarOutput as calculateSolarYield, RAW_MINERAL_WARES } from './mining.js';
 
-export { calculateBlueprintWorkforce };
-export { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand };
+export { calculateBlueprintWorkforce, calculateRequiredWorkforce, calculateWorkforceEfficiency };
+export { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand, calculateMiningRequirements, RAW_MINERAL_WARES };
 
 export function getPPDownstreamWares() {
   const suppressedSet = new Set();
@@ -680,13 +680,92 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
 }
 
 /**
- * Pure calculation alias taking modulesState and options.
+ * Calculates net hourly production/consumption across levels 0 through 4.
+ * Coordinates workforce efficiency from workforce.js and mining from mining.js.
+ *
+ * @param {Object} [modulesState] - { [macroName]: count } or blueprint object
+ * @param {Object} [options] - { workforceCount: number, sunlightPct: number, selectedSector: string }
+ * @returns {Object} Comprehensive calculation matrix result
  */
-export function calculateMatrix(modulesState, options = {}) {
-  const bp = (modulesState && typeof modulesState === 'object')
-    ? (modulesState.modules ? modulesState : { modules: modulesState, name: 'Ad-hoc Matrix' })
-    : state.activeBlueprint;
-  return calculateFactoryRequirements(bp, options);
+export function calculateMatrix(modulesState = {}, options = {}) {
+  const modules = (modulesState && typeof modulesState === 'object')
+    ? (modulesState.modules ? modulesState.modules : modulesState)
+    : (state.activeBlueprint?.modules || {});
+
+  const { workforceCount = 0, sunlightPct = 100 } = options;
+
+  const totalWorkforceNeeded = calculateRequiredWorkforce(modules);
+  const efficiencyMultiplier = calculateWorkforceEfficiency(
+    workforceCount,
+    totalWorkforceNeeded
+  );
+
+  const wareProduction = {};
+  const wareConsumption = {};
+
+  // 1. Accumulate gross production and consumption across active modules
+  for (const [macro, count] of Object.entries(modules)) {
+    if (!macro || count <= 0) continue;
+    const wareId = mapMacroToWare(macro) || macro;
+    const wareInfo = WARES_DB[wareId] || WARES_DB[macro];
+    if (!wareInfo) continue;
+
+    // Apply workforce bonus and sector sunlight scaling where appropriate
+    let productionMultiplier = efficiencyMultiplier;
+    if (wareInfo.id === 'energycells' || wareId === 'EC' || wareId === 'TerEC') {
+      productionMultiplier *= calculateSolarYield(1, sunlightPct);
+    }
+
+    const hourlyOutput = (wareInfo.yieldPerHour || getWareHourlyRatePerModule(wareId, (efficiencyMultiplier - 1.0) * 100) || 0) * count * productionMultiplier;
+    const key = wareInfo.id || wareId;
+    wareProduction[key] = (wareProduction[key] || 0) + hourlyOutput;
+
+    // Accumulate upstream input requirements
+    const inputs = wareInfo.recipe || wareInfo.inputs || {};
+    for (const [inputWare, requiredRate] of Object.entries(inputs)) {
+      wareConsumption[inputWare] = (wareConsumption[inputWare] || 0) + requiredRate * count;
+    }
+  }
+
+  // 2. Compute net balances per ware
+  const netBalance = {};
+  const allWares = new Set([
+    ...Object.keys(wareProduction),
+    ...Object.keys(wareConsumption),
+  ]);
+
+  for (const ware of allWares) {
+    const prod = wareProduction[ware] || 0;
+    const cons = wareConsumption[ware] || 0;
+    netBalance[ware] = prod - cons;
+  }
+
+  // 3. Delegate raw mineral mining demand calculation
+  const rawDemand = calculateMiningRequirements(netBalance);
+
+  // 4. Also calculate complete factory requirements for legacy and matrix consumers
+  const bp = (modulesState && typeof modulesState === 'object' && modulesState.modules)
+    ? modulesState
+    : { modules, name: 'Ad-hoc Matrix' };
+  const factoryReqs = calculateFactoryRequirements(bp, {
+    ...options,
+    workforceBonus: (efficiencyMultiplier - 1.0) * 100
+  });
+
+  return {
+    production: wareProduction,
+    consumption: wareConsumption,
+    netBalance,
+    rawDemand,
+    workforce: {
+      required: totalWorkforceNeeded,
+      active: workforceCount,
+      multiplier: efficiencyMultiplier,
+    },
+    demand: factoryReqs.demand,
+    layerTotals: factoryReqs.layerTotals,
+    workforceSummary: factoryReqs.workforceSummary
+  };
 }
 
 export function getPrimaryMacroForWare(wareId) {

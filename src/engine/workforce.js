@@ -242,3 +242,57 @@ export function calculateBlueprintWorkforce(
     }
   };
 }
+
+/**
+ * Calculates total workforce required across all active station modules.
+ * @param {Object} modules - Active module counts { [macroName]: count }
+ * @returns {number} Total workforce capacity required
+ */
+export function calculateRequiredWorkforce(modules = {}) {
+  let totalRequired = 0;
+  for (const [macro, count] of Object.entries(modules)) {
+    if (!macro || count <= 0) continue;
+    let entry = MODULES_WORKFORCE[macro];
+    if (!entry) {
+      const alt1 = macro.replace('_scraprecycler_', '_scrap_recycler_');
+      const alt2 = macro.replace('_scrap_recycler_', '_scraprecycler_');
+      entry = MODULES_WORKFORCE[alt1] || MODULES_WORKFORCE[alt2];
+    }
+    if (!entry) {
+      entry = MODULES_WORKFORCE[macro.toLowerCase()];
+    }
+    if (!entry && macro.startsWith('prod_')) {
+      const genMacro = macro.replace(/^prod_[a-z]+_/, 'prod_gen_');
+      entry = MODULES_WORKFORCE[genMacro] || MODULES_WORKFORCE[genMacro.toLowerCase()];
+    }
+    if (!entry) {
+      const wareId = mapMacroToWare(macro);
+      if (wareId) {
+        const primaryMacro = getPrimaryMacroForWare(wareId);
+        if (primaryMacro && primaryMacro !== macro) {
+          entry = MODULES_WORKFORCE[primaryMacro] || MODULES_WORKFORCE[primaryMacro.toLowerCase()];
+        }
+      }
+    }
+    const requiredPerModule = typeof entry === 'number' ? entry : (entry?.max || 0);
+    totalRequired += requiredPerModule * count;
+  }
+  return totalRequired;
+}
+
+/**
+ * Calculates the workforce efficiency multiplier for a factory.
+ * @param {number} currentWorkforce - Active worker population
+ * @param {number} requiredWorkforce - Total required workforce across station
+ * @param {number} maxBonus - Maximum workforce bonus ratio (default 1.0 = +100%)
+ * @returns {number} Multiplier (1.0 = 100% normal output, 2.0 = 200% max output)
+ */
+export function calculateWorkforceEfficiency(currentWorkforce, requiredWorkforce, maxBonus = 1.0) {
+  if (!requiredWorkforce || requiredWorkforce <= 0 || !currentWorkforce || currentWorkforce <= 0) {
+    return 1.0; // Base efficiency without workforce
+  }
+
+  const fillRatio = Math.min(1.0, currentWorkforce / requiredWorkforce);
+  return 1.0 + fillRatio * maxBonus;
+}
+

@@ -1,6 +1,7 @@
 import { getFriendlyModuleName, mapMacroToWare, isFoodOrAgriMacro, isWareMacro, isStructureMacro, getModuleBuildCost, MACRO_TO_WARE, MODULE_NAMES, MODULE_BUILD_COSTS, WARES_DB } from '../data/wares.js';
 import MODULES_WORKFORCE from '../data/modules_workforce.json' with { type: 'json' };
 import { calculateBlueprintWorkforce } from '../engine/calculator.js';
+import { readAndParseBlueprintFile } from '../engine/xmlParser.js';
 import { state, store } from '../state/store.js';
 import { escapeHtml } from '../html.js';
 
@@ -478,3 +479,50 @@ export function filterPlannedModules() {
 
   updateAddMacroSelect(rawQuery);
 }
+
+let containerEl = null;
+let unsubscribeStore = null;
+
+/**
+ * Initializes the Planned View component and subscribes to state changes.
+ * @param {HTMLElement} rootElement - Parent DOM container
+ */
+export function initPlannedView(rootElement) {
+  containerEl = rootElement;
+
+  if (unsubscribeStore) {
+    unsubscribeStore();
+  }
+
+  // Subscribe to store updates
+  unsubscribeStore = store.subscribe((currentState) => {
+    if (containerEl && state.activeTab === 'planned') {
+      if (typeof window !== 'undefined' && typeof window.renderApp === 'function') {
+        window.renderApp();
+      } else {
+        containerEl.innerHTML = renderPlannedTabHTML();
+      }
+    }
+  });
+
+  // Initial render
+  if (containerEl) {
+    if (typeof window !== 'undefined' && typeof window.renderApp === 'function') {
+      window.renderApp();
+    } else {
+      containerEl.innerHTML = renderPlannedTabHTML();
+    }
+  }
+}
+
+/**
+ * Cleans up DOM event listeners and store subscriptions upon tab switch.
+ */
+export function destroyPlannedView() {
+  if (unsubscribeStore) {
+    unsubscribeStore();
+    unsubscribeStore = null;
+  }
+  containerEl = null;
+}
+

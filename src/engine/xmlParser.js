@@ -1,5 +1,6 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
 import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from '../state/store.js';
+import macroCatalog from '../data/macro_names.json' with { type: 'json' };
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;
@@ -420,108 +421,152 @@ export function removeActiveBlueprint(onRender) {
 }
 
 /**
- * Parses an X4 XML station plan string.
+ * Parses raw X4 station blueprint XML content into a structured module count map.
+ * 
+ * @param {string} xmlString - Raw XML string from uploaded .xml file
+ * @param {Object} [knownMacros=macroCatalog] - Catalog of recognized module macros
+ * @returns {Object} Standardized parse result contract
+ */
+export function parseBlueprintXML(xmlString, knownMacros = macroCatalog) {
+  const result = {
+    success: false,
+    modules: {},
+    unrecognizedMacros: [],
+    metadata: {
+      entriesParsed: 0,
+      totalModulesCount: 0,
+      name: 'Custom Station Plan',
+      id: 'unnamed_plan'
+    },
+    error: null,
+  };
+
+  if (!xmlString || typeof xmlString !== 'string' || !xmlString.trim()) {
+    result.error = 'Empty or invalid XML content provided.';
+    return result;
+  }
+
+  try {
+    let entries = [];
+    let planName = 'Custom Station Plan';
+    let planId = 'unnamed_plan';
+
+    if (typeof DOMParser !== 'undefined') {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+      // Check for DOMParser syntax error tags
+      const parserError = xmlDoc.querySelector('parsererror');
+      if (parserError) {
+        result.error = `XML Syntax Error: ${parserError.textContent.split('\n')[0]}`;
+        return result;
+      }
+
+      // Extract root <plan> or <blueprint> metadata
+      const planNode = xmlDoc.querySelector('plan') || xmlDoc.querySelector('blueprint') || xmlDoc.documentElement;
+      if (planNode) {
+        planName = planNode.getAttribute('name') || planName;
+        planId = planNode.getAttribute('id') || planId;
+      }
+
+      const entryNodes = xmlDoc.querySelectorAll('entry');
+      entryNodes.forEach((node) => {
+        const macro = node.getAttribute('macro');
+        const countAttr = node.getAttribute('count');
+        const count = countAttr ? parseInt(countAttr, 10) : 1;
+        entries.push({ macro, count: isNaN(count) || count <= 0 ? 1 : count });
+      });
+    } else {
+      // Fallback regex parser for Node.js / non-browser test environments
+      const nameMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bname="([^"]*)"/i);
+      const idMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bid="([^"]*)"/i);
+      if (nameMatch) planName = nameMatch[1];
+      if (idMatch) planId = idMatch[1];
+
+      const entryRegex = /<entry\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bcount="([^"]*)")?[^>]*?>/gi;
+      let match;
+      while ((match = entryRegex.exec(xmlString)) !== null) {
+        const macro = match[1];
+        const count = match[2] ? parseInt(match[2], 10) : 1;
+        entries.push({ macro, count: isNaN(count) || count <= 0 ? 1 : count });
+      }
+    }
+
+    result.metadata.name = planName;
+    result.metadata.id = planId;
+    result.metadata.entriesParsed = entries.length;
+
+    const catalogKeys = knownMacros ? (Array.isArray(knownMacros) ? new Set(knownMacros) : (knownMacros instanceof Set ? knownMacros : new Set(Object.keys(knownMacros)))) : null;
+
+    for (const { macro, count } of entries) {
+      if (!macro) continue;
+
+      result.metadata.totalModulesCount += count;
+      result.modules[macro] = (result.modules[macro] || 0) + count;
+
+      if (catalogKeys && !catalogKeys.has(macro) && !catalogKeys.has(macro.toLowerCase())) {
+        if (!result.unrecognizedMacros.includes(macro)) {
+          result.unrecognizedMacros.push(macro);
+        }
+      }
+    }
+
+    result.success = true;
+    return result;
+  } catch (err) {
+    result.error = err.message || 'Unknown error parsing blueprint XML.';
+    return result;
+  }
+}
+
+/**
+ * Parses an X4 XML station plan string into Map format.
  * @param {string} xmlString - The raw string content of an X4 blueprint .xml file.
- * @returns {{ id: string, name: string, modules: Map<string, number>, totalModules: number }}
+ * @returns {{ id: string, name: string, modules: Map<string, number>, totalModules: number, unrecognizedMacros: string[] }}
  */
 export function parseX4Blueprint(xmlString) {
-  if (!xmlString || typeof xmlString !== 'string') {
-    throw new Error('Invalid XML content: Expected a non-empty string.');
+  const res = parseBlueprintXML(xmlString);
+  if (!res.success) {
+    throw new Error(res.error || 'Failed to parse X4 XML blueprint.');
   }
 
-  if (typeof DOMParser !== 'undefined') {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-
-    // Check for XML parsing errors
-    const parseError = xmlDoc.querySelector('parsererror');
-    if (parseError) {
-      throw new Error(`XML Parsing Error: ${parseError.textContent}`);
-    }
-
-    // Extract root <plan> or <blueprint> metadata
-    const planNode = xmlDoc.querySelector('plan') || xmlDoc.querySelector('blueprint') || xmlDoc.documentElement;
-    const name = (planNode && planNode.getAttribute('name')) || 'Custom Station Plan';
-    const id = (planNode && planNode.getAttribute('id')) || 'unnamed_plan';
-
-    // Aggregate module macro counts
-    const entries = xmlDoc.querySelectorAll('entry');
-    const modulesMap = new Map();
-    let totalModules = 0;
-
-    entries.forEach((entry) => {
-      const macro = entry.getAttribute('macro');
-      if (!macro) return;
-
-      const countAttr = entry.getAttribute('count');
-      const count = countAttr ? parseInt(countAttr, 10) : 1;
-
-      if (!isNaN(count) && count > 0) {
-        const currentCount = modulesMap.get(macro) || 0;
-        modulesMap.set(macro, currentCount + count);
-        totalModules += count;
-      }
-    });
-
-    return {
-      id,
-      name,
-      modules: modulesMap,
-      totalModules
-    };
-  }
-
-  // Fallback regex parser for Node.js / non-browser test environments
-  const nameMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bname="([^"]*)"/i);
-  const idMatch = xmlString.match(/<(?:plan|blueprint)[^>]*?\bid="([^"]*)"/i);
-  const name = nameMatch ? nameMatch[1] : 'Custom Station Plan';
-  const id = idMatch ? idMatch[1] : 'unnamed_plan';
-
-  const entryRegex = /<entry\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bcount="([^"]*)")?[^>]*?>/gi;
   const modulesMap = new Map();
-  let totalModules = 0;
-  let match;
-
-  while ((match = entryRegex.exec(xmlString)) !== null) {
-    const macro = match[1];
-    const count = match[2] ? parseInt(match[2], 10) : 1;
-    if (macro && !isNaN(count) && count > 0) {
-      const currentCount = modulesMap.get(macro) || 0;
-      modulesMap.set(macro, currentCount + count);
-      totalModules += count;
-    }
-  }
+  Object.entries(res.modules).forEach(([macro, count]) => {
+    modulesMap.set(macro, count);
+  });
 
   return {
-    id,
-    name,
+    id: res.metadata.id,
+    name: res.metadata.name,
     modules: modulesMap,
-    totalModules
+    totalModules: res.metadata.totalModulesCount,
+    unrecognizedMacros: res.unrecognizedMacros
   };
 }
 
 /**
  * Parses a blueprint XML string and automatically updates the reactive StationStore.
  * @param {string} xmlString - The raw contents of an X4 blueprint .xml file.
- * @returns {{ id: string, name: string, totalModules: number }} Metadata summary.
+ * @param {Object} [targetStore=store] - Target reactive station store
+ * @returns {{ id: string, name: string, totalModules: number, unrecognizedMacros: string[] }} Metadata summary.
  */
 export function loadBlueprintIntoStore(xmlString, targetStore = store) {
-  const parsed = parseX4Blueprint(xmlString);
+  const parsed = parseBlueprintXML(xmlString);
+  if (!parsed.success) {
+    throw new Error(parsed.error || 'Failed to parse blueprint XML into store.');
+  }
 
-  const rawMacros = {};
-  parsed.modules.forEach((count, macro) => {
-    rawMacros[macro] = count;
-  });
+  const rawMacros = { ...parsed.modules };
 
   const appState = (targetStore && targetStore.state) ? targetStore.state : state;
   appState.originalBlueprint = {
-    name: parsed.name,
+    name: parsed.metadata.name,
     rawMacros: { ...rawMacros }
   };
 
   appState.activeBlueprint = {
-    name: parsed.name,
-    totalModules: parsed.totalModules,
+    name: parsed.metadata.name,
+    totalModules: parsed.metadata.totalModulesCount,
     modules: {},
     rawMacros: { ...rawMacros },
     rootMacros: { ...rawMacros },
@@ -532,11 +577,16 @@ export function loadBlueprintIntoStore(xmlString, targetStore = store) {
     baselineLayerTotals: null
   };
 
-  appState.activeModules = parsed.modules;
+  const modulesMap = new Map();
+  Object.entries(rawMacros).forEach(([macro, count]) => {
+    modulesMap.set(macro, count);
+  });
+  appState.activeModules = modulesMap;
   appState.xmlMetadata = {
-    id: parsed.id,
-    name: parsed.name,
-    totalModules: parsed.totalModules,
+    id: parsed.metadata.id,
+    name: parsed.metadata.name,
+    totalModules: parsed.metadata.totalModulesCount,
+    unrecognizedMacros: parsed.unrecognizedMacros,
     loadedAt: new Date().toISOString()
   };
 
@@ -548,9 +598,10 @@ export function loadBlueprintIntoStore(xmlString, targetStore = store) {
   }
 
   return {
-    id: parsed.id,
-    name: parsed.name,
-    totalModules: parsed.totalModules
+    id: parsed.metadata.id,
+    name: parsed.metadata.name,
+    totalModules: parsed.metadata.totalModulesCount,
+    unrecognizedMacros: parsed.unrecognizedMacros
   };
 }
 
@@ -580,5 +631,45 @@ export function readAndLoadBlueprintFile(file, targetStore = store) {
     reader.readAsText(file);
   });
 }
+
+/**
+ * Asynchronously reads a File object and parses it via parseBlueprintXML.
+ * Does not mutate store state directly, returning the standardized parse result.
+ * @param {File} file - HTML5 File object
+ * @param {Object} [knownMacros] - Optional custom macro catalog
+ * @returns {Promise<Object>} Standardized parse result contract
+ */
+export function readAndParseBlueprintFile(file, knownMacros = macroCatalog) {
+  return new Promise((resolve) => {
+    if (!file) {
+      resolve({
+        success: false,
+        modules: {},
+        unrecognizedMacros: [],
+        metadata: { entriesParsed: 0, totalModulesCount: 0, fileName: '' },
+        error: 'No file provided.'
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const parsed = parseBlueprintXML(e.target.result, knownMacros);
+      parsed.metadata.fileName = file.name || 'uploaded_plan.xml';
+      resolve(parsed);
+    };
+    reader.onerror = () => {
+      resolve({
+        success: false,
+        modules: {},
+        unrecognizedMacros: [],
+        metadata: { entriesParsed: 0, totalModulesCount: 0, fileName: file.name },
+        error: 'Failed to read the blueprint file.'
+      });
+    };
+    reader.readAsText(file);
+  });
+}
+
 
 

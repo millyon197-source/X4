@@ -344,3 +344,45 @@ export function accumulateRawMiningRates(
 
   return rawTotals;
 }
+
+export const RAW_MINERAL_WARES = new Set([
+  'ore',
+  'silicon',
+  'ice',
+  'hydrogen',
+  'helium',
+  'methane',
+]);
+
+/**
+ * Evaluates net hourly raw resource harvesting demand from net production deficits.
+ * @param {Object} netWareBalance - Net balance per ware per hour { [wareId]: netAmountPerHour }
+ * @returns {Object} Raw extraction requirements { [wareId]: hourlyHarvestRate }
+ */
+export function calculateMiningRequirements(netWareBalance = {}) {
+  const rawRequirements = {};
+
+  for (const ware of RAW_MINERAL_WARES) {
+    const pascal = ware.charAt(0).toUpperCase() + ware.slice(1);
+    const balance = netWareBalance[ware] !== undefined ? netWareBalance[ware] : (netWareBalance[pascal] || 0);
+    // Deficit (negative net balance) indicates required raw extraction
+    rawRequirements[ware] = balance < 0 ? Math.abs(balance) : 0;
+    if (pascal !== ware) {
+      rawRequirements[pascal] = rawRequirements[ware];
+    }
+  }
+
+  return rawRequirements;
+}
+
+/**
+ * Calculates Energy Cell production for solar modules based on sector sunlight percentage.
+ * @param {number} baseEnergyOutput - Base solar module output per hour
+ * @param {number} sunlightPct - Sector sunlight percentage (e.g., 100, 150)
+ * @returns {number} Adjusted hourly Energy Cell output
+ */
+export function calculateSolarOutput(baseEnergyOutput, sunlightPct = 100) {
+  const effectiveSunlight = Math.max(0, Number(sunlightPct) || 100) / 100;
+  return baseEnergyOutput * effectiveSunlight;
+}
+

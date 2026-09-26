@@ -1,7 +1,7 @@
 import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareHourlyRatePerModule, getWareCycleTimeSec, getWareOutputPerCycle, MACRO_TO_WARE, FACTION_WARE_MAP, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
 import { state, store, saveActiveBlueprintToStorage } from '../state/store.js';
 import { rebuildBlueprintFromMacros, reloadActiveBlueprint } from '../engine/xmlParser.js';
-import { calculateFactoryRequirements, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
+import { calculateFactoryRequirements, calculateMatrix, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { SECTORS_SUNLIGHT, getSectorInfo, getSectorSunlight, getSolarDynamicCycles, calculateSolarOutput } from '../data/sectors.js';
 import { escapeHtml } from '../html.js';
 
@@ -2251,3 +2251,50 @@ export function updateInspector(id, onRender) {
     });
   }
 }
+
+let containerEl = null;
+let unsubscribeStore = null;
+
+/**
+ * Initializes the Matrix View component and subscribes to state changes.
+ * @param {HTMLElement} rootElement - Parent DOM container
+ */
+export function initMatrixView(rootElement) {
+  containerEl = rootElement;
+
+  if (unsubscribeStore) {
+    unsubscribeStore();
+  }
+
+  // Subscribe to store updates
+  unsubscribeStore = store.subscribe((currentState) => {
+    if (containerEl && state.activeTab === 'matrix') {
+      if (typeof window !== 'undefined' && typeof window.renderApp === 'function') {
+        window.renderApp();
+      } else {
+        containerEl.innerHTML = renderMatrixTabHTML();
+      }
+    }
+  });
+
+  // Initial render
+  if (containerEl) {
+    if (typeof window !== 'undefined' && typeof window.renderApp === 'function') {
+      window.renderApp();
+    } else {
+      containerEl.innerHTML = renderMatrixTabHTML();
+    }
+  }
+}
+
+/**
+ * Cleans up DOM event listeners and store subscriptions upon tab switch.
+ */
+export function destroyMatrixView() {
+  if (unsubscribeStore) {
+    unsubscribeStore();
+    unsubscribeStore = null;
+  }
+  containerEl = null;
+}
+
