@@ -253,7 +253,19 @@ if (savedPreset === 'all' && savedBlueprint && !savedPreviousBlueprint) {
   savedBlueprint = null;
 }
 
+export const DEFAULT_STATE = {
+  modules: {},           // { [macroName]: count }
+  workforceCount: 0,     // Total active workers
+  sunlightPct: 100,      // Sector sunlight percentage (e.g. 100%, 150%)
+  constructionMethod: 'commonwealth', // 'commonwealth' | 'terran' | 'boron'
+  activeTab: 'matrix',   // 'matrix' | 'planned'
+};
+
 export const state = {
+  modules: {},
+  workforceCount: 0,
+  sunlightPct: 100,
+  constructionMethod: 'commonwealth',
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
   originalBlueprint: savedOriginalBlueprint,
@@ -407,19 +419,127 @@ export function saveActiveBlueprintToStorage() {
   }
 }
 
-// Reactive StationStore with pub/sub listener pattern
-export class StationStore {
+export const STORAGE_KEY = 'x4_station_planner_state_v1';
+
+// Reactive StationStore with EventTarget and pub/sub listener pattern
+export class StationStore extends EventTarget {
   constructor(initialState = state) {
+    super();
     this.state = initialState;
     this.listeners = new Set();
   }
 
-  subscribe(listener) {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+  /**
+   * Returns a copy of the current state.
+   */
+  getState() {
+    return this.state;
   }
 
-  notify(event, payload = null) {
+  /**
+   * Updates state slice and notifies all subscribers.
+   */
+  setState(updater) {
+    const nextSlice = typeof updater === 'function' ? updater(this.state) : updater;
+    Object.assign(this.state, nextSlice);
+    this._saveState();
+    this._notify();
+  }
+
+  /* --- Module Operations --- */
+
+  setModuleCount(macro, count) {
+    const validCount = Math.max(0, parseInt(count, 10) || 0);
+    if (!this.state.modules) this.state.modules = {};
+    if (validCount > 0) {
+      this.state.modules[macro] = validCount;
+    } else {
+      delete this.state.modules[macro];
+    }
+
+    if (this.state.activeBlueprint) {
+      if (!this.state.activeBlueprint.rawMacros) this.state.activeBlueprint.rawMacros = {};
+      if (validCount > 0) {
+        this.state.activeBlueprint.rawMacros[macro] = validCount;
+      } else {
+        delete this.state.activeBlueprint.rawMacros[macro];
+      }
+      this.state.activeBlueprint.totalModules = Object.values(this.state.activeBlueprint.rawMacros).reduce((s, n) => s + n, 0);
+    }
+
+    this._saveState();
+    this._notify();
+  }
+
+  addModule(macro, delta = 1) {
+    const current = (this.state.modules && this.state.modules[macro]) ||
+                    (this.state.activeBlueprint?.rawMacros && this.state.activeBlueprint.rawMacros[macro]) || 0;
+    this.setModuleCount(macro, current + delta);
+  }
+
+  importBlueprint(importedModulesMap) {
+    const rawMacros = { ...importedModulesMap };
+    this.state.modules = { ...rawMacros };
+    if (!this.state.activeBlueprint) {
+      this.state.activeBlueprint = {
+        name: 'Imported Plan',
+        modules: {},
+        rawMacros: { ...rawMacros },
+        rootMacros: { ...rawMacros },
+        totalModules: Object.values(rawMacros).reduce((s, n) => s + n, 0),
+        sector: this.state.selectedSector,
+        workforceBonus: this.state.workforceBonus,
+        ppStates: {}
+      };
+    } else {
+      this.state.activeBlueprint.rawMacros = { ...rawMacros };
+      this.state.activeBlueprint.rootMacros = { ...rawMacros };
+      this.state.activeBlueprint.totalModules = Object.values(rawMacros).reduce((s, n) => s + n, 0);
+    }
+    this._saveState();
+    this._notify();
+  }
+
+  reset() {
+    clearBlueprintInternalStorage();
+    this.state.modules = {};
+    this.state.workforceCount = 0;
+    this.state.sunlightPct = 100;
+    this._saveState();
+    this._notify();
+  }
+
+  /* --- Sector & Faction Settings --- */
+
+  setSunlight(pct) {
+    this.state.sunlightPct = Math.max(0, Number(pct) || 100);
+    this._saveState();
+    this._notify();
+  }
+
+  setConstructionMethod(method) {
+    this.state.constructionMethod = method;
+    this.state.factionConstructionMethod = method;
+    this._saveState();
+    this._notify();
+  }
+
+  /* --- Subscription System --- */
+
+  subscribe(callback) {
+    const handler = (e) => {
+      const detail = e.detail && e.detail.state ? e.detail.state : (e.detail || this.getState());
+      callback(detail);
+    };
+    this.addEventListener('stateChange', handler);
+    this.listeners.add(callback);
+    return () => {
+      this.removeEventListener('stateChange', handler);
+      this.listeners.delete(callback);
+    };
+  }
+
+  notify(event = 'stateChange', payload = null) {
     this.listeners.forEach(fn => {
       try {
         fn(this.state, event, payload);
@@ -427,10 +547,49 @@ export class StationStore {
         console.error('Error in StationStore listener:', err);
       }
     });
+    try {
+      this.dispatchEvent(
+        new CustomEvent('stateChange', { detail: { state: this.getState(), event, payload } })
+      );
+    } catch (e) {}
+  }
+
+  _notify() {
+    this.notify('stateChange', this.getState());
+  }
+
+  _loadState() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return { ...DEFAULT_STATE, ...JSON.parse(saved) };
+      }
+    } catch (err) {
+      console.warn('Failed to load station state from localStorage:', err);
+    }
+    return { ...DEFAULT_STATE };
+  }
+
+  _saveState() {
+    try {
+      saveActiveBlueprintToStorage();
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const snapshot = {
+          modules: this.state.modules || (this.state.activeBlueprint?.rawMacros) || {},
+          workforceCount: this.state.workforceCount || 0,
+          sunlightPct: this.state.sunlightPct || 100,
+          constructionMethod: this.state.constructionMethod || this.state.factionConstructionMethod || 'commonwealth',
+          activeTab: this.state.activeTab || 'matrix'
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      }
+    } catch (err) {
+      console.error('Failed to save station state to localStorage:', err);
+    }
   }
 
   save() {
-    saveActiveBlueprintToStorage();
+    this._saveState();
     this.notify('STORAGE_SAVED');
   }
 
@@ -441,3 +600,4 @@ export class StationStore {
 }
 
 export const store = new StationStore(state);
+

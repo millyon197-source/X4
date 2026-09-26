@@ -1,13 +1,19 @@
 // ============================================================================
-// src/engine/state.js - Re-export Bridge to Unified Reactive State Store
+// src/engine/state.js - (DEPRECATED) Re-export Bridge to Unified Reactive State Store
 // ============================================================================
-// State management has been consolidated into `src/state/store.js`.
-// This module provides full backward-compatibility for existing imports.
+/**
+ * @deprecated
+ * State management and persistence have been consolidated into `src/state/store.js`.
+ * Direct imports from `src/engine/state.js` are deprecated.
+ * This file is maintained strictly as a backwards-compatibility re-export shim.
+ */
 
 export {
   state,
   store,
   StationStore,
+  DEFAULT_STATE,
+  STORAGE_KEY,
   isHostedMode,
   clearBlueprintInternalStorage,
   saveActiveBlueprintToStorage

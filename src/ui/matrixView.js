@@ -1,5 +1,5 @@
 import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareHourlyRatePerModule, getWareCycleTimeSec, getWareOutputPerCycle, MACRO_TO_WARE, FACTION_WARE_MAP, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
-import { state, saveActiveBlueprintToStorage } from '../engine/state.js';
+import { state, store, saveActiveBlueprintToStorage } from '../state/store.js';
 import { rebuildBlueprintFromMacros, reloadActiveBlueprint } from '../engine/xmlParser.js';
 import { calculateFactoryRequirements, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { SECTORS_SUNLIGHT, getSectorInfo, getSectorSunlight, getSolarDynamicCycles, calculateSolarOutput } from '../data/sectors.js';

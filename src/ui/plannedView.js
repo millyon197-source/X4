@@ -1,7 +1,7 @@
 import { getFriendlyModuleName, mapMacroToWare, isFoodOrAgriMacro, isWareMacro, isStructureMacro, getModuleBuildCost, MACRO_TO_WARE, MODULE_NAMES, MODULE_BUILD_COSTS, WARES_DB } from '../data/wares.js';
 import MODULES_WORKFORCE from '../data/modules_workforce.json' with { type: 'json' };
 import { calculateBlueprintWorkforce } from '../engine/calculator.js';
-import { state } from '../engine/state.js';
+import { state, store } from '../state/store.js';
 import { escapeHtml } from '../html.js';
 
 export function getKnownMacrosList() {

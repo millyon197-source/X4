@@ -1,6 +1,5 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
-import { state, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './state.js';
-import { store } from '../state/store.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from '../state/store.js';
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;

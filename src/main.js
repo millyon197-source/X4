@@ -1,6 +1,6 @@
 import './style.css';
 import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
-import { state, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './engine/state.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage } from './state/store.js';
 import { calculateFactoryRequirements, syncPopulatedMatrix, getPrimaryMacroForWare } from './engine/calculator.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
 import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId } from './ui/matrixView.js';
@@ -10,6 +10,7 @@ import { escapeHtml } from './html.js';
 
 if (typeof window !== 'undefined') {
   window.state = state;
+  window.store = store;
   window.WARES_DB = WARES_DB;
   window.calculateFactoryRequirements = calculateFactoryRequirements;
   window.renderMatrixTabHTML = renderMatrixTabHTML;
@@ -21,6 +22,13 @@ if (typeof window !== 'undefined') {
       window.__IS_HOSTED__ = Boolean(__IS_HOSTED__);
     }
   } catch (e) {}
+
+  // Subscribe UI to reactive state changes from StationStore
+  store.subscribe(() => {
+    if (typeof renderApp === 'function') {
+      renderApp();
+    }
+  });
 }
 
 if (isHostedMode()) {

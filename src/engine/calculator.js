@@ -1,5 +1,5 @@
 import { WARES_DB, DEPENDENCIES, PRESET_BLUEPRINTS, getWareHourlyRatePerModule, getWareCycleYield, mapMacroToWare, MACRO_TO_WARE, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
-import { state, saveActiveBlueprintToStorage } from './state.js';
+import { state, saveActiveBlueprintToStorage } from '../state/store.js';
 import { getSectorSunlight, calculateSolarOutput } from '../data/sectors.js';
 import { calculateBlueprintWorkforce } from './workforce.js';
 import { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand } from './mining.js';
@@ -325,20 +325,25 @@ export function computeLayerTotals() {
   totals.workforce = state.workforceSummary;
 }
 
-export function calculateFactoryRequirements() {
+export function calculateFactoryRequirements(blueprint = state.activeBlueprint, options = {}) {
   state.calculatedDemand = {};
 
-  // CASE 1: Full Station Blueprint loaded (always use blueprint modules for all totals)
-  if (state.activeBlueprint) {
-    if (!state.activeBlueprint.modules) state.activeBlueprint.modules = {};
-    if (!state.activeBlueprint.rawMacros) state.activeBlueprint.rawMacros = {};
-    const bpModules = state.activeBlueprint.modules;
+  const activeBp = blueprint !== undefined ? blueprint : state.activeBlueprint;
+  if (options.selectedSector !== undefined) state.selectedSector = options.selectedSector;
+  if (options.workforceBonus !== undefined) state.workforceBonus = options.workforceBonus;
+  if (options.ppStates !== undefined && activeBp) activeBp.ppStates = options.ppStates;
 
-    if (!state.activeBlueprint.ppStates) state.activeBlueprint.ppStates = {};
-    delete state.activeBlueprint.ppStates['ScrapHullParts'];
-    delete state.activeBlueprint.ppStates['ScrapClaytronics'];
-    delete state.activeBlueprint.ppStates['TerCompSubstrate'];
-    delete state.activeBlueprint.ppStates['TerSilCarbide'];
+  // CASE 1: Full Station Blueprint loaded (always use blueprint modules for all totals)
+  if (activeBp) {
+    if (!activeBp.modules) activeBp.modules = {};
+    if (!activeBp.rawMacros) activeBp.rawMacros = {};
+    const bpModules = activeBp.modules;
+
+    if (!activeBp.ppStates) activeBp.ppStates = {};
+    delete activeBp.ppStates['ScrapHullParts'];
+    delete activeBp.ppStates['ScrapClaytronics'];
+    delete activeBp.ppStates['TerCompSubstrate'];
+    delete activeBp.ppStates['TerSilCarbide'];
 
     // Rule: If any inputs to Hull Parts has 0 module count, then check PP for Hull Part
     const hullWare = WARES_DB['HullParts'];
@@ -510,11 +515,15 @@ export function calculateFactoryRequirements() {
     accumulateRawMiningRates();
     computeLayerTotals();
 
-    if (!state.activeBlueprint.baselineDemand) {
-      state.activeBlueprint.baselineDemand = JSON.parse(JSON.stringify(state.calculatedDemand));
-      state.activeBlueprint.baselineLayerTotals = JSON.parse(JSON.stringify(state.layerTotals));
+    if (activeBp && !activeBp.baselineDemand) {
+      activeBp.baselineDemand = JSON.parse(JSON.stringify(state.calculatedDemand));
+      activeBp.baselineLayerTotals = JSON.parse(JSON.stringify(state.layerTotals));
     }
-    return;
+    return {
+      demand: state.calculatedDemand,
+      layerTotals: state.layerTotals,
+      workforceSummary: state.workforceSummary
+    };
   }
 
   // CASE 2: Single Target Mode with a specific card selected
@@ -528,7 +537,11 @@ export function calculateFactoryRequirements() {
       });
       accumulateRawMiningRates();
       computeLayerTotals();
-      return;
+      return {
+        demand: state.calculatedDemand,
+        layerTotals: state.layerTotals,
+        workforceSummary: state.workforceSummary
+      };
     } else {
       // Level 1, 2, 3 selected target or Level 0 EC/TerEC
       const isTargetEC = state.selectedWareId === 'EC' || state.selectedWareId === 'TerEC';
@@ -651,10 +664,29 @@ export function calculateFactoryRequirements() {
 
     accumulateRawMiningRates();
     computeLayerTotals();
-    return;
+    return {
+      demand: state.calculatedDemand,
+      layerTotals: state.layerTotals,
+      workforceSummary: state.workforceSummary
+    };
   }
 
   computeLayerTotals();
+  return {
+    demand: state.calculatedDemand,
+    layerTotals: state.layerTotals,
+    workforceSummary: state.workforceSummary
+  };
+}
+
+/**
+ * Pure calculation alias taking modulesState and options.
+ */
+export function calculateMatrix(modulesState, options = {}) {
+  const bp = (modulesState && typeof modulesState === 'object')
+    ? (modulesState.modules ? modulesState : { modules: modulesState, name: 'Ad-hoc Matrix' })
+    : state.activeBlueprint;
+  return calculateFactoryRequirements(bp, options);
 }
 
 export function getPrimaryMacroForWare(wareId) {
