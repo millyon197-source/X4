@@ -209,10 +209,9 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
     saveActiveBlueprintToStorage();
 
     if (typeof onRender === 'function') onRender();
-    alert(`Loaded XML Blueprint: "${planName}" (${state.activeBlueprint.totalModules} total modules scanned!)`);
+    console.info(`Loaded XML Blueprint: "${planName}" (${state.activeBlueprint.totalModules} total modules scanned!)`);
   } catch (err) {
-    alert('Failed to parse XML file.');
-    console.error(err);
+    console.error('Failed to parse XML file:', err);
   }
 }
 
