@@ -1407,14 +1407,30 @@ export function updateInspector(id, onRender) {
     const isDiffCollapsed = Boolean(state.moduleDiffCollapsed);
 
     const redShortages = [];
+    const expandedDeficits = [];
     if (wf.surplusDeficit < 0) {
       redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Workforce Bed Shortage: ${wf.surplusDeficit.toLocaleString()} beds">🛏️ ${wf.surplusDeficit.toLocaleString()} beds</span>`);
+      expandedDeficits.push({
+        icon: '🛏️',
+        label: 'Workforce Bed Deficit',
+        value: `${wf.surplusDeficit.toLocaleString()} beds`
+      });
     }
     if (wf.lifeSupport && wf.lifeSupport.foodBalance < 0) {
       redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Food Rations Shortage: ${Math.round(wf.lifeSupport.foodBalance).toLocaleString()} / hr">🍞 ${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}/hr</span>`);
+      expandedDeficits.push({
+        icon: '🍞',
+        label: 'Food Rations Deficit',
+        value: `${Math.round(wf.lifeSupport.foodBalance).toLocaleString()} / hr`
+      });
     }
     if (wf.lifeSupport && wf.lifeSupport.medBalance < 0) {
       redShortages.push(`<span style="color:#ef4444; background:rgba(239,68,68,0.15); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem; font-weight:700;" title="Medical Supplies Shortage: ${Math.round(wf.lifeSupport.medBalance).toLocaleString()} / hr">💊 ${Math.round(wf.lifeSupport.medBalance).toLocaleString()}/hr</span>`);
+      expandedDeficits.push({
+        icon: '💊',
+        label: 'Medical Supplies Deficit',
+        value: `${Math.round(wf.lifeSupport.medBalance).toLocaleString()} / hr`
+      });
     }
 
     insBody.innerHTML = `
@@ -1452,6 +1468,17 @@ export function updateInspector(id, onRender) {
             </div>
           </div>
           <div class="bp-wf-body" style="padding:0.5rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); display:${isWfCollapsed ? 'none' : 'block'};">
+            ${expandedDeficits.length > 0 ? `
+              <div class="bp-wf-expanded-deficits" style="margin-bottom:0.45rem; padding:0.35rem 0.5rem; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:4px; font-size:0.72rem; display:flex; flex-direction:column; gap:0.25rem;">
+                <div style="font-weight:700; color:#ef4444; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em;">⚠️ Workforce Deficits:</div>
+                ${expandedDeficits.map(d => `
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#cbd5e1;">${d.icon} ${d.label}:</span>
+                    <span style="color:#ef4444; font-weight:700; background:rgba(239,68,68,0.2); padding:1px 6px; border-radius:3px; border:1px solid rgba(239,68,68,0.35); font-size:0.7rem;">${d.value}</span>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.35rem 0.6rem; font-size:0.76rem;">
               <div><span style="color:#94a3b8;">Optimal Needed:</span> <strong style="color:#38bdf8;">${wf.totalOptimalWorkforce.toLocaleString()}</strong></div>
               <div><span style="color:#94a3b8;">Hab Capacity:</span> <strong style="color:#34d399;">${wf.totalHabitationCapacity.toLocaleString()}</strong></div>
