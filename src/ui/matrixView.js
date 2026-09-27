@@ -1077,7 +1077,9 @@ export function updateInspector(id, onRender) {
   if (state.activeBlueprint && !id) {
     const dbOrder = Object.keys(WARES_DB);
     const liveDemand = state.calculatedDemand || (state.activeBlueprint && state.activeBlueprint.baselineDemand) || {};
-    const liveLt = state.layerTotals || (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals) || { totalECNeeded: 0, solarModulesNeeded: 0 };
+    const liveLt = (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals && state.activeBlueprint.baselineLayerTotals.totalECNeeded > 0)
+      ? state.activeBlueprint.baselineLayerTotals
+      : (state.layerTotals || { totalECNeeded: 0, solarModulesNeeded: 0 });
 
     // Gather all card modules where needed module count is not equal to plan count
     const diffList = [];
@@ -1090,16 +1092,12 @@ export function updateInspector(id, onRender) {
 
     Object.keys(WARES_DB).forEach(wId => {
       const ware = WARES_DB[wId];
-      if (ware.level === 0 && wId !== 'EC' && wId !== 'TerEC') return;
+      if (ware.level === 0) return;
       if (ware.level === 4) return;
+      if (wId === 'EC' || wId === 'TerEC' || wId === 'ScrapMetal' || wId === 'TerScrapMetal' || wId === 'ScrapProc' || wId === 'AllographyneScrapProc') return;
 
       let inPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[wId]) || 0;
-      let optimum = 0;
-      if (wId === 'EC' || wId === 'TerEC') {
-        optimum = (liveDemand[wId] ? liveDemand[wId].modulesNeeded : 0) || 0;
-      } else if (liveDemand[wId]) {
-        optimum = liveDemand[wId].modulesNeeded || 0;
-      }
+      let optimum = liveDemand[wId] ? (liveDemand[wId].modulesNeeded || 0) : 0;
 
       if (inPlan > optimum) {
         hasExceeded = true;
@@ -1148,7 +1146,9 @@ export function updateInspector(id, onRender) {
 
     const activeRawList = rawList.filter(item => item.rate > 0);
     const totalRaw = activeRawList.reduce((sum, item) => sum + item.rate, 0);
-    const ecTotal = state.layerTotals ? state.layerTotals.totalECNeeded : (state.calculatedDemand['EC'] ? state.calculatedDemand['EC'].rateNeeded : 0);
+    const ecTotal = (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals && state.activeBlueprint.baselineLayerTotals.totalECNeeded > 0)
+      ? state.activeBlueprint.baselineLayerTotals.totalECNeeded
+      : (state.layerTotals ? state.layerTotals.totalECNeeded : (state.calculatedDemand['EC'] ? state.calculatedDemand['EC'].rateNeeded : 0));
 
     const bpEntriesMap = {};
     
@@ -1593,7 +1593,7 @@ export function updateInspector(id, onRender) {
           macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_gen_scraprecycler_macro'] !== undefined)
             ? 'prod_gen_scraprecycler_macro'
             : 'prod_gen_scrap_recycler_macro';
-        } else if (wareId === 'TerScrapMetal' || wareId === 'TerCompSubstrate' || wareId === 'TerSilCarbide') {
+        } else if (wareId === 'TerScrapMetal' || ((wareId === 'TerCompSubstrate' || wareId === 'TerSilCarbide') && !state.activeBlueprint.rawMacros['prod_ter_computronicsubstrate_macro'] && !state.activeBlueprint.rawMacros['prod_ter_siliconcarbide_macro'])) {
           macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined)
             ? 'prod_ter_scraprecycler_macro'
             : 'prod_ter_scrap_recycler_macro';
@@ -1813,11 +1813,12 @@ export function updateInspector(id, onRender) {
         }
 
         // Solar panels (EC and TerEC) installed in station blueprint are preserved and not overridden
-        if ((wId === 'EC' || wId === 'TerEC') && currentPlan > 0) {
+        if (wId === 'EC' || wId === 'TerEC') {
           return;
         }
 
-        if (wId === 'ScrapMetal' || wId === 'TerScrapMetal') {
+        // Raw scrap infrastructure (ScrapMetal, Processors) are preserved and not overridden by Match Needs
+        if (wId === 'ScrapMetal' || wId === 'TerScrapMetal' || wId === 'ScrapProc' || wId === 'AllographyneScrapProc') {
           return;
         }
 
@@ -1845,30 +1846,38 @@ export function updateInspector(id, onRender) {
         }
 
         if (wId === 'TerCompSubstrate' || wId === 'TerSilCarbide') {
-          const macroKey = state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined
-            ? 'prod_ter_scraprecycler_macro'
-            : 'prod_ter_scrap_recycler_macro';
-          if (optimum > 0) {
-            state.activeBlueprint.modules[wId] = optimum;
-            state.activeBlueprint.modules['TerScrapMetal'] = Math.max(state.activeBlueprint.modules['TerCompSubstrate'] || 0, state.activeBlueprint.modules['TerSilCarbide'] || 0);
-            state.activeBlueprint.rawMacros[macroKey] = Math.max(state.activeBlueprint.rawMacros[macroKey] || 0, optimum);
-            if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = Math.max(state.activeBlueprint.rootMacros[macroKey] || 0, optimum);
-          } else {
-            delete state.activeBlueprint.modules[wId];
-            const otherId = wId === 'TerCompSubstrate' ? 'TerSilCarbide' : 'TerCompSubstrate';
-            if (!state.activeBlueprint.modules[otherId]) {
-              delete state.activeBlueprint.modules['TerScrapMetal'];
-              delete state.activeBlueprint.rawMacros[macroKey];
-              if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+          const hasStdMacro = (wId === 'TerCompSubstrate' && state.activeBlueprint.rawMacros['prod_ter_computronicsubstrate_macro'] !== undefined) ||
+                              (wId === 'TerSilCarbide' && state.activeBlueprint.rawMacros['prod_ter_siliconcarbide_macro'] !== undefined);
+          if (!hasStdMacro && (state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined || state.activeBlueprint.rawMacros['prod_ter_scrap_recycler_macro'] !== undefined)) {
+            const macroKey = state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined
+              ? 'prod_ter_scraprecycler_macro'
+              : 'prod_ter_scrap_recycler_macro';
+            if (optimum > 0) {
+              state.activeBlueprint.modules[wId] = optimum;
+              state.activeBlueprint.modules['TerScrapMetal'] = Math.max(state.activeBlueprint.modules['TerCompSubstrate'] || 0, state.activeBlueprint.modules['TerSilCarbide'] || 0);
+              state.activeBlueprint.rawMacros[macroKey] = Math.max(state.activeBlueprint.rawMacros[macroKey] || 0, optimum);
+              if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = Math.max(state.activeBlueprint.rootMacros[macroKey] || 0, optimum);
             } else {
-              state.activeBlueprint.modules['TerScrapMetal'] = state.activeBlueprint.modules[otherId];
+              delete state.activeBlueprint.modules[wId];
+              const otherId = wId === 'TerCompSubstrate' ? 'TerSilCarbide' : 'TerCompSubstrate';
+              if (!state.activeBlueprint.modules[otherId]) {
+                delete state.activeBlueprint.modules['TerScrapMetal'];
+                delete state.activeBlueprint.rawMacros[macroKey];
+                if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+              } else {
+                state.activeBlueprint.modules['TerScrapMetal'] = state.activeBlueprint.modules[otherId];
+              }
             }
+            return;
           }
-          return;
         }
 
         // Clean up all existing macros for this ware to prevent double counting
-        const matchingMacros = Object.keys(state.activeBlueprint.rawMacros).filter(m => mapMacroToWare(m) === wId);
+        const matchingMacros = Object.keys(state.activeBlueprint.rawMacros).filter(m => {
+          const lower = m.toLowerCase();
+          if (lower.includes('scraprecycler') || lower.includes('scrap_recycler')) return false;
+          return mapMacroToWare(m) === wId;
+        });
         matchingMacros.forEach(m => {
           delete state.activeBlueprint.rawMacros[m];
           if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[m];

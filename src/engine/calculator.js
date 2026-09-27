@@ -253,6 +253,11 @@ export function computeLayerTotals() {
     totals.totalECNeeded += scrapEc.totalDemand;
   }
 
+  if (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals && state.activeBlueprint.baselineLayerTotals.totalECNeeded > 0) {
+    // Preserve station blueprint's constant EC needed across Match Needs / recalculations
+    totals.totalECNeeded = state.activeBlueprint.baselineLayerTotals.totalECNeeded;
+  }
+
   let inPlanSolarCount = state.activeBlueprint ? (state.activeBlueprint.modules['EC'] || 0) : 0;
   let inPlanTerSolarCount = state.activeBlueprint ? (state.activeBlueprint.modules['TerEC'] || 0) : 0;
 
