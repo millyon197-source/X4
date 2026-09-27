@@ -1,7 +1,8 @@
 import './style.css';
 import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
 import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents } from './state/store.js';
-import { calculateFactoryRequirements, syncPopulatedMatrix, getPrimaryMacroForWare } from './engine/calculator.js';
+import { calculateFactoryRequirements, getPrimaryMacroForWare } from './engine/calculator.js';
+import { applyMatchNeeds } from './engine/matchNeeds.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
 import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId } from './ui/matrixView.js';
 import { renderPlannedTabHTML, filterPlannedModules } from './ui/plannedView.js';
@@ -154,11 +155,7 @@ function renderApp() {
   try {
 
     if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
-      if (state.populateMatrix) {
-        syncPopulatedMatrix();
-      } else {
-        rebuildBlueprintFromMacros();
-      }
+      rebuildBlueprintFromMacros();
     }
     calculateFactoryRequirements();
 
@@ -958,18 +955,10 @@ function setupEvents(searchFocusState = {}) {
     });
   }
 
-  const chkPopulateMatrix = document.getElementById('chkPopulateMatrix');
-  if (chkPopulateMatrix) {
-    chkPopulateMatrix.addEventListener('change', (e) => {
-      state.populateMatrix = e.target.checked;
-      if (state.activeBlueprint) {
-        if (!state.activeBlueprint.rootMacros) {
-          state.activeBlueprint.rootMacros = { ...(state.activeBlueprint.rawMacros || {}) };
-        }
-        syncPopulatedMatrix();
-      }
-      saveActiveBlueprintToStorage();
-      renderApp();
+  const chkMatchNeedsPlanned = document.getElementById('chkMatchNeedsPlanned');
+  if (chkMatchNeedsPlanned) {
+    chkMatchNeedsPlanned.addEventListener('change', (e) => {
+      applyMatchNeeds(e.target.checked, renderApp);
     });
   }
 
@@ -1059,11 +1048,7 @@ function setupEvents(searchFocusState = {}) {
       const addedWareId = mapMacroToWare(selectedMacro);
       state.selectedWareId = addedWareId;
 
-      if (state.populateMatrix) {
-        syncPopulatedMatrix();
-      } else {
-        rebuildBlueprintFromMacros();
-      }
+      rebuildBlueprintFromMacros();
       saveActiveBlueprintToStorage();
       calculateFactoryRequirements();
       renderApp();
@@ -1085,11 +1070,7 @@ function setupEvents(searchFocusState = {}) {
       state.activeBlueprint.rawMacros[macro] = Math.max(0, newQty);
     }
 
-    if (state.populateMatrix) {
-      syncPopulatedMatrix();
-    } else {
-      rebuildBlueprintFromMacros();
-    }
+    rebuildBlueprintFromMacros();
     saveActiveBlueprintToStorage();
     calculateFactoryRequirements();
     renderApp();

@@ -226,7 +226,7 @@ export function computeLayerTotals() {
       // Hourly Recipe Consumption
       if (ware.recipe) {
         Object.entries(ware.recipe).forEach(([inputId, inputQty]) => {
-          let consRate = modCount * inputQty;
+          let consRate = (state.activeBlueprint ? inPlanCount : modCount) * inputQty;
           if (inputId === 'EC') {
             if (isPPChecked) {
               consRate = 0;
@@ -251,11 +251,6 @@ export function computeLayerTotals() {
   if (scrapEc.totalDemand > 0) {
     totals.L1.ecConsumed += scrapEc.totalDemand;
     totals.totalECNeeded += scrapEc.totalDemand;
-  }
-
-  if (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals && state.activeBlueprint.baselineLayerTotals.totalECNeeded > 0) {
-    // Preserve station blueprint's constant EC needed across Match Needs / recalculations
-    totals.totalECNeeded = state.activeBlueprint.baselineLayerTotals.totalECNeeded;
   }
 
   let inPlanSolarCount = state.activeBlueprint ? (state.activeBlueprint.modules['EC'] || 0) : 0;

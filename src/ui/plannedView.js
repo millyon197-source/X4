@@ -4,6 +4,7 @@ import { calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { readAndParseBlueprintFile } from '../engine/xmlParser.js';
 import { calculateBuildCosts } from '../engine/buildCost.js';
 import { getWareUnitPrice, WARE_PRICES } from '../engine/prices.js';
+import { getMatchNeedsStatus } from '../engine/matchNeeds.js';
 import { state, store } from '../state/store.js';
 import { escapeHtml } from '../html.js';
 
@@ -142,6 +143,7 @@ export function renderPlannedTabHTML() {
   const hasAnyVisible = !searchQuery || macroEntries.some(([macro]) => matchesModuleQuery(macro, searchQuery));
   const wf = calculateBlueprintWorkforce(state.activeBlueprint);
   const hasWorkforce = wf && (wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0);
+  const { isAllSynced, matchNeedsLabel, matchNeedsTitle } = getMatchNeedsStatus();
 
   return `
     <div class="planned-wrapper">
@@ -255,9 +257,9 @@ export function renderPlannedTabHTML() {
       </div>
 
       <div class="add-macro-box" style="margin:0; display:flex; align-items:center; gap:0.4rem; width:100%; flex-wrap:nowrap;">
-        <label style="font-size:0.73rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.3rem; cursor:pointer; user-select:none; background:rgba(56,189,248,0.1); padding:0.2rem 0.45rem; border-radius:5px; border:1px solid rgba(56,189,248,0.25); white-space:nowrap; flex-shrink:0;" title="Once checked, signifies that the selected ware may have upstream providers. If the ware is L2 or L3, populates the display with those upstream wares and displays the number required to satisfy the upstream demands of each ware.">
-          <input type="checkbox" id="chkPopulateMatrix" ${state.populateMatrix ? 'checked' : ''} style="width:13px; height:13px; accent-color:#38bdf8; cursor:pointer; margin:0;" />
-          ⚡ Populate Needs
+        <label style="font-size:0.72rem; color:#38bdf8; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.15); padding:0.2rem 0.5rem; border-radius:4px; border:1px solid rgba(56,189,248,0.35); user-select:none; white-space:nowrap; flex-shrink:0;" title="${matchNeedsTitle}">
+          <input type="checkbox" id="chkMatchNeedsPlanned" ${isAllSynced ? 'checked' : ''} style="cursor:pointer; width:13px; height:13px; accent-color:#38bdf8; margin:0;" />
+          ${matchNeedsLabel}
         </label>
         <label style="font-size:0.73rem; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:0.3rem; white-space:nowrap; flex-shrink:0;">
           Method:
