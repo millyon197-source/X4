@@ -13,6 +13,13 @@ const io = new Server(httpServer, {
   cors: { origin: "*" } // Allows dashboard connections from anywhere during dev
 });
 
+// Middleware to parse incoming JSON payloads from your X4 LUA client
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve static dashboard files from a "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Global memory store for static game definitions
 let gameEncyclopedia = {
   blueprints: [],
@@ -21,7 +28,7 @@ let gameEncyclopedia = {
 
 // Handle incoming static database dumps
 app.post('/api/encyclopedia', (req, res) => {
-  const { blueprints } = req.body;
+  const { blueprints } = req.body || {};
 
   gameEncyclopedia = {
     blueprints: blueprints || [],
@@ -30,18 +37,16 @@ app.post('/api/encyclopedia', (req, res) => {
 
   console.log(`📚 Encyclopedia/Blueprints updated! Loaded ${gameEncyclopedia.blueprints.length} components.`);
   
-  // Optional: Write data to a local JSON file to act as a database cache
-  // fs.writeFileSync('./public/encyclopedia_cache.json', JSON.stringify(gameEncyclopedia, null, 2));
+  // Broadcast update if clients want to know encyclopedia refreshed
+  io.emit('encyclopedia_updated', gameEncyclopedia);
 
   return res.status(200).json({ status: 'success', count: gameEncyclopedia.blueprints.length });
 });
 
-
-// Middleware to parse incoming JSON payloads from your X4 LUA client
-app.use(express.json());
-
-// Serve static dashboard files from a "public" folder
-app.use(express.static(path.join(__dirname, 'public')));
+// Endpoint to fetch current encyclopedia
+app.get('/api/encyclopedia', (req, res) => {
+  return res.status(200).json(gameEncyclopedia);
+});
 
 // Global state cache for your X4 Universe data
 let gameState = {

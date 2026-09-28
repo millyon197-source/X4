@@ -1,33 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mdscript name="BlueprintHarvester" xmlns:xsi="http://w3.org" xsi:noNamespaceSchemaLocation="md.xsd">
+<mdscript name="BlueprintHarvester" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
   <cues>
-    <!-- Triggered once the game session/save fully finishes loading -->
+    <!-- Triggered once the game session starts OR an existing save is loaded -->
     <cue name="OnGameInit" instantiate="true">
       <conditions>
-        <event_cue_signalled cue="md.Setup.GameStart"/>
+        <check_any>
+          <event_cue_signalled cue="md.Setup.GameStart"/>
+          <event_game_loaded/>
+        </check_any>
       </conditions>
       <actions>
-        <set_value name="$BlueprintList" exact="global.$PlayerBlueprints" comment="Or loop over all game wares if extracting full encyclopedia" />
+        <!-- Determine blueprint list: player unlocked blueprints or fallback to module wares -->
+        <do_if value="@player.blueprints.list.count">
+          <set_value name="$BlueprintList" exact="player.blueprints.list" />
+        </do_if>
+        <do_elseif value="@global.$PlayerBlueprints.count">
+          <set_value name="$BlueprintList" exact="global.$PlayerBlueprints" />
+        </do_elseif>
+        <do_else>
+          <!-- Fallback to module wares for full encyclopedia extraction -->
+          <get_ware_definition result="$BlueprintList" flags="module" />
+        </do_else>
         
         <!-- Create a clean data table to pass to the LUA layer -->
         <set_value name="$ExportTable" exact="table[]" />
         
-        <do_all exact="$BlueprintList.count" counter="$i">
-          <set_value name="$WareID" exact="$BlueprintList.{$i}" />
-          <set_value name="$MacroName" exact="ware.{$WareID}.macro" />
-          
-          <!-- Gather key structural metrics for this blueprint -->
-          <set_value name="$ExportTable.{$WareID}" exact="table[
-            $id = $WareID,
-            $name = ware.{$WareID}.name,
-            $description = ware.{$WareID}.description,
-            $category = ware.{$WareID}.category.name,
-            $productionTime = ware.{$WareID}.productiontime,
-            $macro = $MacroName
-          ]" />
-        </do_all>
+        <do_if value="@$BlueprintList.count">
+          <do_all exact="$BlueprintList.count" counter="$i">
+            <set_value name="$Item" exact="$BlueprintList.{$i}" />
+            <do_if value="typeof $Item == datatype.ware">
+              <set_value name="$WareID" exact="$Item.id" />
+              <set_value name="$Ware" exact="$Item" />
+            </do_if>
+            <do_else>
+              <set_value name="$WareID" exact="tostring $Item" />
+              <set_value name="$Ware" exact="ware.{$WareID}" />
+            </do_else>
 
-        <!-- Raise a custom UI event that our Lua script is listening for -->
+            <do_if value="@$Ware">
+              <set_value name="$MacroName" exact="@$Ware.objectmacro.id" />
+              <do_if value="not $MacroName">
+                <set_value name="$MacroName" exact="@$Ware.macro" />
+              </do_if>
+
+              <set_value name="$CatName" exact="@$Ware.category.name" />
+              <do_if value="not $CatName">
+                <set_value name="$CatName" exact="@$Ware.category" />
+              </do_if>
+
+              <!-- Gather key structural metrics for this blueprint -->
+              <set_value name="$ExportTable.{$WareID}" exact="table[
+                $id = $WareID,
+                $name = @$Ware.name,
+                $description = @$Ware.description,
+                $category = $CatName,
+                $productionTime = @$Ware.productiontime,
+                $macro = $MacroName
+              ]" />
+            </do_if>
+          </do_all>
+        </do_if>
+
+        <!-- Raise custom events for the Lua bridge listener -->
+        <raise_lua_event name="'X4_Export_Encyclopedia'" value="$ExportTable" />
         <raise_game_ui_event name="'X4_Export_Encyclopedia'" separator="'|'" value="$ExportTable" />
       </actions>
     </cue>

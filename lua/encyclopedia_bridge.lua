@@ -1,4 +1,15 @@
-local JSON = require("json")
+local JSON
+local ok, mod = pcall(require, "json")
+if ok and mod then
+    JSON = mod
+else
+    local ok2, mod2 = pcall(require, "main")
+    if ok2 and mod2 then
+        JSON = mod2
+    else
+        JSON = require("extensions.x4_supply_matrix.lua.main")
+    end
+end
 local Request = require("djfhe.http.request") 
 
 local function RegisterEncyclopediaListener()
