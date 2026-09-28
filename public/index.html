@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>X4 Companion Dashboard</title>
+    <style>
+        body { background: #121214; color: #e1e1e6; font-family: sans-serif; padding: 20px; }
+        .card { background: #202024; border: 1px solid #323238; padding: 20px; border-radius: 8px; max-width: 400px; }
+        h1 { color: #00b37e; margin-top: 0; }
+        .status { font-weight: bold; color: #f75a68; }
+        .online { color: #00b37e; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>X4 Flight Log</h1>
+        <p>Status: <span id="status" class="status">Offline</span></p>
+        <p>Pilot: <span id="pilot">-</span></p>
+        <p>Credits: <span id="credits">-</span></p>
+        <p>Sector: <span id="sector">-</span></p>
+    </div>
+
+    <script>
+        async function updateDashboard() {
+            try {
+                const res = await fetch('/api/live/player');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                
+                document.getElementById('status').innerText = 'Connected';
+                document.getElementById('status').className = 'status online';
+                document.getElementById('pilot').innerText = data.name || 'Unknown';
+                document.getElementById('credits').innerText = Number(data.credits || 0).toLocaleString() + ' Cr';
+                document.getElementById('sector').innerText = data.sector || 'Deep Space';
+            } catch (err) {
+                document.getElementById('status').innerText = 'Game Offline';
+                document.getElementById('status').className = 'status';
+            }
+        }
+        // Poll every 3 seconds
+        setInterval(updateDashboard, 3000);
+        updateDashboard();
+    </script>
+</body>
+</html>
