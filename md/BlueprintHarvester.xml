@@ -10,6 +10,66 @@
         </check_any>
       </conditions>
       <actions>
+        <signal_cue cue="HarvestBlueprints" />
+        <signal_cue cue="HarvestPlayerStats" />
+      </actions>
+    </cue>
+
+    <!-- Triggered when Companion UI requests an on-demand update for a specific table -->
+    <cue name="OnUpdateRequest" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_ui_triggered screen="'X4_Request_Update'" />
+          <event_lua_event name="'X4_Request_Update'" />
+        </check_any>
+      </conditions>
+      <actions>
+        <set_value name="$TargetTable" exact="'blueprints'" />
+        <do_if value="event.param?">
+          <set_value name="$TargetTable" exact="tostring event.param" />
+        </do_if>
+        <do_elseif value="event.param2?">
+          <set_value name="$TargetTable" exact="tostring event.param2" />
+        </do_elseif>
+
+        <!-- Dispatch harvest based on selected table -->
+        <do_if value="$TargetTable == 'blueprints' or $TargetTable == 'modules' or $TargetTable == 'all'">
+          <signal_cue cue="HarvestBlueprints" />
+        </do_if>
+        <do_if value="$TargetTable == 'player' or $TargetTable == 'ships' or $TargetTable == 'stations' or $TargetTable == 'all'">
+          <signal_cue cue="HarvestPlayerStats" />
+        </do_if>
+      </actions>
+    </cue>
+
+    <!-- Harvest Player Telemetry Table -->
+    <cue name="HarvestPlayerStats" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$SectorName" exact="'Unknown'" />
+        <do_if value="@player.sector.name">
+          <set_value name="$SectorName" exact="player.sector.name" />
+        </do_if>
+
+        <set_value name="$PlayerTable" exact="table[
+          $name = @player.name,
+          $credits = @player.money,
+          $sector = $SectorName
+        ]" />
+
+        <raise_lua_event name="'X4_Export_Player'" value="$PlayerTable" />
+        <raise_game_ui_event name="'X4_Export_Player'" separator="'|'" value="$PlayerTable" />
+      </actions>
+    </cue>
+
+    <!-- Harvest Station Modules & Blueprints Table -->
+    <cue name="HarvestBlueprints" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
         <!-- Determine blueprint list: player unlocked blueprints or fallback to module wares -->
         <do_if value="@player.blueprints.list.count">
           <set_value name="$BlueprintList" exact="player.blueprints.list" />
@@ -38,7 +98,8 @@
             </do_else>
 
             <do_if value="@$Ware">
-              <set_value name="$MacroName" exact="@$Ware.objectmacro.id" />
+              <set_value name="$MacroObj" exact="@$Ware.objectmacro" />
+              <set_value name="$MacroName" exact="@$MacroObj.id" />
               <do_if value="not $MacroName">
                 <set_value name="$MacroName" exact="@$Ware.macro" />
               </do_if>
@@ -48,13 +109,117 @@
                 <set_value name="$CatName" exact="@$Ware.category" />
               </do_if>
 
-              <!-- Gather key structural metrics for this blueprint -->
+              <!-- Structural Integrity (Hull) -->
+              <set_value name="$Hull" exact="@$MacroObj.maxhull" />
+              <do_if value="not $Hull">
+                <set_value name="$Hull" exact="@$MacroObj.hull" />
+              </do_if>
+              <do_if value="not $Hull">
+                <set_value name="$Hull" exact="@$Ware.hull" />
+              </do_if>
+              <do_if value="not $Hull">
+                <set_value name="$Hull" exact="100000" />
+              </do_if>
+
+              <!-- Production Metrics -->
+              <set_value name="$Products" exact="@$MacroObj.products.list" />
+              <set_value name="$ProdCycleTime" exact="0" />
+              <set_value name="$ProdOutput" exact="''" />
+              <set_value name="$ProdAmount" exact="0" />
+              <set_value name="$ProdInputs" exact="list[]" />
+
+              <do_if value="@$Products.count">
+                <set_value name="$ProdWare" exact="$Products.{1}" />
+                <set_value name="$ProdOutput" exact="@$ProdWare.name" />
+                <set_value name="$ProdCycleTime" exact="@$MacroObj.production.{$ProdWare}.time" />
+                <do_if value="not $ProdCycleTime">
+                  <set_value name="$ProdCycleTime" exact="@$ProdWare.productiontime" />
+                </do_if>
+                <set_value name="$ProdAmount" exact="@$MacroObj.production.{$ProdWare}.amount" />
+                <do_if value="not $ProdAmount">
+                  <set_value name="$ProdAmount" exact="@$ProdWare.production.{$ProdWare.defaultproduction.method}.amount" />
+                </do_if>
+
+                <!-- Inputs list -->
+                <set_value name="$InputWares" exact="@$MacroObj.production.{$ProdWare}.inputs.list" />
+                <do_if value="@$InputWares.count">
+                  <do_all exact="$InputWares.count" counter="$j">
+                    <set_value name="$InWare" exact="$InputWares.{$j}" />
+                    <set_value name="$InAmount" exact="@$MacroObj.production.{$ProdWare}.inputs.{$InWare}.amount" />
+                    <append_to_list name="$ProdInputs" exact="table[$ware = @$InWare.name, $amount = $InAmount]" />
+                  </do_all>
+                </do_if>
+              </do_if>
+              <do_elseif value="@$Ware.productiontime">
+                <set_value name="$ProdCycleTime" exact="$Ware.productiontime" />
+              </do_elseif>
+
+              <!-- Habitation Metrics -->
+              <set_value name="$MaxCapacity" exact="@$MacroObj.workforce.capacity" />
+              <do_if value="not $MaxCapacity">
+                <set_value name="$MaxCapacity" exact="@$MacroObj.workforce.max" />
+              </do_if>
+              <do_if value="not $MaxCapacity">
+                <set_value name="$MaxCapacity" exact="0" />
+              </do_if>
+              <set_value name="$HabRace" exact="@$MacroObj.workforce.race.name" />
+              <do_if value="not $HabRace">
+                <set_value name="$HabRace" exact="@$Ware.race.name" />
+              </do_if>
+              <do_if value="not $HabRace">
+                <set_value name="$HabRace" exact="'All'" />
+              </do_if>
+
+              <!-- Storage Metrics -->
+              <set_value name="$StorageCap" exact="@$MacroObj.cargo.capacity" />
+              <do_if value="not $StorageCap">
+                <set_value name="$StorageCap" exact="0" />
+              </do_if>
+              <set_value name="$StorageTags" exact="@$MacroObj.cargo.tags" />
+              <do_if value="not $StorageTags">
+                <set_value name="$StorageTags" exact="''" />
+              </do_if>
+
+              <!-- Classify Module Type -->
+              <set_value name="$ModuleType" exact="'Structural'" />
+              <do_if value="@$MacroObj.isclass.production or (@$Products.count gt 0) or (@$Ware.category.id == 'module_production')">
+                <set_value name="$ModuleType" exact="'Production'" />
+              </do_if>
+              <do_elseif value="@$MacroObj.isclass.habitation or ($MaxCapacity gt 0) or (@$Ware.category.id == 'module_habitation')">
+                <set_value name="$ModuleType" exact="'Habitation'" />
+              </do_elseif>
+              <do_elseif value="@$MacroObj.isclass.storage or ($StorageCap gt 0) or (@$Ware.category.id == 'module_storage')">
+                <set_value name="$ModuleType" exact="'Storage'" />
+              </do_elseif>
+              <do_elseif value="@$MacroObj.isclass.defencemodule or (@$Ware.category.id == 'module_defence')">
+                <set_value name="$ModuleType" exact="'Defense'" />
+              </do_elseif>
+              <do_elseif value="@$MacroObj.isclass.dockarea or @$MacroObj.isclass.pier or (@$Ware.category.id == 'module_dock')">
+                <set_value name="$ModuleType" exact="'Dock'" />
+              </do_elseif>
+
+              <!-- Export Module Specs Table -->
               <set_value name="$ExportTable.{$WareID}" exact="table[
                 $id = $WareID,
                 $name = @$Ware.name,
                 $description = @$Ware.description,
                 $category = $CatName,
-                $productionTime = @$Ware.productiontime,
+                $moduleType = $ModuleType,
+                $hull = $Hull,
+                $production = table[
+                  $cycleTime = $ProdCycleTime,
+                  $output = $ProdOutput,
+                  $amount = $ProdAmount,
+                  $inputs = $ProdInputs
+                ],
+                $habitation = table[
+                  $race = $HabRace,
+                  $maxCapacity = $MaxCapacity
+                ],
+                $storage = table[
+                  $capacity = $StorageCap,
+                  $tags = $StorageTags
+                ],
                 $macro = $MacroName
               ]" />
             </do_if>

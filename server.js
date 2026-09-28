@@ -39,6 +39,12 @@ app.post('/api/encyclopedia', (req, res) => {
   
   // Broadcast update if clients want to know encyclopedia refreshed
   io.emit('encyclopedia_updated', gameEncyclopedia);
+  io.emit('table_updated', {
+    table: 'blueprints',
+    timestamp: gameEncyclopedia.lastSynced,
+    count: gameEncyclopedia.blueprints.length,
+    summary: `${gameEncyclopedia.blueprints.length} modules loaded`
+  });
 
   return res.status(200).json({ status: 'success', count: gameEncyclopedia.blueprints.length });
 });
@@ -56,7 +62,29 @@ let gameState = {
   lastUpdated: null
 };
 
-// --- API ROUTES FOR THE X4 LUA CLIENT ---
+// Global command queue for requests dispatched from Dashboard to in-game Lua mod
+let commandQueue = [];
+
+function queueCommand(action, table) {
+  const command = {
+    id: `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    action: action || 'HARVEST_TABLE',
+    table: table || 'blueprints',
+    createdAt: new Date().toISOString()
+  };
+  commandQueue.push(command);
+  console.log(`📡 Queued in-game command: [${command.action}] for table: [${command.table}] (ID: ${command.id})`);
+  io.emit('command_queued', command);
+  return command;
+}
+
+// Endpoint to request an on-demand update for a specific data table
+app.post('/api/request-update', (req, res) => {
+  const { table, action } = req.body || {};
+  const selectedTable = table || 'blueprints';
+  const command = queueCommand(action || 'HARVEST_TABLE', selectedTable);
+  return res.status(200).json({ status: 'queued', command });
+});
 
 // Endpoint for X4 mod to send a full state update
 app.post('/api/update', (req, res) => {
@@ -70,17 +98,24 @@ app.post('/api/update', (req, res) => {
     lastUpdated: new Date().toISOString()
   };
 
-  // Broadcast the fresh game data immediately to all connected UI clients
+  // Broadcast fresh game data immediately to all connected UI clients
   io.emit('game_state_changed', gameState);
+  io.emit('table_updated', {
+    table: 'player',
+    timestamp: gameState.lastUpdated,
+    summary: `${gameState.player.name} (${Number(gameState.player.credits || 0).toLocaleString()} Cr)`
+  });
 
   return res.status(200).json({ status: 'success', message: 'Data synced' });
 });
 
 // Endpoint for X4 mod to poll for commands/actions sent from the dashboard
 app.get('/api/commands', (req, res) => {
-  // If you want to send actions BACK into X4 (e.g. rename a ship), 
-  // queue them here and return them to the game client during its poll cycle.
-  return res.status(200).json({ commands: [] });
+  const pendingCommands = commandQueue.splice(0);
+  if (pendingCommands.length > 0) {
+    console.log(`📤 Dispatched ${pendingCommands.length} command(s) to in-game Lua client:`, pendingCommands.map(c => `${c.action}:${c.table}`));
+  }
+  return res.status(200).json({ commands: pendingCommands });
 });
 
 
@@ -91,6 +126,14 @@ io.on('connection', (socket) => {
   
   // Push the current state to the dashboard immediately upon connection
   socket.emit('game_state_changed', gameState);
+  socket.emit('encyclopedia_updated', gameEncyclopedia);
+
+  // Allow dashboard to issue on-demand update requests via WebSocket
+  socket.on('request_table_update', (data) => {
+    const table = data?.table || 'blueprints';
+    const action = data?.action || 'HARVEST_TABLE';
+    queueCommand(action, table);
+  });
 
   socket.on('disconnect', () => {
     console.log(`❌ Dashboard UI disconnected: ${socket.id}`);

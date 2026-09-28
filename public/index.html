@@ -3,55 +3,509 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X4 Foundations Live Dashboard</title>
+    <title>X4 Foundations Companion & Module Encyclopedia</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121214; color: #e1e1e6; margin: 2rem; }
-        .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; }
-        .card { background: #1d1d22; border-radius: 8px; padding: 1.5rem; border: 1px solid #29292e; }
-        h1, h2 { color: #ff9d00; margin-top: 0; }
-        .stat { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #121214;
+            color: #e1e1e6;
+            margin: 0;
+            padding: 2rem;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #29292e;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: #ff9d00; margin-top: 0; }
+        .grid-top {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: #1d1d22;
+            border-radius: 8px;
+            padding: 1.25rem;
+            border: 1px solid #29292e;
+        }
+        .stat { font-size: 1.1rem; margin-bottom: 0.4rem; }
         .stat span { color: #00ffaa; font-weight: bold; }
-        pre { background: #0c0c0e; padding: 1rem; border-radius: 4px; overflow-x: auto; color: #a9a9b3; }
+        .status-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status-online { background: rgba(0, 255, 170, 0.2); color: #00ffaa; border: 1px solid #00ffaa; }
+        .status-offline { background: rgba(247, 90, 104, 0.2); color: #f75a68; border: 1px solid #f75a68; }
+
+        /* Module Encyclopedia Section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: #202024;
+            color: #a9a9b3;
+            border: 1px solid #323238;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: #ff9d00;
+            color: #121214;
+            font-weight: bold;
+            border-color: #ff9d00;
+        }
+        .search-box {
+            background: #202024;
+            border: 1px solid #323238;
+            color: #fff;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            min-width: 240px;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #ff9d00;
+        }
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+        }
+        .module-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .module-card:hover {
+            transform: translateY(-2px);
+            border-color: #44444e;
+        }
+        .module-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+            color: #fff;
+        }
+        .badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .badge.production { background: rgba(0, 255, 170, 0.15); color: #00ffaa; border: 1px solid #00ffaa; }
+        .badge.habitation { background: rgba(0, 179, 255, 0.15); color: #00b3ff; border: 1px solid #00b3ff; }
+        .badge.storage { background: rgba(255, 157, 0, 0.15); color: #ff9d00; border: 1px solid #ff9d00; }
+        .badge.defense { background: rgba(255, 85, 85, 0.15); color: #ff5555; border: 1px solid #ff5555; }
+        .badge.dock { background: rgba(180, 100, 255, 0.15); color: #b464ff; border: 1px solid #b464ff; }
+        .badge.structural { background: rgba(142, 142, 147, 0.15); color: #8e8e93; border: 1px solid #8e8e93; }
+        .badge.other { background: rgba(142, 142, 147, 0.15); color: #8e8e93; border: 1px solid #8e8e93; }
+
+        .factory-loop ul { margin: 0; padding-left: 1.2rem; }
+        .factory-loop li { margin-bottom: 0.25rem; font-size: 0.88rem; }
+        .habitation-specs, .storage-specs { font-size: 0.88rem; line-height: 1.6; }
+        .empty-placeholder {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem 1rem;
+            background: #18181b;
+            border-radius: 8px;
+            border: 1px dashed #323238;
+            color: #7c7c8a;
+        }
+
+        /* On-demand Sync Bar Styles */
+        .sync-panel {
+            background: #19191e;
+            border: 1px solid #32323e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sync-select {
+            background: #25252b;
+            color: #fff;
+            border: 1px solid #3f3f4a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .sync-select:focus {
+            outline: none;
+            border-color: #ff9d00;
+        }
+        .sync-btn {
+            background: #ff9d00;
+            color: #121214;
+            font-weight: bold;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .sync-btn:hover:not(:disabled) {
+            background: #ffaa1a;
+            transform: translateY(-1px);
+        }
+        .sync-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .sync-status-text {
+            font-size: 0.88rem;
+            color: #8e8e98;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <h1>X4 Foundations Live Telemetry</h1>
-    
-    <div class="grid">
+    <header>
+        <div>
+            <h1>X4 Foundations Companion</h1>
+            <div style="font-size: 0.9rem; color: #a9a9b3;">Live Game Engine Telemetry & Station Module Harvester</div>
+        </div>
+        <div>
+            <span id="socket-status" class="status-badge status-offline">Connecting to Server...</span>
+        </div>
+    </header>
+
+    <!-- On-Demand In-Game Data Sync Control Bar -->
+    <div class="card sync-panel">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem;">📡</span>
+                <strong>On-Demand Sync:</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="sync-table-select" style="font-size: 0.88rem; color: #a9a9b3;">Data Table:</label>
+                <select id="sync-table-select" class="sync-select">
+                    <option value="blueprints">Station Modules & Blueprints</option>
+                    <option value="player">Pilot Profile & Account Telemetry</option>
+                    <option value="ships">Player Fleet & Ships</option>
+                    <option value="stations">Player Stations & Complexes</option>
+                    <option value="all">Full Universe Sync (All Tables)</option>
+                </select>
+            </div>
+            <button id="btn-request-update" class="sync-btn">
+                <span id="sync-icon">🔄</span> Request Update
+            </button>
+        </div>
+        <div id="sync-status" class="sync-status-text">Ready to request updates</div>
+    </div>
+
+    <div class="grid-top">
         <!-- Player Info Card -->
         <div class="card">
             <h2>Pilot Profile</h2>
-            <div class="stat">Pilot: <span id="pilot-name">Loading...</span></div>
+            <div class="stat">Pilot: <span id="pilot-name">Offline</span></div>
             <div class="stat">Credits: <span id="pilot-credits">0</span> Cr</div>
-            <div class="stat">Location: <span id="pilot-sector">Unknown</span></div>
-            <hr style="border-color: #29292e;">
-            <div style="font-size: 0.85rem; color: #7c7c8a;">Last updated: <span id="timestamp">-</span></div>
+            <div class="stat">Sector: <span id="pilot-sector">Unknown</span></div>
+            <hr style="border: 0; border-top: 1px solid #29292e; margin: 0.8rem 0;">
+            <div style="font-size: 0.82rem; color: #7c7c8a;">Last updated: <span id="timestamp">Never</span></div>
         </div>
 
-        <!-- Raw JSON Payload Monitor -->
+        <!-- Encyclopedia Overview Card -->
         <div class="card">
-            <h2>Raw Telemetry Stream</h2>
-            <pre id="raw-stream">Waiting for data from X4 client mod...</pre>
+            <h2>Module Database Status</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center; margin-top: 0.5rem;">
+                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #00ffaa;" id="count-total">0</div>
+                    <div style="font-size: 0.8rem; color: #7c7c8a;">Total Modules</div>
+                </div>
+                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #00b37e;" id="count-prod">0</div>
+                    <div style="font-size: 0.8rem; color: #7c7c8a;">Production</div>
+                </div>
+                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #00b3ff;" id="count-hab">0</div>
+                    <div style="font-size: 0.8rem; color: #7c7c8a;">Habitation</div>
+                </div>
+                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
+                    <div style="font-size: 1.4rem; font-weight: bold; color: #ff9d00;" id="count-store">0</div>
+                    <div style="font-size: 0.8rem; color: #7c7c8a;">Storage</div>
+                </div>
+            </div>
+            <div style="font-size: 0.82rem; color: #7c7c8a; margin-top: 1rem;">
+                Last Harvest: <span id="enc-sync-time">Awaiting in-game harvester event</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Modules Directory -->
+    <div class="section-header">
+        <h2>Station Modules Encyclopedia</h2>
+        <div class="filter-bar">
+            <input type="text" id="search-input" class="search-box" placeholder="Search modules, wares, macro...">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="Production">Production</button>
+            <button class="filter-btn" data-filter="Habitation">Habitation</button>
+            <button class="filter-btn" data-filter="Storage">Storage</button>
+            <button class="filter-btn" data-filter="Defense">Defense</button>
+            <button class="filter-btn" data-filter="Dock">Dock</button>
+        </div>
+    </div>
+
+    <div id="modules-container" class="modules-grid">
+        <div class="empty-placeholder">
+            <h3>No Station Modules Synced</h3>
+            <p>Load your savegame or start a new game in X4 Foundations with the <strong>BlueprintHarvester</strong> mod active.</p>
+            <p style="font-size: 0.85rem; color: #555560;">The script will automatically harvest all blueprint specifications and transmit them here.</p>
         </div>
     </div>
 
     <!-- Include Socket.io client -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        let allModules = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
 
-        // Listen for live updates broadcasted by the Express server
-        socket.on('game_state_changed', (state) => {
-            // Update individual UI elements
-            document.getElementById('pilot-name').textContent = state.player.name;
-            document.getElementById('pilot-credits').textContent = state.player.credits.toLocaleString();
-            document.getElementById('pilot-sector').textContent = state.player.sector;
-            document.getElementById('timestamp').textContent = state.lastUpdated || 'Never';
+        function renderModuleCard(item) {
+            let typeSpecsHtml = '';
 
-            // Update raw stream visualizer
-            document.getElementById('raw-stream').textContent = JSON.stringify(state, null, 2);
+            if (item.moduleType === 'Production' && item.production && item.production.output) {
+                const cycleTime = item.production.cycleTime || 60;
+                const cyclesPerHour = 3600 / cycleTime;
+                const totalHourlyOutput = (item.production.amount || 0) * cyclesPerHour;
+
+                let inputListHtml = '';
+                if (item.production.inputs && item.production.inputs.length > 0) {
+                    inputListHtml = item.production.inputs.map(input => {
+                        const hourlyInput = (input.amount || 0) * cyclesPerHour;
+                        return `<li>📉 Consumes: <strong>${Math.round(hourlyInput).toLocaleString()}/hr</strong> of ${input.ware}</li>`;
+                    }).join('');
+                }
+
+                typeSpecsHtml = `
+                    <div class="factory-loop">
+                        <div style="color: #00ffaa; font-weight: bold; margin-bottom: 0.5rem;">
+                            🏭 Production Loop (${cycleTime}s cycle)
+                        </div>
+                        <ul>
+                            <li>📈 Yields: <strong>${Math.round(totalHourlyOutput).toLocaleString()}/hr</strong> of ${item.production.output}</li>
+                            ${inputListHtml}
+                        </ul>
+                    </div>
+                `;
+            } else if (item.moduleType === 'Habitation' && item.habitation) {
+                typeSpecsHtml = `
+                    <div class="habitation-specs">
+                        <div>🧬 Target Workforce Race: <strong>${item.habitation.race || 'All'}</strong></div>
+                        <div>👥 Worker Space Cap: <strong>${(item.habitation.maxCapacity || 0).toLocaleString()} Pilots</strong></div>
+                    </div>
+                `;
+            } else if (item.moduleType === 'Storage' && item.storage) {
+                typeSpecsHtml = `
+                    <div class="storage-specs">
+                        <div>📦 Warehouse Size: <strong>${(item.storage.capacity || 0).toLocaleString()} m³</strong></div>
+                        <div>🧳 Cargo Profiles Accepted: <span style="color: #ff9d00;">${item.storage.tags || 'General'}</span></div>
+                    </div>
+                `;
+            } else if (item.description) {
+                typeSpecsHtml = `<div style="font-size: 0.85rem; color: #8e8e93;">${item.description}</div>`;
+            }
+
+            const badgeClass = (item.moduleType || 'other').toLowerCase();
+            const hullHP = (item.hull || 100000).toLocaleString();
+
+            return `
+                <div class="card module-card">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+                            <h3>${item.name || item.id}</h3>
+                            <span class="badge ${badgeClass}">${item.moduleType || 'Module'}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #8e8e93; margin-bottom: 0.75rem;">
+                            🛡️ Structural Integrity: ${hullHP} HP
+                        </div>
+                    </div>
+                    <div class="specs-body">
+                        ${typeSpecsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateModulesList() {
+            const container = document.getElementById('modules-container');
+            const filtered = allModules.filter(m => {
+                const matchType = (currentFilter === 'all') || (m.moduleType === currentFilter);
+                const q = searchQuery.toLowerCase();
+                const matchSearch = !q || 
+                    (m.name && m.name.toLowerCase().includes(q)) ||
+                    (m.id && m.id.toLowerCase().includes(q)) ||
+                    (m.production && m.production.output && m.production.output.toLowerCase().includes(q));
+                return matchType && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                if (allModules.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-placeholder">
+                            <h3>No Station Modules Synced</h3>
+                            <p>Load your savegame or start a new game in X4 Foundations with the <strong>BlueprintHarvester</strong> mod active.</p>
+                            <p style="font-size: 0.85rem; color: #555560;">The script will automatically harvest all blueprint specifications and transmit them here.</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `<div class="empty-placeholder"><h3>No modules match the filter "${currentFilter}"</h3></div>`;
+                }
+                return;
+            }
+
+            container.innerHTML = filtered.map(renderModuleCard).join('');
+        }
+
+        function updateCounts() {
+            document.getElementById('count-total').textContent = allModules.length;
+            document.getElementById('count-prod').textContent = allModules.filter(m => m.moduleType === 'Production').length;
+            document.getElementById('count-hab').textContent = allModules.filter(m => m.moduleType === 'Habitation').length;
+            document.getElementById('count-store').textContent = allModules.filter(m => m.moduleType === 'Storage').length;
+        }
+
+        function setEncyclopedia(data) {
+            allModules = data.blueprints || [];
+            if (data.lastSynced) {
+                document.getElementById('enc-sync-time').textContent = new Date(data.lastSynced).toLocaleTimeString();
+            }
+            updateCounts();
+            updateModulesList();
+        }
+
+        // Initialize Filter & Search Listeners
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                updateModulesList();
+            });
         });
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            updateModulesList();
+        });
+
+        // Initialize Socket.io Connection
+        const socket = io();
+        const statusEl = document.getElementById('socket-status');
+
+        socket.on('connect', () => {
+            statusEl.textContent = 'Server Connected';
+            statusEl.className = 'status-badge status-online';
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.textContent = 'Server Offline';
+            statusEl.className = 'status-badge status-offline';
+        });
+
+        socket.on('game_state_changed', (state) => {
+            if (state && state.player) {
+                document.getElementById('pilot-name').textContent = state.player.name || 'Unknown';
+                document.getElementById('pilot-credits').textContent = Number(state.player.credits || 0).toLocaleString();
+                document.getElementById('pilot-sector').textContent = state.player.sector || 'Deep Space';
+                document.getElementById('timestamp').textContent = state.lastUpdated ? new Date(state.lastUpdated).toLocaleTimeString() : 'Never';
+            }
+        });
+
+        socket.on('encyclopedia_updated', (data) => {
+            setEncyclopedia(data);
+        });
+
+        // --- On-Demand Data Table Update Handlers ---
+        const syncSelect = document.getElementById('sync-table-select');
+        const syncBtn = document.getElementById('btn-request-update');
+        const syncStatus = document.getElementById('sync-status');
+        const syncIcon = document.getElementById('sync-icon');
+
+        async function triggerTableUpdate() {
+            const table = syncSelect.value;
+            const tableName = syncSelect.options[syncSelect.selectedIndex].text;
+
+            syncBtn.disabled = true;
+            syncIcon.style.display = 'inline-block';
+            syncIcon.style.animation = 'spin 1s linear infinite';
+            syncStatus.innerHTML = `<span style="color: #ff9d00;">⏳ Dispatching harvest request for <strong>${tableName}</strong>...</span>`;
+
+            try {
+                // Emit over WebSocket and call REST API
+                socket.emit('request_table_update', { table });
+                const res = await fetch('/api/request-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ table })
+                });
+                const data = await res.json();
+                if (data && data.command) {
+                    syncStatus.innerHTML = `<span style="color: #00ffaa;">📡 Queued in-game command (ID: ${data.command.id}) for <strong>${table}</strong></span>`;
+                }
+            } catch (err) {
+                syncStatus.innerHTML = `<span style="color: #f75a68;">❌ Failed to queue request: ${err.message}</span>`;
+                syncBtn.disabled = false;
+                syncIcon.style.animation = 'none';
+            }
+        }
+
+        syncBtn.addEventListener('click', triggerTableUpdate);
+
+        // Listen for command queued confirmation
+        socket.on('command_queued', (cmd) => {
+            syncStatus.innerHTML = `<span style="color: #ffaa1a;">📬 Queued for X4 client: <strong>${cmd.table}</strong> (Command: ${cmd.id})</span>`;
+        });
+
+        // Listen for table updated confirmation events
+        socket.on('table_updated', (info) => {
+            syncBtn.disabled = false;
+            syncIcon.style.animation = 'none';
+            const timeStr = new Date(info.timestamp || Date.now()).toLocaleTimeString();
+            syncStatus.innerHTML = `<span style="color: #00ffaa;"> Table <strong>${info.table}</strong> synced at ${timeStr}! ${info.summary ? '(' + info.summary + ')' : ''}</span>`;
+        });
+
+        // Initial fetch on page load
+        fetch('/api/encyclopedia')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.blueprints) {
+                    setEncyclopedia(data);
+                }
+            })
+            .catch(() => {});
     </script>
 </body>
 </html>
