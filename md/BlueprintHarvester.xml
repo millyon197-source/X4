@@ -42,6 +42,17 @@
       </actions>
     </cue>
 
+    <!-- Background heartbeat: signals Lua every 2 seconds to poll Node for dashboard commands -->
+    <cue name="CommandPollTimer" checkinterval="2s" instantiate="true">
+      <conditions>
+        <check_value value="player.entity.exists" />
+      </conditions>
+      <actions>
+        <raise_lua_event name="'X4_Check_Commands'" />
+        <raise_game_ui_event name="'X4_Check_Commands'" />
+      </actions>
+    </cue>
+
     <!-- Harvest Player Telemetry Table -->
     <cue name="HarvestPlayerStats" instantiate="true">
       <conditions>

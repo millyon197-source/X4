@@ -161,8 +161,26 @@ end
 RegisterEncyclopediaListener()
 RegisterPlayerListener()
 
--- Register command polling hook
+-- 1. Primary trigger: Mission Director timer raises X4_Check_Commands every 2 seconds
 if RegisterEvent then
-    RegisterEvent("game_loop", PollBackendCommands)
-    RegisterEvent("onUpdate", PollBackendCommands)
+    RegisterEvent("X4_Check_Commands", function()
+        PollBackendCommands()
+    end)
+end
+
+-- 2. Fallback trigger: Frame update hook with 2-second throttle
+local lastPollTime = 0
+local POLL_INTERVAL = 2.0 -- seconds
+
+local function ThrottledFrameUpdate()
+    local now = (type(getElapsedTime) == "function" and getElapsedTime()) or os.clock()
+    if (now - lastPollTime) >= POLL_INTERVAL then
+        lastPollTime = now
+        PollBackendCommands()
+    end
+end
+
+if RegisterEvent then
+    RegisterEvent("game_loop", ThrottledFrameUpdate)
+    RegisterEvent("onUpdate", ThrottledFrameUpdate)
 end
