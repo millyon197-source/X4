@@ -5,15 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server.js",
     "dhcp-client": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^8.2.1"
+    "vite": "^8.3.1"
   },
   "dependencies": {
     "axios": "^1.20.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "socket.io": "^4.7.5"
   }
 }

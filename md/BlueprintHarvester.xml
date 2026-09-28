@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="BlueprintHarvester" xmlns:xsi="http://w3.org" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <!-- Triggered once the game session/save fully finishes loading -->
+    <cue name="OnGameInit" instantiate="true">
+      <conditions>
+        <event_cue_signalled cue="md.Setup.GameStart"/>
+      </conditions>
+      <actions>
+        <set_value name="$BlueprintList" exact="global.$PlayerBlueprints" comment="Or loop over all game wares if extracting full encyclopedia" />
+        
+        <!-- Create a clean data table to pass to the LUA layer -->
+        <set_value name="$ExportTable" exact="table[]" />
+        
+        <do_all exact="$BlueprintList.count" counter="$i">
+          <set_value name="$WareID" exact="$BlueprintList.{$i}" />
+          <set_value name="$MacroName" exact="ware.{$WareID}.macro" />
+          
+          <!-- Gather key structural metrics for this blueprint -->
+          <set_value name="$ExportTable.{$WareID}" exact="table[
+            $id = $WareID,
+            $name = ware.{$WareID}.name,
+            $description = ware.{$WareID}.description,
+            $category = ware.{$WareID}.category.name,
+            $productionTime = ware.{$WareID}.productiontime,
+            $macro = $MacroName
+          ]" />
+        </do_all>
+
+        <!-- Raise a custom UI event that our Lua script is listening for -->
+        <raise_game_ui_event name="'X4_Export_Encyclopedia'" separator="'|'" value="$ExportTable" />
+      </actions>
+    </cue>
+  </cues>
+</mdscript>

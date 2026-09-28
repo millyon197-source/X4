@@ -2,44 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>X4 Companion Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X4 Foundations Live Dashboard</title>
     <style>
-        body { background: #121214; color: #e1e1e6; font-family: sans-serif; padding: 20px; }
-        .card { background: #202024; border: 1px solid #323238; padding: 20px; border-radius: 8px; max-width: 400px; }
-        h1 { color: #00b37e; margin-top: 0; }
-        .status { font-weight: bold; color: #f75a68; }
-        .online { color: #00b37e; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121214; color: #e1e1e6; margin: 2rem; }
+        .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; }
+        .card { background: #1d1d22; border-radius: 8px; padding: 1.5rem; border: 1px solid #29292e; }
+        h1, h2 { color: #ff9d00; margin-top: 0; }
+        .stat { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .stat span { color: #00ffaa; font-weight: bold; }
+        pre { background: #0c0c0e; padding: 1rem; border-radius: 4px; overflow-x: auto; color: #a9a9b3; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>X4 Flight Log</h1>
-        <p>Status: <span id="status" class="status">Offline</span></p>
-        <p>Pilot: <span id="pilot">-</span></p>
-        <p>Credits: <span id="credits">-</span></p>
-        <p>Sector: <span id="sector">-</span></p>
+
+    <h1>X4 Foundations Live Telemetry</h1>
+    
+    <div class="grid">
+        <!-- Player Info Card -->
+        <div class="card">
+            <h2>Pilot Profile</h2>
+            <div class="stat">Pilot: <span id="pilot-name">Loading...</span></div>
+            <div class="stat">Credits: <span id="pilot-credits">0</span> Cr</div>
+            <div class="stat">Location: <span id="pilot-sector">Unknown</span></div>
+            <hr style="border-color: #29292e;">
+            <div style="font-size: 0.85rem; color: #7c7c8a;">Last updated: <span id="timestamp">-</span></div>
+        </div>
+
+        <!-- Raw JSON Payload Monitor -->
+        <div class="card">
+            <h2>Raw Telemetry Stream</h2>
+            <pre id="raw-stream">Waiting for data from X4 client mod...</pre>
+        </div>
     </div>
 
+    <!-- Include Socket.io client -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        async function updateDashboard() {
-            try {
-                const res = await fetch('/api/live/player');
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                
-                document.getElementById('status').innerText = 'Connected';
-                document.getElementById('status').className = 'status online';
-                document.getElementById('pilot').innerText = data.name || 'Unknown';
-                document.getElementById('credits').innerText = Number(data.credits || 0).toLocaleString() + ' Cr';
-                document.getElementById('sector').innerText = data.sector || 'Deep Space';
-            } catch (err) {
-                document.getElementById('status').innerText = 'Game Offline';
-                document.getElementById('status').className = 'status';
-            }
-        }
-        // Poll every 3 seconds
-        setInterval(updateDashboard, 3000);
-        updateDashboard();
+        const socket = io();
+
+        // Listen for live updates broadcasted by the Express server
+        socket.on('game_state_changed', (state) => {
+            // Update individual UI elements
+            document.getElementById('pilot-name').textContent = state.player.name;
+            document.getElementById('pilot-credits').textContent = state.player.credits.toLocaleString();
+            document.getElementById('pilot-sector').textContent = state.player.sector;
+            document.getElementById('timestamp').textContent = state.lastUpdated || 'Never';
+
+            // Update raw stream visualizer
+            document.getElementById('raw-stream').textContent = JSON.stringify(state, null, 2);
+        });
     </script>
 </body>
 </html>
