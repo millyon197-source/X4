@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<content id="x4_companion_bridge" name="X4 Companion Bridge" description="Live telemetry and blueprint sync for X4 Companion Dashboard" author="User" version="100" date="2026-09-28" save="0" enabled="1">
+  <text language="44" name="X4 Companion Bridge" description="Live telemetry and blueprint sync for X4 Companion Dashboard." />
+  <dependency id="djfhe_http" optional="false" name="djfhe http" />
+</content>

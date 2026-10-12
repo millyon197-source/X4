@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="CompanionBridgeHarvester" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <!-- Continuous heartbeat loop -->
+    <cue name="CompanionHeartbeat">
+      <delay exact="2s" />
+      <actions>
+        <raise_lua_event name="'X4_Check_Commands'" />
+        <reset_cue cue="this" />
+      </actions>
+    </cue>
+
+    <!-- Initialization on game load / start with version upgrade -->
+    <cue name="CompanionHarvesterInit" version="10" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_cue_signalled cue="md.Setup.GameStart" />
+          <event_cue_signalled cue="md.Setup.Start" />
+          <event_game_loaded />
+        </check_any>
+      </conditions>
+      <actions>
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v10 triggered on game load!'" />
+        <reset_cue cue="CompanionHeartbeat" />
+        <signal_cue cue="HarvestPlayerStats" />
+        <signal_cue cue="HarvestBlueprints" />
+      </actions>
+    </cue>
+
+    <!-- Triggered when Companion UI requests an on-demand update -->
+    <cue name="CompanionOnUpdateRequest" version="10" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_ui_triggered screen="'X4_Request_Update'" />
+          <event_ui_triggered control="'X4_Request_Update'" />
+          <event_ui_triggered screen="'x4_companion_bridge'" />
+        </check_any>
+      </conditions>
+      <actions>
+        <set_value name="$TargetTable" exact="'modules'" />
+        <do_if value="event.param == 'X4_Request_Update'">
+          <do_if value="event.param2? and event.param2 != ''">
+            <set_value name="$TargetTable" exact="event.param2" />
+          </do_if>
+        </do_if>
+        <do_elseif value="event.param2 == 'X4_Request_Update'">
+          <do_if value="event.param3? and event.param3 != ''">
+            <set_value name="$TargetTable" exact="event.param3" />
+          </do_if>
+          <do_elseif value="event.param? and event.param != ''">
+            <set_value name="$TargetTable" exact="event.param" />
+          </do_elseif>
+        </do_elseif>
+        <do_elseif value="event.param == 'x4_companion_bridge'">
+          <do_if value="event.param3? and event.param3 != ''">
+            <set_value name="$TargetTable" exact="event.param3" />
+          </do_if>
+          <do_elseif value="event.param2? and event.param2 != '' and event.param2 != 'X4_Request_Update'">
+            <set_value name="$TargetTable" exact="event.param2" />
+          </do_elseif>
+        </do_elseif>
+        <do_elseif value="event.param3? and event.param3 != ''">
+          <set_value name="$TargetTable" exact="event.param3" />
+        </do_elseif>
+        <do_elseif value="event.param2? and event.param2 != '' and event.param2 != 'X4_Request_Update'">
+          <set_value name="$TargetTable" exact="event.param2" />
+        </do_elseif>
+        <do_elseif value="event.param? and event.param != '' and event.param != 'X4_Request_Update' and event.param != 'x4_companion_bridge'">
+          <set_value name="$TargetTable" exact="event.param" />
+        </do_elseif>
+
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionOnUpdateRequest received for table: ' + $TargetTable" />
+
+        <do_if value="$TargetTable == 'modules'">
+          <signal_cue cue="HarvestBlueprints" />
+        </do_if>
+        <do_elseif value="$TargetTable == 'ships'">
+          <signal_cue cue="HarvestShips" />
+        </do_elseif>
+        <do_elseif value="$TargetTable == 'equipment'">
+          <signal_cue cue="HarvestEquipment" />
+        </do_elseif>
+        <do_elseif value="$TargetTable == 'blueprints' or $TargetTable == 'all'">
+          <signal_cue cue="HarvestBlueprints" />
+          <signal_cue cue="HarvestShips" />
+          <signal_cue cue="HarvestEquipment" />
+        </do_elseif>
+        <do_if value="$TargetTable == 'player' or $TargetTable == 'all'">
+          <signal_cue cue="HarvestPlayerStats" />
+        </do_if>
+      </actions>
+    </cue>
+
+    <!-- Harvest Player Telemetry Table -->
+    <cue name="HarvestPlayerStats" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$SectorName" exact="'Unknown'" />
+        <do_if value="@player.sector.name">
+          <set_value name="$SectorName" exact="player.sector.name" />
+        </do_if>
+
+        <set_value name="$PlayerName" exact="'Unknown'" />
+        <do_if value="@player.name and player.name != ''">
+          <set_value name="$PlayerName" exact="player.name" />
+        </do_if>
+        <do_elseif value="@player.entity.name and player.entity.name != ''">
+          <set_value name="$PlayerName" exact="player.entity.name" />
+        </do_elseif>
+
+        <set_value name="$PlayerTable" exact="table[
+          $name = $PlayerName,
+          $credits = @player.money,
+          $sector = $SectorName
+        ]" />
+
+        <raise_lua_event name="'X4_Export_Player'" param="$PlayerTable" />
+      </actions>
+    </cue>
+
+    <!-- Harvest Station Modules & Blueprints Table -->
+    <cue name="HarvestBlueprints" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$WaresList" exact="[ware.module_gen_prod_hullparts_01, ware.module_gen_prod_refinedmetals_01, ware.module_gen_prod_energycells_01, ware.module_gen_prod_antimattercells_01, ware.module_gen_prod_antimatterconverters_01, ware.module_gen_prod_advancedcomposites_01, ware.module_gen_prod_advancedelectronics_01, ware.module_gen_prod_claytronics_01, ware.module_gen_prod_dronecomponents_01, ware.module_gen_prod_engineparts_01, ware.module_gen_prod_fieldcoils_01, ware.module_gen_prod_graphene_01, ware.module_gen_prod_microchips_01, ware.module_gen_prod_missilecomponents_01, ware.module_gen_prod_plasmaconductors_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_gen_prod_quantumtubes_01, ware.module_gen_prod_scanningarrays_01, ware.module_gen_prod_shieldcomponents_01, ware.module_gen_prod_siliconwafers_01, ware.module_gen_prod_smartchips_01, ware.module_gen_prod_spices_01, ware.module_gen_prod_superfluidcoolant_01, ware.module_gen_prod_turretcomponents_01, ware.module_gen_prod_water_01, ware.module_gen_prod_weaponcomponents_01, ware.module_arg_prod_foodrations_01, ware.module_arg_prod_meat_01, ware.module_arg_prod_medicalsupplies_01, ware.module_arg_prod_spacefuel_01, ware.module_arg_prod_wheat_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_par_prod_majadust_01, ware.module_par_prod_majasnails_01, ware.module_par_prod_medicalsupplies_01, ware.module_par_prod_sojabeans_01, ware.module_par_prod_sojahusk_01, ware.module_tel_prod_medicalsupplies_01, ware.module_tel_prod_nostropoil_01, ware.module_tel_prod_spaceweed_01, ware.module_tel_prod_sunriseflowers_01, ware.module_tel_prod_swampplant_01, ware.module_tel_prod_teladianium_01, ware.module_spl_prod_cheltmeat_01, ware.module_spl_prod_medicalsupplies_01, ware.module_spl_prod_scruffinfruit_01, ware.module_ter_prod_computronicsubstrate_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_ter_prod_metallicmicrolattice_01, ware.module_ter_prod_proteinpaste_01, ware.module_ter_prod_siliconcarbide_01, ware.module_ter_prod_stimulants_01, ware.module_ter_prod_mre_01, ware.module_bor_prod_bofu_01, ware.module_bor_prod_bogas_01, ware.module_bor_prod_medicalsupplies_01, ware.module_bor_prod_plankton_01, ware.module_arg_stor_container_s_01, ware.module_arg_stor_container_m_01, ware.module_arg_stor_container_l_01, ware.module_arg_stor_solid_s_01, ware.module_arg_stor_solid_m_01, ware.module_arg_stor_solid_l_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_arg_stor_liquid_s_01, ware.module_arg_stor_liquid_m_01, ware.module_arg_stor_liquid_l_01, ware.module_arg_hab_s_01, ware.module_arg_hab_m_01, ware.module_arg_hab_l_01, ware.module_arg_dock_m_01, ware.module_arg_dock_m_02, ware.module_arg_pier_l_01, ware.module_arg_pier_l_02, ware.module_arg_pier_l_03, ware.module_arg_conn_base_01, ware.module_arg_conn_cross_01, ware.module_arg_conn_cross_04, ware.module_arg_conn_vertical_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_arg_conn_vertical_02, ware.module_gen_conn_observationdeck_01, ware.module_gen_conn_observationdeck_02, ware.module_gen_conn_observationdeck_03, ware.module_gen_conn_venturerbase_01, ware.module_gen_conn_venturerbase_02, ware.module_gen_conn_venturerbase_03, ware.module_gen_conn_venturercross_01, ware.module_gen_conn_venturervertical_01, ware.module_gen_conn_venturervertical_02, ware.module_gen_dock_m_venturer_01, ware.module_gen_ventureplatform_cross_01, ware.module_conn_arg_antigonearc_01, ware.module_conn_arg_antigonescaffolding_01, ware.module_conn_arg_antigonestraight_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_hab_arg_antigonepillar_01, ware.module_hab_arg_antigonespire_01, ware.module_conn_lndm_piratestation_01_core_01, ware.module_conn_lndm_piratestation_01_exit_01, ware.module_def_lndm_piratestation_02_ring_01, ware.module_gen_welfare_casino_01, ware.module_hab_lndm_piratestation_01_port_01, ware.module_hab_lndm_piratestation_02_port_01, ware.module_hab_lndm_piratestation_02_ring_02, ware.module_pir_hab_l_01, ware.module_pir_hab_m_01, ware.module_pir_hab_s_01, ware.module_pir_stor_condensate_l_01, ware.module_pir_stor_condensate_s_01, ware.module_stor_lndm_piratestation_01_ring_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_stor_lndm_piratestation_02_storage_01, ware.module_stor_lndm_piratestation_02_storage_02, ware.module_spl_conn_base_01, ware.module_spl_conn_base_02, ware.module_spl_conn_base_03, ware.module_spl_conn_cross_01, ware.module_spl_conn_vertical_01, ware.module_spl_conn_vertical_02, ware.module_spl_def_claim_01, ware.module_spl_def_disc_01, ware.module_spl_def_tube_01, ware.module_spl_hab_l_01, ware.module_spl_hab_m_01, ware.module_spl_hab_s_01, ware.module_spl_pier_l_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_spl_pier_l_02, ware.module_spl_pier_l_03, ware.module_spl_prod_scruffinfruit_01, ware.module_spl_stor_container_l_01, ware.module_spl_stor_container_m_01, ware.module_spl_stor_container_s_01, ware.module_spl_stor_liquid_l_01, ware.module_spl_stor_liquid_m_01, ware.module_spl_stor_liquid_s_01, ware.module_spl_stor_solid_l_01, ware.module_spl_stor_solid_m_01, ware.module_spl_stor_solid_s_01, ware.module_ter_build_dockarea_m_01, ware.module_ter_build_l_01, ware.module_ter_build_xl_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_ter_conn_base_01, ware.module_ter_conn_base_02, ware.module_ter_conn_base_03, ware.module_ter_conn_cross_01, ware.module_ter_conn_vertical_01, ware.module_ter_conn_vertical_02, ware.module_ter_def_claim_01, ware.module_ter_def_disc_01, ware.module_ter_def_tube_01, ware.module_ter_dock_m_01_hightech, ware.module_ter_equip_dockarea_m_01, ware.module_ter_equip_l_01, ware.module_ter_equip_xl_01, ware.module_ter_hab_l_01, ware.module_ter_hab_m_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_ter_hab_s_01, ware.module_ter_pier_01, ware.module_ter_pier_02, ware.module_ter_pier_03, ware.module_ter_pier_04, ware.module_ter_pier_tradestation_01, ware.module_ter_prod_energycells_01, ware.module_ter_prod_medicalsupplies_01, ware.module_ter_prod_scrap_recycler, ware.module_ter_prod_terranmre_01, ware.module_ter_stor_container_l_01, ware.module_ter_stor_container_m_01, ware.module_ter_stor_container_m_tradestation, ware.module_ter_stor_container_s_01, ware.module_ter_stor_liquid_l_01]" />
+        <append_list_elements name="$WaresList" other="[ware.module_ter_stor_liquid_m_01, ware.module_ter_stor_liquid_s_01, ware.module_ter_stor_liquid_s_tradestation, ware.module_ter_stor_solid_l_01, ware.module_ter_stor_solid_m_01, ware.module_ter_stor_solid_s_01]" />
+
+        <set_value name="$ExportTable" exact="table[]" />
+
+        <do_for_each in="$WaresList" name="$Ware">
+          <do_if value="@$Ware">
+            <set_value name="$WareID" exact="$Ware.id" />
+            <set_value name="$Name" exact="$Ware.name" />
+            <set_value name="$Desc" exact="$Ware.description" />
+            <do_if value="not $Desc">
+              <set_value name="$Desc" exact="''" />
+            </do_if>
+
+            <set_value name="$IsUnlocked" exact="false" />
+            <do_if value="player.blueprints.{$Ware}.any.exists">
+              <set_value name="$IsUnlocked" exact="true" />
+            </do_if>
+
+            <set_value name="$MacroId" exact="''" />
+            <do_if value="@$Ware.macro">
+              <set_value name="$MacroId" exact="$Ware.macro.id" />
+            </do_if>
+
+            <set_value name="$ExportTable.{$WareID}" exact="table[
+              $id = $WareID,
+              $name = $Name,
+              $description = $Desc,
+              $category = 'Modules',
+              $moduleType = 'Production',
+              $group = 'modules',
+              $hull = 100000,
+              $unlocked = $IsUnlocked,
+              $macro = $MacroId
+            ]" />
+          </do_if>
+        </do_for_each>
+
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'modules', $items = $ExportTable]" />
+      </actions>
+    </cue>
+
+    <!-- Harvest Ships Blueprint Table -->
+    <cue name="HarvestShips" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$WaresList" exact="[ware.ship_arg_s_racer_01_a, ware.ship_gen_s_racer_01_a, ware.ship_par_s_racer_01_a, ware.ship_tel_s_racer_01_a, ware.ship_ter_l_flagship_01_a, ware.ship_ter_m_corvette_02_a, ware.ship_ter_s_fighter_04_a, ware.ship_ter_s_xperimental_01_a, ware.ship_xen_xl_mothership_01, ware.ship_par_l_expeditionary_01_a, ware.ship_gen_m_yacht_01_a, ware.ship_pir_l_miner_solid_01_a, ware.ship_pir_l_scavenger_01_a, ware.ship_pir_l_scrapper_01, ware.ship_pir_s_fighter_01_a]" />
+        <append_list_elements name="$WaresList" other="[ware.ship_pir_s_fighter_02_a, ware.ship_pir_s_heavyfighter_01_a, ware.ship_pir_s_trans_condensate_01_a, ware.ship_pir_s_trans_container_01_a, ware.ship_pir_xl_battleship_01_a, ware.ship_pir_xl_builder_01, ware.ship_spl_l_destroyer_01_a, ware.ship_spl_l_miner_liquid_01_a, ware.ship_spl_l_miner_solid_01_a, ware.ship_spl_l_trans_container_01_a, ware.ship_spl_m_corvette_01_a, ware.ship_spl_m_corvette_01_b, ware.ship_spl_m_frigate_01_a, ware.ship_spl_m_miner_liquid_01_a, ware.ship_spl_m_miner_solid_01_a]" />
+        <append_list_elements name="$WaresList" other="[ware.ship_spl_m_trans_container_01_a, ware.ship_spl_s_fighter_01_a, ware.ship_spl_s_fighter_02_a, ware.ship_spl_s_fighter_02_b, ware.ship_spl_s_heavyfighter_01_a, ware.ship_spl_s_heavyfighter_02_a, ware.ship_spl_s_miner_solid_01_a, ware.ship_spl_s_scout_01_a, ware.ship_spl_s_trans_container_01_a, ware.ship_spl_xl_builder_01_a, ware.ship_spl_xl_carrier_01_a, ware.ship_spl_xl_resupplier_01_a, ware.ship_atf_l_destroyer_01_a, ware.ship_atf_xl_battleship_01_a, ware.ship_gen_m_transdrone_container_02_a]" />
+        <append_list_elements name="$WaresList" other="[ware.ship_gen_s_transdrone_container_02_a, ware.ship_ter_l_destroyer_01_a, ware.ship_ter_l_miner_liquid_01_a, ware.ship_ter_l_miner_solid_01_a, ware.ship_ter_l_trans_container_01_a, ware.ship_ter_m_corvette_01_a, ware.ship_ter_m_frigate_01_a, ware.ship_ter_m_gunboat_01_a, ware.ship_ter_m_miner_liquid_01_a, ware.ship_ter_m_miner_solid_01_a, ware.ship_ter_m_trans_container_01_a, ware.ship_ter_s_fighter_01_a, ware.ship_ter_s_fighter_02_a, ware.ship_ter_s_fighter_03_a, ware.ship_ter_s_heavyfighter_01_a]" />
+        <append_list_elements name="$WaresList" other="[ware.ship_ter_s_miner_solid_01_a, ware.ship_ter_s_scout_01_a, ware.ship_ter_s_scout_02_a, ware.ship_ter_s_trans_container_01_a, ware.ship_ter_xl_builder_01_a, ware.ship_ter_xl_carrier_01_a, ware.ship_ter_xl_resupplier_01_a, ware.ship_yak_m_corvette_01_a, ware.ship_yak_s_fighter_01_a]" />
+
+        <set_value name="$ExportTable" exact="table[]" />
+
+        <do_for_each in="$WaresList" name="$Ware">
+          <do_if value="@$Ware">
+            <set_value name="$WareID" exact="$Ware.id" />
+            <set_value name="$Name" exact="$Ware.name" />
+            <set_value name="$Desc" exact="$Ware.description" />
+            <do_if value="not $Desc">
+              <set_value name="$Desc" exact="''" />
+            </do_if>
+
+            <set_value name="$IsUnlocked" exact="false" />
+            <do_if value="player.blueprints.{$Ware}.any.exists">
+              <set_value name="$IsUnlocked" exact="true" />
+            </do_if>
+
+            <set_value name="$MacroId" exact="''" />
+            <do_if value="@$Ware.macro">
+              <set_value name="$MacroId" exact="$Ware.macro.id" />
+            </do_if>
+
+            <set_value name="$ExportTable.{$WareID}" exact="table[
+              $id = $WareID,
+              $name = $Name,
+              $description = $Desc,
+              $category = 'Ships',
+              $moduleType = 'Ship',
+              $group = 'ships',
+              $hull = 50000,
+              $unlocked = $IsUnlocked,
+              $macro = $MacroId
+            ]" />
+          </do_if>
+        </do_for_each>
+
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'ships', $items = $ExportTable]" />
+      </actions>
+    </cue>
+
+    <!-- Harvest Equipment Blueprint Table -->
+    <cue name="HarvestEquipment" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$WaresList" exact="[ware.engine_arg_s_racer_01_mk1, ware.engine_gen_s_racer_01_mk1, ware.engine_gen_s_racer_01_mk2, ware.engine_par_s_racer_01_mk1, ware.engine_tel_s_racer_01_mk1, ware.engine_ter_l_allround_02_mk1, ware.engine_ter_m_virtual_01_mk1, ware.engine_ter_s_virtual_01_mk1, ware.engine_xen_xl_mothership_01_allround_mk1, ware.missile_flagship_heavy_mk1, ware.missile_flagship_light_mk1, ware.mod_engine_boostthrust_escort_scenario, ware.mod_engine_travelthrust_transport_refugees, ware.mod_weapon_damage_fleet_battle_1, ware.shield_arg_s_racer_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.shield_gen_s_racer_01_mk1, ware.shield_par_s_racer_01_mk1, ware.shield_tel_s_racer_01_mk1, ware.shield_ter_l_standard_02_mk1, ware.shield_ter_l_standard_02_mk2, ware.shield_ter_l_standard_02_mk3, ware.shield_ter_m_standard_04_mk1, ware.shield_ter_m_standard_04_mk2, ware.shield_ter_m_standard_04_mk3, ware.shield_ter_m_virtual_01_mk1, ware.shield_ter_m_virtual_01_mk2, ware.shield_ter_m_virtual_01_mk3, ware.shield_ter_s_virtual_01_mk1, ware.shield_ter_s_xperimental_01_mk5, ware.shield_xen_xl_mothership_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.turret_ter_m_laser_03_mk1, ware.turret_ter_m_laser_04_mk1, ware.turret_xen_xl_battleship_01_mk1, ware.weapon_gen_spacesuit_laser_03_mk1, ware.weapon_ter_l_flagship_01_mk1, ware.weapon_ter_m_laser_02_mk1, ware.weapon_ter_s_laser_02_mk1, ware.weapon_ter_s_plasma_01_mk1, ware.weapon_par_l_expeditionary_01_mk1, ware.engine_gen_m_yacht_01_mk1, ware.engine_pir_xl_battleship_01_allround_01_mk1, ware.shield_gen_m_yacht_01_mk1, ware.shield_pir_xl_battleship_01_standard_01_mk1, ware.turret_gen_m_yacht_01_mk1, ware.turret_pir_l_battleship_01_laser_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.turret_pir_m_battleship_01_gatling_02_mk1, ware.weapon_gen_m_yacht_01_mk1, ware.weapon_pir_xl_battleship_01_mk1, ware.engine_spl_l_allround_01_mk1, ware.engine_spl_l_travel_01_mk1, ware.engine_spl_m_allround_01_mk1, ware.engine_spl_m_allround_01_mk2, ware.engine_spl_m_allround_01_mk3, ware.engine_spl_m_combat_01_mk1, ware.engine_spl_m_combat_01_mk2, ware.engine_spl_m_combat_01_mk3, ware.engine_spl_m_combat_01_mk4, ware.engine_spl_m_travel_01_mk1, ware.engine_spl_m_travel_01_mk2, ware.engine_spl_m_travel_01_mk3]" />
+        <append_list_elements name="$WaresList" other="[ware.engine_spl_s_allround_01_mk1, ware.engine_spl_s_allround_01_mk2, ware.engine_spl_s_allround_01_mk3, ware.engine_spl_s_combat_01_mk1, ware.engine_spl_s_combat_01_mk2, ware.engine_spl_s_combat_01_mk3, ware.engine_spl_s_combat_01_mk4, ware.engine_spl_s_travel_01_mk1, ware.engine_spl_s_travel_01_mk2, ware.engine_spl_s_travel_01_mk3, ware.engine_spl_xl_allround_01_mk1, ware.engine_spl_xl_travel_01_mk1, ware.missile_gen_s_disruptor_01_mk1, ware.missile_gen_s_interceptor_01_mk1, ware.shield_spl_l_standard_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.shield_spl_l_standard_01_mk2, ware.shield_spl_m_standard_01_mk1, ware.shield_spl_m_standard_01_mk2, ware.shield_spl_m_standard_02_mk1, ware.shield_spl_m_standard_02_mk2, ware.shield_spl_s_standard_01_mk1, ware.shield_spl_s_standard_01_mk2, ware.shield_spl_s_standard_01_mk3, ware.shield_spl_xl_standard_01_mk1, ware.ship_spl_xs_police_01_a, ware.turret_spl_l_beam_01_mk1, ware.turret_spl_l_dumbfire_01_mk1, ware.turret_spl_l_guided_01_mk1, ware.turret_spl_l_laser_01_mk1, ware.turret_spl_l_mining_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.turret_spl_l_plasma_01_mk1, ware.turret_spl_m_beam_01_mk1, ware.turret_spl_m_beam_02_mk1, ware.turret_spl_m_dumbfire_02_mk1, ware.turret_spl_m_flak_01_mk1, ware.turret_spl_m_flak_02_mk1, ware.turret_spl_m_gatling_01_mk1, ware.turret_spl_m_gatling_02_mk1, ware.turret_spl_m_guided_02_mk1, ware.turret_spl_m_laser_01_mk1, ware.turret_spl_m_laser_02_mk1, ware.turret_spl_m_mining_01_mk1, ware.turret_spl_m_mining_02_mk1, ware.turret_spl_m_plasma_01_mk1, ware.turret_spl_m_plasma_02_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.turret_spl_m_shotgun_01_mk1, ware.turret_spl_m_shotgun_02_mk1, ware.weapon_spl_l_destroyer_01_mk1, ware.weapon_spl_m_gatling_01_mk1, ware.weapon_spl_m_gatling_01_mk2, ware.weapon_spl_m_railgun_01_mk1, ware.weapon_spl_m_railgun_01_mk2, ware.weapon_spl_m_shotgun_01_mk1, ware.weapon_spl_m_shotgun_01_mk2, ware.weapon_spl_m_sticky_01_mk1, ware.weapon_spl_m_sticky_01_mk2, ware.weapon_spl_s_gatling_01_mk1, ware.weapon_spl_s_gatling_01_mk2, ware.weapon_spl_s_railgun_01_mk1, ware.weapon_spl_s_railgun_01_mk2]" />
+        <append_list_elements name="$WaresList" other="[ware.weapon_spl_s_shotgun_01_mk1, ware.weapon_spl_s_shotgun_01_mk2, ware.weapon_spl_s_sticky_01_mk1, ware.weapon_spl_s_sticky_01_mk2, ware.engine_spacesuit_weak, ware.engine_ter_l_allround_01_mk1, ware.engine_ter_l_travel_01_mk1, ware.engine_ter_m_allround_01_mk1, ware.engine_ter_m_allround_01_mk2, ware.engine_ter_m_allround_01_mk3, ware.engine_ter_m_combat_01_mk1, ware.engine_ter_m_combat_01_mk2, ware.engine_ter_m_combat_01_mk3, ware.engine_ter_m_travel_01_mk1, ware.engine_ter_m_travel_01_mk2]" />
+        <append_list_elements name="$WaresList" other="[ware.engine_ter_m_travel_01_mk3, ware.engine_ter_s_allround_01_mk1, ware.engine_ter_s_allround_01_mk2, ware.engine_ter_s_allround_01_mk3, ware.engine_ter_s_combat_01_mk1, ware.engine_ter_s_combat_01_mk2, ware.engine_ter_s_combat_01_mk3, ware.engine_ter_s_travel_01_mk1, ware.engine_ter_s_travel_01_mk2, ware.engine_ter_s_travel_01_mk3, ware.engine_ter_xl_allround_01_mk1, ware.engine_ter_xl_travel_01_mk1, ware.shield_ter_l_standard_01_mk1, ware.shield_ter_l_standard_01_mk2, ware.shield_ter_l_standard_01_mk3]" />
+        <append_list_elements name="$WaresList" other="[ware.shield_ter_m_standard_01_mk1, ware.shield_ter_m_standard_01_mk2, ware.shield_ter_m_standard_01_mk3, ware.shield_ter_m_standard_02_mk1, ware.shield_ter_m_standard_02_mk2, ware.shield_ter_m_standard_02_mk3, ware.shield_ter_s_standard_01_mk1, ware.shield_ter_s_standard_01_mk2, ware.shield_ter_s_standard_01_mk3, ware.shield_ter_xl_standard_01_mk1, ware.shield_ter_xl_standard_01_mk2, ware.ship_ter_xs_police_01_a, ware.turret_ter_l_beam_01_mk1, ware.turret_ter_l_dumbfire_01_mk1, ware.turret_ter_l_gatling_01_mk1]" />
+        <append_list_elements name="$WaresList" other="[ware.turret_ter_l_guided_01_mk1, ware.turret_ter_l_laser_01_mk1, ware.turret_ter_l_mining_01_mk1, ware.turret_ter_m_beam_01_mk1, ware.turret_ter_m_beam_02_mk1, ware.turret_ter_m_dumbfire_02_mk1, ware.turret_ter_m_gatling_01_mk1, ware.turret_ter_m_gatling_02_mk1, ware.turret_ter_m_guided_02_mk1, ware.turret_ter_m_laser_01_mk1, ware.turret_ter_m_laser_02_mk1, ware.turret_ter_m_mining_01_mk1, ware.turret_ter_m_mining_02_mk1, ware.weapon_atf_xl_battleship_01_mk1, ware.weapon_clustermine_01]" />
+        <append_list_elements name="$WaresList" other="[ware.weapon_ter_l_destroyer_01_mk1, ware.weapon_ter_m_beam_01_mk1, ware.weapon_ter_m_beam_01_mk2, ware.weapon_ter_m_gatling_01_mk1, ware.weapon_ter_m_gatling_01_mk2, ware.weapon_ter_m_laser_01_mk1, ware.weapon_ter_m_laser_01_mk2, ware.weapon_ter_s_beam_01_mk1, ware.weapon_ter_s_beam_01_mk2, ware.weapon_ter_s_gatling_01_mk1, ware.weapon_ter_s_gatling_01_mk2, ware.weapon_ter_s_laser_01_mk1, ware.weapon_ter_s_laser_01_mk2]" />
+
+        <set_value name="$ExportTable" exact="table[]" />
+
+        <do_for_each in="$WaresList" name="$Ware">
+          <do_if value="@$Ware">
+            <set_value name="$WareID" exact="$Ware.id" />
+            <set_value name="$Name" exact="$Ware.name" />
+            <set_value name="$Desc" exact="$Ware.description" />
+            <do_if value="not $Desc">
+              <set_value name="$Desc" exact="''" />
+            </do_if>
+
+            <set_value name="$IsUnlocked" exact="false" />
+            <do_if value="player.blueprints.{$Ware}.any.exists">
+              <set_value name="$IsUnlocked" exact="true" />
+            </do_if>
+
+            <set_value name="$MacroId" exact="''" />
+            <do_if value="@$Ware.macro">
+              <set_value name="$MacroId" exact="$Ware.macro.id" />
+            </do_if>
+
+            <set_value name="$ExportTable.{$WareID}" exact="table[
+              $id = $WareID,
+              $name = $Name,
+              $description = $Desc,
+              $category = 'Equipment',
+              $moduleType = 'Equipment',
+              $group = 'equipment',
+              $hull = 10000,
+              $unlocked = $IsUnlocked,
+              $macro = $MacroId
+            ]" />
+          </do_if>
+        </do_for_each>
+
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'equipment', $items = $ExportTable]" />
+      </actions>
+    </cue>
+  </cues>
+</mdscript>
