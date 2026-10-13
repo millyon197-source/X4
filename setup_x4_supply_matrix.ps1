@@ -269,31 +269,108 @@ function Sync-X4CompanionExtension {
 # -------------------------------------------------------------
 Write-Host "[1/5] Checking Node.js and npm environment..." -ForegroundColor Yellow
 
+function Refresh-EnvironmentPath {
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath    = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path    = "$machinePath;$userPath"
+
+    # Also prepend standard Node install paths if present
+    $standardNodeDirs = @(
+        "$env:ProgramFiles\nodejs",
+        "${env:ProgramFiles(x86)}\nodejs",
+        "$env:LOCALAPPDATA\Programs\node"
+    )
+    foreach ($dir in $standardNodeDirs) {
+        if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
+            $env:Path = "$dir;$env:Path"
+        }
+    }
+}
+
+Refresh-EnvironmentPath
+
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
 
-if (-not $nodeCmd) {
-    Write-Warning "Node.js was not detected on this system."
+if (-not $nodeCmd -or -not $npmCmd) {
+    Write-Warning "Node.js or npm was not detected on this system."
+
+    $installedSuccessfully = $false
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+
     if ($wingetCmd) {
-        $response = Read-Host "Would you like to install Node.js LTS via winget now? (Y/N)"
+        $response = Read-Host "Would you like to install Node.js LTS via winget automatically? (Y/N)"
         if ($response -match '^[Yy]') {
             Write-Host "Installing Node.js LTS via winget..." -ForegroundColor Green
-            & winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            try {
+                & winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
+            } catch {
+                Write-Warning "winget installation encountered an issue: $_"
+            }
+            Refresh-EnvironmentPath
+            $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+            $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
+            if ($nodeCmd -and $npmCmd) {
+                $installedSuccessfully = $true
+            }
+        }
+    }
+
+    # Fallback to direct MSI download if winget was unavailable, declined, or failed
+    if (-not $installedSuccessfully -and (-not $nodeCmd -or -not $npmCmd)) {
+        $msiResponse = Read-Host "Download and install official Node.js LTS MSI package now? (Y/N)"
+        if ($msiResponse -match '^[Yy]') {
+            Write-Host "Fetching latest Node.js LTS installer..." -ForegroundColor Green
+            try {
+                $tempMsi = Join-Path $env:TEMP "node-lts-installer.msi"
+                $downloadUrl = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-x64.msi"
+                Write-Host "Downloading from $downloadUrl to $tempMsi..." -ForegroundColor DarkGray
+                
+                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempMsi -UseBasicParsing
+                
+                Write-Host "Running Node.js installer (msiexec)..." -ForegroundColor Green
+                $msiProcess = Start-Process msiexec.exe -ArgumentList "/i `"$tempMsi`" /passive /norestart" -PassThru -Wait
+                if ($msiProcess.ExitCode -eq 0) {
+                    Write-Host "  -> Node.js MSI installed successfully." -ForegroundColor Green
+                } else {
+                    Write-Warning "msiexec finished with exit code $($msiProcess.ExitCode)."
+                }
+                if (Test-Path $tempMsi) { Remove-Item -Force $tempMsi }
+            } catch {
+                Write-Warning "Direct MSI download/install failed: $_"
+            }
+
+            Refresh-EnvironmentPath
             $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
             $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
         }
     }
-    
-    if (-not $nodeCmd) {
-        Write-Error "Node.js is required. Please install Node.js 18+ from https://nodejs.org/ and re-run this script."
+
+    if (-not $nodeCmd -or -not $npmCmd) {
+        Write-Error "Node.js (v18+) and npm are required to run X4 Supply Matrix. Please download and install from https://nodejs.org/ and re-run this script."
         exit 1
     }
 }
 
-$nodeVersion = (& node -v).Trim()
-$npmVersion  = (& npm -v).Trim()
+try {
+    $nodeVersionRaw = (& node -v 2>$null)
+    $npmVersionRaw  = (& npm -v 2>$null)
+    $nodeVersion = if ($nodeVersionRaw) { $nodeVersionRaw.Trim() } else { "Unknown" }
+    $npmVersion  = if ($npmVersionRaw) { $npmVersionRaw.Trim() } else { "Unknown" }
+    
+    # Check minimum major version (18+)
+    if ($nodeVersion -match '^v(\d+)\.') {
+        $majorVer = [int]$matches[1]
+        if ($majorVer -lt 18) {
+            Write-Error "Node.js version $nodeVersion is too old. Please upgrade to Node.js 18 or newer."
+            exit 1
+        }
+    }
+} catch {
+    Write-Warning "Could not verify Node.js version string: $_"
+}
+
 Write-Host "  -> Node.js: $nodeVersion" -ForegroundColor Green
 Write-Host "  -> npm:     $npmVersion" -ForegroundColor Green
 
