@@ -3,7 +3,14 @@ import zlib from 'zlib';
 import readline from 'readline';
 import path from 'path';
 
-const savePath = 'C:\\Users\\Zeus\\OneDrive\\Documents\\Egosoft\\X4\\47624366\\save\\save_006.xml.gz';
+import os from 'os';
+
+const docsDir = process.env.USERPROFILE 
+  ? path.join(process.env.USERPROFILE, 'OneDrive', 'Documents')
+  : path.join(os.homedir(), 'Documents');
+
+// Find first matching X4 save or use default path
+const savePath = process.argv[2] || path.join(docsDir, 'Egosoft', 'X4', '47624366', 'save', 'save_006.xml.gz');
 const catalog = JSON.parse(fs.readFileSync('src/data/blueprints_catalog.json', 'utf8'));
 
 const fileStream = fs.createReadStream(savePath);

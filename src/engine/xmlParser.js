@@ -1,9 +1,67 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, isBlueprintTerran, WARES_DB } from '../data/wares.js';
-import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents } from '../state/store.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents, clearCustomOutputs } from '../state/store.js';
 import macroCatalog from '../data/macro_names.json' with { type: 'json' };
+
+export function ensureBlueprintUpgrades(bp) {
+  if (!bp || !bp.rawXml) return;
+  if (bp._upgradesExtracted) return; // Already extracted: never overwrite user deletions or modifications!
+  bp._upgradesExtracted = true;
+
+  if (!bp.rawMacros) bp.rawMacros = {};
+  const xmlText = bp.rawXml;
+  if (!xmlText.includes('<upgrades') && !xmlText.includes('<upgrades/>')) return;
+
+  const upgradeCounts = {};
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'text/xml');
+      const entries = doc.querySelectorAll('entry');
+      entries.forEach(entry => {
+        const upgradesEl = entry.querySelector('upgrades');
+        if (upgradesEl) {
+          const upgradeItems = upgradesEl.querySelectorAll('[macro]');
+          upgradeItems.forEach(u => {
+            const uMacro = u.getAttribute('macro');
+            if (!uMacro) return;
+            const exactAttr = u.getAttribute('exact');
+            const count = exactAttr ? (parseInt(exactAttr, 10) || 1) : 1;
+            upgradeCounts[uMacro] = (upgradeCounts[uMacro] || 0) + count;
+          });
+        }
+      });
+    } catch (e) {}
+  } else {
+    const entryBlockRegex = /<entry\b([^>]*)>([\s\S]*?)<\/entry>/gi;
+    let blockMatch;
+    while ((blockMatch = entryBlockRegex.exec(xmlText)) !== null) {
+      const entryInner = blockMatch[2] || '';
+      const upgradesMatch = entryInner.match(/<upgrades\b[^>]*>([\s\S]*?)<\/upgrades>/i);
+      if (upgradesMatch) {
+        const upgInner = upgradesMatch[1];
+        const upgItemRegex = /<[a-z0-9_-]+\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bexact="([^"]*)")?[^>]*?>/gi;
+        let uMatch;
+        while ((uMatch = upgItemRegex.exec(upgInner)) !== null) {
+          const uMacro = uMatch[1];
+          const uExact = uMatch[2] ? (parseInt(uMatch[2], 10) || 1) : 1;
+          upgradeCounts[uMacro] = (upgradeCounts[uMacro] || 0) + uExact;
+        }
+      }
+    }
+  }
+
+  for (const [uMacro, count] of Object.entries(upgradeCounts)) {
+    if (!bp.rawMacros[uMacro] || bp.rawMacros[uMacro] < count) {
+      bp.rawMacros[uMacro] = count;
+      if (bp.rootMacros) bp.rootMacros[uMacro] = count;
+    }
+  }
+}
 
 export function rebuildBlueprintFromMacros() {
   if (!state.activeBlueprint) return;
+  ensureBlueprintUpgrades(state.activeBlueprint);
+  if (state.originalBlueprint) ensureBlueprintUpgrades(state.originalBlueprint);
 
   if (state.activeBlueprint.name === 'Prod Max' && (!state.activeBlueprint.rawMacros || Object.keys(state.activeBlueprint.rawMacros).length === 0)) {
     if (PRESET_BLUEPRINTS && PRESET_BLUEPRINTS['prod_max']) {
@@ -42,6 +100,9 @@ export function rebuildBlueprintFromMacros() {
 
     state.activeBlueprint.totalModules = totalEntries;
     state.activeBlueprint.modules = moduleCounts;
+  } else if (state.activeBlueprint.rawMacros) {
+    state.activeBlueprint.totalModules = 0;
+    state.activeBlueprint.modules = {};
   } else if (state.activeBlueprint.modules) {
     Object.entries(state.activeBlueprint.modules).forEach(([k, v]) => {
       const wareId = mapMacroToWare(k);
@@ -131,20 +192,67 @@ export function rebuildBlueprintFromMacros() {
 
 export function parseXMLBlueprint(xmlText, fileName, onRender) {
   try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'text/xml');
-    const planEl = doc.querySelector('plan');
-    const planName = planEl ? (planEl.getAttribute('name') || fileName) : fileName;
-
-    const entries = doc.querySelectorAll('entry');
+    let planName = fileName;
     const rawMacroCounts = {};
 
-    entries.forEach(entry => {
-      const macro = entry.getAttribute('macro');
-      if (macro) {
-        rawMacroCounts[macro] = (rawMacroCounts[macro] || 0) + 1;
+    if (typeof DOMParser !== 'undefined') {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'text/xml');
+      const planEl = doc.querySelector('plan');
+      planName = planEl ? (planEl.getAttribute('name') || fileName) : fileName;
+
+      const entries = doc.querySelectorAll('entry');
+
+      entries.forEach(entry => {
+        const macro = entry.getAttribute('macro');
+        if (macro) {
+          rawMacroCounts[macro] = (rawMacroCounts[macro] || 0) + 1;
+        }
+
+        // Parse module equipment upgrades (turrets, shields, weapons)
+        const upgradesEl = entry.querySelector('upgrades');
+        if (upgradesEl) {
+          const upgradeItems = upgradesEl.querySelectorAll('[macro]');
+          upgradeItems.forEach(u => {
+            const uMacro = u.getAttribute('macro');
+            if (!uMacro) return;
+            const exactAttr = u.getAttribute('exact');
+            const count = exactAttr ? (parseInt(exactAttr, 10) || 1) : 1;
+            rawMacroCounts[uMacro] = (rawMacroCounts[uMacro] || 0) + count;
+          });
+        }
+      });
+    } else {
+      // Regex fallback for non-DOM / Node.js test environments
+      const nameMatch = xmlText.match(/<plan\b[^>]*?\bname="([^"]*)"/i);
+      if (nameMatch) planName = nameMatch[1];
+
+      const entryBlockRegex = /<entry\b([^>]*)>([\s\S]*?)<\/entry>|<entry\b([^>]*)\/>/gi;
+      let blockMatch;
+      while ((blockMatch = entryBlockRegex.exec(xmlText)) !== null) {
+        const entryAttrs = blockMatch[1] || blockMatch[3] || '';
+        const entryInner = blockMatch[2] || '';
+        const mMatch = entryAttrs.match(/\bmacro="([^"]*)"/i);
+        if (mMatch) {
+          const macro = mMatch[1];
+          rawMacroCounts[macro] = (rawMacroCounts[macro] || 0) + 1;
+        }
+
+        if (entryInner) {
+          const upgradesMatch = entryInner.match(/<upgrades\b[^>]*>([\s\S]*?)<\/upgrades>/i);
+          if (upgradesMatch) {
+            const upgInner = upgradesMatch[1];
+            const upgItemRegex = /<[a-z0-9_-]+\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bexact="([^"]*)")?[^>]*?>/gi;
+            let uMatch;
+            while ((uMatch = upgItemRegex.exec(upgInner)) !== null) {
+              const uMacro = uMatch[1];
+              const uExact = uMatch[2] ? (parseInt(uMatch[2], 10) || 1) : 1;
+              rawMacroCounts[uMacro] = (rawMacroCounts[uMacro] || 0) + uExact;
+            }
+          }
+        }
       }
-    });
+    }
 
     if (isHostedMode()) {
       clearBlueprintInternalStorage();
@@ -152,7 +260,9 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
 
     state.originalBlueprint = {
       name: planName,
-      rawMacros: { ...rawMacroCounts }
+      rawMacros: { ...rawMacroCounts },
+      rawXml: xmlText,
+      _upgradesExtracted: true
     };
 
     state.activeBlueprint = {
@@ -165,11 +275,19 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
       workforceBonus: 0,
       ppStates: {},
       baselineDemand: null,
-      baselineLayerTotals: null
+      baselineLayerTotals: null,
+      rawXml: xmlText,
+      _upgradesExtracted: true
     };
 
     state.selectedSector = null;
     state.workforceBonus = 0;
+    state.supportWorkforce = false;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('x4_support_workforce', 'false');
+      }
+    } catch (e) {}
 
     rebuildBlueprintFromMacros();
 
@@ -182,7 +300,8 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
         rootMacros: { ...state.activeBlueprint.rootMacros },
         sector: null,
         workforceBonus: 0,
-        ppStates: {}
+        ppStates: {},
+        rawXml: xmlText
       }];
     } else {
       // Shift previous blueprints to the right by adding new blueprint at the front (index 0)
@@ -196,7 +315,8 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
         rootMacros: { ...state.activeBlueprint.rootMacros },
         sector: null,
         workforceBonus: 0,
-        ppStates: {}
+        ppStates: {},
+        rawXml: xmlText
       });
     }
 
@@ -204,7 +324,7 @@ export function parseXMLBlueprint(xmlText, fileName, onRender) {
     state.selectedWareId = null;
     state.calculatedDemand = {};
     state.subdueEcCalc = true;
-    state.subdueLevel4 = true;
+    clearCustomOutputs();
 
     collapseAllBiComponents();
     saveActiveBlueprintToStorage();
@@ -228,9 +348,16 @@ export function reloadActiveBlueprint(onRender) {
     ? currentLb.workforceBonus
     : (typeof state.activeBlueprint.workforceBonus === 'number' ? state.activeBlueprint.workforceBonus : 0);
   const preservedPP = (currentLb && currentLb.ppStates) || state.activeBlueprint.ppStates || {};
+  const preservedXml = (currentLb && currentLb.rawXml) || state.activeBlueprint.rawXml || (state.originalBlueprint && state.originalBlueprint.rawXml) || null;
 
   state.selectedSector = preservedSector;
   state.workforceBonus = preservedWf;
+  state.supportWorkforce = false;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('x4_support_workforce', 'false');
+    }
+  } catch (e) {}
 
   if (state.currentPreset && PRESET_BLUEPRINTS[state.currentPreset]) {
     const p = PRESET_BLUEPRINTS[state.currentPreset];
@@ -244,7 +371,8 @@ export function reloadActiveBlueprint(onRender) {
       workforceBonus: preservedWf,
       ppStates: { ...preservedPP },
       baselineDemand: null,
-      baselineLayerTotals: null
+      baselineLayerTotals: null,
+      rawXml: preservedXml
     };
   } else if (state.originalBlueprint && state.originalBlueprint.rawMacros) {
     state.activeBlueprint = {
@@ -257,7 +385,9 @@ export function reloadActiveBlueprint(onRender) {
       workforceBonus: preservedWf,
       ppStates: { ...preservedPP },
       baselineDemand: null,
-      baselineLayerTotals: null
+      baselineLayerTotals: null,
+      rawXml: preservedXml,
+      _upgradesExtracted: true
     };
     rebuildBlueprintFromMacros();
   } else if (state.activeBlueprint.rawMacros) {
@@ -267,18 +397,27 @@ export function reloadActiveBlueprint(onRender) {
     state.activeBlueprint.sector = preservedSector;
     state.activeBlueprint.workforceBonus = preservedWf;
     state.activeBlueprint.ppStates = { ...preservedPP };
+    state.activeBlueprint.rawXml = preservedXml;
+    state.activeBlueprint._upgradesExtracted = true;
     rebuildBlueprintFromMacros();
   }
 
+  if (state.originalBlueprint) {
+    state.originalBlueprint.rawXml = preservedXml;
+    state.originalBlueprint._upgradesExtracted = true;
+  }
+
+  const preservedFocus = state.focusedBiPanel;
   state.selectedWareId = null;
   state.calculatedDemand = {};
   state.searchQuery = '';
   state.subdueEcCalc = true;
-  state.subdueLevel4 = true;
-  state.previousBlueprint = null;
-  state.previousPreset = null;
+  clearCustomOutputs();
+  if (preservedFocus) {
+    state.focusedBiPanel = preservedFocus;
+  }
 
-  collapseAllBiComponents();
+  // NOTE: Do not collapse BI components when unchecking Match Needs
   saveActiveBlueprintToStorage();
 
   if (typeof onRender === 'function') onRender();
@@ -293,6 +432,7 @@ export function switchLoadedBlueprint(name, onRender) {
   const targetSector = targetBp.sector || null;
   const targetWf = typeof targetBp.workforceBonus === 'number' ? targetBp.workforceBonus : 0;
   const targetPP = targetBp.ppStates || {};
+  const targetXml = targetBp.rawXml || null;
 
   state.activeBlueprint = {
     name: targetBp.name,
@@ -304,11 +444,15 @@ export function switchLoadedBlueprint(name, onRender) {
     workforceBonus: targetWf,
     ppStates: { ...targetPP },
     baselineDemand: null,
-    baselineLayerTotals: null
+    baselineLayerTotals: null,
+    rawXml: targetXml,
+    _upgradesExtracted: true
   };
   state.originalBlueprint = {
     name: targetBp.name,
-    rawMacros: { ...targetBp.rawMacros }
+    rawMacros: { ...targetBp.rawMacros },
+    rawXml: targetXml,
+    _upgradesExtracted: true
   };
 
   // If a load of a blueprint has no internalStorage used to allow switching between already loaded blueprints,
@@ -316,6 +460,12 @@ export function switchLoadedBlueprint(name, onRender) {
   // and flashing the needle indicator between red and green head.
   state.selectedSector = targetSector;
   state.workforceBonus = targetWf;
+  state.supportWorkforce = false;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('x4_support_workforce', 'false');
+    }
+  } catch (e) {}
 
   rebuildBlueprintFromMacros();
 
@@ -328,9 +478,7 @@ export function switchLoadedBlueprint(name, onRender) {
   state.calculatedDemand = {};
   state.searchQuery = '';
   state.subdueEcCalc = true;
-  state.subdueLevel4 = true;
-  state.previousBlueprint = null;
-  state.previousPreset = null;
+  clearCustomOutputs();
 
   collapseAllBiComponents();
   saveActiveBlueprintToStorage();
@@ -341,8 +489,32 @@ export function removeLoadedBlueprint(name, onRender) {
   if (isHostedMode()) {
     clearBlueprintInternalStorage();
     state.activeBlueprint = null;
-    state.originalBlueprint = null;
-    state.currentPreset = 'all';
+    if (PRESET_BLUEPRINTS && PRESET_BLUEPRINTS['prod_max']) {
+      const p = PRESET_BLUEPRINTS['prod_max'];
+      state.activeBlueprint = {
+        name: p.name,
+        totalModules: p.totalModules,
+        modules: { ...p.modules },
+        rawMacros: { ...(p.rawMacros || {}) },
+        rootMacros: { ...(p.rawMacros || {}) },
+        sector: null,
+        workforceBonus: 0,
+        ppStates: {},
+        baselineDemand: null,
+        baselineLayerTotals: null
+      };
+      state.originalBlueprint = {
+        name: p.name,
+        totalModules: p.totalModules,
+        modules: { ...p.modules },
+        rawMacros: { ...(p.rawMacros || {}) }
+      };
+      state.currentPreset = 'prod_max';
+    } else {
+      state.activeBlueprint = null;
+      state.originalBlueprint = null;
+      state.currentPreset = 'blueprint';
+    }
     state.selectedWareId = null;
     state.calculatedDemand = {};
     saveActiveBlueprintToStorage();
@@ -355,8 +527,6 @@ export function removeLoadedBlueprint(name, onRender) {
   state.loadedBlueprints = state.loadedBlueprints.filter(b => b.name !== name);
 
   if (wasActive) {
-    state.previousBlueprint = null;
-    state.previousPreset = null;
     if (state.loadedBlueprints.length > 0) {
       const nextBp = state.loadedBlueprints[0];
       const nextSector = nextBp.sector || null;
@@ -377,16 +547,17 @@ export function removeLoadedBlueprint(name, onRender) {
       state.workforceBonus = nextWf;
       state.currentPreset = 'blueprint';
       state.subdueEcCalc = true;
-      state.subdueLevel4 = true;
     } else {
       state.activeBlueprint = null;
       state.originalBlueprint = null;
       state.selectedSector = null;
       state.workforceBonus = 0;
-      state.currentPreset = 'all';
+      state.currentPreset = null;
+      state.subdueEcCalc = false;
     }
     state.selectedWareId = null;
     state.calculatedDemand = {};
+    clearCustomOutputs();
   }
 
   saveActiveBlueprintToStorage();
@@ -394,18 +565,7 @@ export function removeLoadedBlueprint(name, onRender) {
 }
 
 export function removeActiveBlueprint(onRender) {
-  if (isHostedMode()) {
-    clearBlueprintInternalStorage();
-    state.activeBlueprint = null;
-    state.originalBlueprint = null;
-    state.currentPreset = 'all';
-    state.selectedWareId = null;
-    state.calculatedDemand = {};
-    saveActiveBlueprintToStorage();
-    if (typeof onRender === 'function') onRender();
-    return;
-  }
-
+  clearCustomOutputs();
   if (state.activeBlueprint) {
     const activeName = state.activeBlueprint.name;
     removeLoadedBlueprint(activeName, onRender);
@@ -414,13 +574,13 @@ export function removeActiveBlueprint(onRender) {
     state.originalBlueprint = null;
     state.selectedSector = null;
     state.workforceBonus = 0;
-    state.currentPreset = 'all';
-    state.selectedWareId = null;
-    state.calculatedDemand = {};
+    state.currentPreset = null;
+    state.subdueEcCalc = false;
     saveActiveBlueprintToStorage();
     if (typeof onRender === 'function') onRender();
   }
 }
+
 
 /**
  * Parses raw X4 station blueprint XML content into a structured module count map.
@@ -477,6 +637,18 @@ export function parseBlueprintXML(xmlString, knownMacros = macroCatalog) {
         const countAttr = node.getAttribute('count');
         const count = countAttr ? parseInt(countAttr, 10) : 1;
         entries.push({ macro, count: isNaN(count) || count <= 0 ? 1 : count });
+
+        const upgradesEl = node.querySelector('upgrades');
+        if (upgradesEl) {
+          const upgradeItems = upgradesEl.querySelectorAll('[macro]');
+          upgradeItems.forEach(u => {
+            const uMacro = u.getAttribute('macro');
+            if (!uMacro) return;
+            const exactAttr = u.getAttribute('exact');
+            const uCount = exactAttr ? (parseInt(exactAttr, 10) || 1) : 1;
+            entries.push({ macro: uMacro, count: isNaN(uCount) || uCount <= 0 ? 1 : uCount });
+          });
+        }
       });
     } else {
       // Fallback regex parser for Node.js / non-browser test environments
@@ -485,12 +657,32 @@ export function parseBlueprintXML(xmlString, knownMacros = macroCatalog) {
       if (nameMatch) planName = nameMatch[1];
       if (idMatch) planId = idMatch[1];
 
-      const entryRegex = /<entry\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bcount="([^"]*)")?[^>]*?>/gi;
-      let match;
-      while ((match = entryRegex.exec(xmlString)) !== null) {
-        const macro = match[1];
-        const count = match[2] ? parseInt(match[2], 10) : 1;
-        entries.push({ macro, count: isNaN(count) || count <= 0 ? 1 : count });
+      const entryBlockRegex = /<entry\b([^>]*)>([\s\S]*?)<\/entry>|<entry\b([^>]*)\/>/gi;
+      let blockMatch;
+      while ((blockMatch = entryBlockRegex.exec(xmlString)) !== null) {
+        const entryAttrs = blockMatch[1] || blockMatch[3] || '';
+        const entryInner = blockMatch[2] || '';
+        const mMatch = entryAttrs.match(/\bmacro="([^"]*)"/i);
+        const countMatch = entryAttrs.match(/\bcount="([^"]*)"/i);
+        if (mMatch) {
+          const macro = mMatch[1];
+          const count = countMatch ? parseInt(countMatch[1], 10) : 1;
+          entries.push({ macro, count: isNaN(count) || count <= 0 ? 1 : count });
+        }
+
+        if (entryInner) {
+          const upgradesMatch = entryInner.match(/<upgrades\b[^>]*>([\s\S]*?)<\/upgrades>/i);
+          if (upgradesMatch) {
+            const upgInner = upgradesMatch[1];
+            const upgItemRegex = /<[a-z0-9_-]+\b[^>]*?\bmacro="([^"]*)"(?:[^>]*?\bexact="([^"]*)")?[^>]*?>/gi;
+            let uMatch;
+            while ((uMatch = upgItemRegex.exec(upgInner)) !== null) {
+              const uMacro = uMatch[1];
+              const uExact = uMatch[2] ? (parseInt(uMatch[2], 10) || 1) : 1;
+              entries.push({ macro: uMacro, count: isNaN(uExact) || uExact <= 0 ? 1 : uExact });
+            }
+          }
+        }
       }
     }
 
@@ -563,7 +755,8 @@ export function loadBlueprintIntoStore(xmlString, targetStore = store) {
   const appState = (targetStore && targetStore.state) ? targetStore.state : state;
   appState.originalBlueprint = {
     name: parsed.metadata.name,
-    rawMacros: { ...rawMacros }
+    rawMacros: { ...rawMacros },
+    _upgradesExtracted: true
   };
 
   appState.activeBlueprint = {
@@ -576,7 +769,8 @@ export function loadBlueprintIntoStore(xmlString, targetStore = store) {
     workforceBonus: 0,
     ppStates: {},
     baselineDemand: null,
-    baselineLayerTotals: null
+    baselineLayerTotals: null,
+    _upgradesExtracted: true
   };
 
   const modulesMap = new Map();
@@ -591,6 +785,12 @@ export function loadBlueprintIntoStore(xmlString, targetStore = store) {
     unrecognizedMacros: parsed.unrecognizedMacros,
     loadedAt: new Date().toISOString()
   };
+  appState.supportWorkforce = false;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('x4_support_workforce', 'false');
+    }
+  } catch (e) {}
 
   rebuildBlueprintFromMacros();
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X4 Foundations Companion & Module Encyclopedia</title>
+    <title>X4 Foundations Companion & Blueprint Matrix</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -34,7 +34,7 @@
             padding: 1.25rem;
             border: 1px solid #29292e;
         }
-        .stat { font-size: 1.1rem; margin-bottom: 0.4rem; }
+        .stat { font-size: 1.05rem; margin-bottom: 0.4rem; }
         .stat span { color: #00ffaa; font-weight: bold; }
         .status-badge {
             display: inline-block;
@@ -44,23 +44,113 @@
             font-weight: bold;
         }
         .status-online { background: rgba(0, 255, 170, 0.2); color: #00ffaa; border: 1px solid #00ffaa; }
+        .status-idle { background: rgba(255, 170, 26, 0.2); color: #ffaa1a; border: 1px solid #ffaa1a; }
         .status-offline { background: rgba(247, 90, 104, 0.2); color: #f75a68; border: 1px solid #f75a68; }
 
-        /* Module Encyclopedia Section */
+        /* Categorized Blueprint Interface */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
-        .filter-bar {
+
+        /* Primary Group Tabs */
+        .cat-tabs-container {
             display: flex;
             gap: 0.5rem;
-            align-items: center;
+            background: #17171d;
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid #2b2b36;
+            margin-bottom: 1.2rem;
             flex-wrap: wrap;
         }
+        .cat-tab {
+            background: transparent;
+            color: #9e9ea8;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.92rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .cat-tab:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .cat-tab.active {
+            background: #ff9d00;
+            color: #121214;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(255, 157, 0, 0.35);
+        }
+        .cat-tab .tab-badge {
+            background: rgba(0, 0, 0, 0.35);
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: bold;
+        }
+        .cat-tab.active .tab-badge {
+            background: #121214;
+            color: #ff9d00;
+        }
+
+        /* Filter & Controls Toolbar */
+        .toolbar-panel {
+            background: #17171c;
+            border: 1px solid #282832;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .subgroup-pills {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .subgroup-pill {
+            background: #202028;
+            color: #a0a0ab;
+            border: 1px solid #32323e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+        .subgroup-pill:hover {
+            color: #fff;
+            border-color: #555566;
+        }
+        .subgroup-pill.active {
+            background: #00b3ff;
+            color: #121214;
+            font-weight: bold;
+            border-color: #00b3ff;
+            box-shadow: 0 0 8px rgba(0, 179, 255, 0.4);
+        }
+
         .filter-btn {
             background: #202024;
             color: #a9a9b3;
@@ -77,57 +167,192 @@
             font-weight: bold;
             border-color: #ff9d00;
         }
+
+        /* Ownership filter toggle */
+        .ownership-toggle-group {
+            display: flex;
+            background: #121216;
+            border: 1px solid #32323e;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .ownership-btn {
+            background: transparent;
+            color: #8e8e98;
+            border: none;
+            padding: 6px 13px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ownership-btn:hover { color: #fff; }
+        .ownership-btn.active.btn-owned {
+            background: rgba(0, 255, 170, 0.2);
+            color: #00ffaa;
+            border-bottom: 2px solid #00ffaa;
+        }
+        .ownership-btn.active.btn-all {
+            background: #2b2b36;
+            color: #fff;
+        }
+        .ownership-btn.active.btn-unowned {
+            background: rgba(247, 90, 104, 0.2);
+            color: #f75a68;
+            border-bottom: 2px solid #f75a68;
+        }
+
         .search-box {
-            background: #202024;
-            border: 1px solid #323238;
+            background: #202028;
+            border: 1px solid #383846;
             color: #fff;
             padding: 7px 12px;
             border-radius: 6px;
-            font-size: 0.9rem;
-            min-width: 240px;
+            font-size: 0.88rem;
+            min-width: 250px;
         }
         .search-box:focus {
             outline: none;
             border-color: #ff9d00;
         }
-        .modules-grid {
+
+        /* Blueprints Grid */
+        .blueprints-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 1.25rem;
         }
-        .module-card {
+        .bp-card {
+            background: #1b1b22;
+            border: 1px solid #2d2d38;
+            border-radius: 8px;
+            padding: 1.15rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.15s ease, border-color 0.15s ease;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
         }
-        .module-card:hover {
+        .bp-card:hover {
             transform: translateY(-2px);
-            border-color: #44444e;
+            border-color: #4b4b5c;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        .module-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.25rem;
+        .bp-card.card-owned {
+            border-left: 4px solid #00ffaa;
+        }
+        .bp-card.card-unowned {
+            border-left: 4px solid #4a4a58;
+            opacity: 0.88;
+        }
+        .bp-card h3 {
+            font-size: 1.05rem;
+            margin: 0 0 0.35rem 0;
             color: #fff;
+            line-height: 1.3;
         }
+        
+        /* Badges */
         .badge {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             text-transform: uppercase;
             font-weight: bold;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 4px;
         }
+        .badge.group-modules { background: rgba(0, 179, 255, 0.15); color: #00b3ff; border: 1px solid #00b3ff; }
+        .badge.group-ships { background: rgba(255, 157, 0, 0.15); color: #ff9d00; border: 1px solid #ff9d00; }
+        .badge.group-equipment { background: rgba(180, 100, 255, 0.15); color: #b464ff; border: 1px solid #b464ff; }
+
         .badge.production { background: rgba(0, 255, 170, 0.15); color: #00ffaa; border: 1px solid #00ffaa; }
         .badge.habitation { background: rgba(0, 179, 255, 0.15); color: #00b3ff; border: 1px solid #00b3ff; }
         .badge.storage { background: rgba(255, 157, 0, 0.15); color: #ff9d00; border: 1px solid #ff9d00; }
         .badge.defense { background: rgba(255, 85, 85, 0.15); color: #ff5555; border: 1px solid #ff5555; }
         .badge.dock { background: rgba(180, 100, 255, 0.15); color: #b464ff; border: 1px solid #b464ff; }
         .badge.structural { background: rgba(142, 142, 147, 0.15); color: #8e8e93; border: 1px solid #8e8e93; }
-        .badge.other { background: rgba(142, 142, 147, 0.15); color: #8e8e93; border: 1px solid #8e8e93; }
+
+        .faction-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #252530;
+            color: #c0c0cb;
+        }
+        .faction-tag.argon { color: #00b3ff; border-left: 2px solid #00b3ff; }
+        .faction-tag.terran { color: #00ffaa; border-left: 2px solid #00ffaa; }
+        .faction-tag.teladi { color: #ffcc00; border-left: 2px solid #ffcc00; }
+        .faction-tag.paranid { color: #b464ff; border-left: 2px solid #b464ff; }
+        .faction-tag.split { color: #ff5555; border-left: 2px solid #ff5555; }
+        .faction-tag.boron { color: #00d2ff; border-left: 2px solid #00d2ff; }
+
+        /* Interactive Ownership Badge */
+        .bp-ownership-tag {
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .bp-ownership-tag.owned {
+            background: rgba(0, 255, 170, 0.15);
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+        }
+        .bp-ownership-tag.owned:hover {
+            background: rgba(0, 255, 170, 0.25);
+            transform: scale(1.04);
+        }
+        .bp-ownership-tag.locked {
+            background: rgba(142, 142, 147, 0.12);
+            color: #8e8e98;
+            border: 1px solid #4a4a58;
+        }
+        .bp-ownership-tag.locked:hover {
+            color: #ff9d00;
+            border-color: #ff9d00;
+            background: rgba(255, 157, 0, 0.1);
+            transform: scale(1.04);
+        }
+
+        /* Card Specs Layout */
+        .specs-body {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #282834;
+            font-size: 0.86rem;
+        }
+        .specs-grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+        }
+        .spec-item {
+            background: #141419;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #23232c;
+        }
+        .spec-label {
+            font-size: 0.73rem;
+            color: #7c7c8a;
+            text-transform: uppercase;
+        }
+        .spec-value {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #fff;
+            margin-top: 2px;
+        }
 
         .factory-loop ul { margin: 0; padding-left: 1.2rem; }
-        .factory-loop li { margin-bottom: 0.25rem; font-size: 0.88rem; }
-        .habitation-specs, .storage-specs { font-size: 0.88rem; line-height: 1.6; }
+        .factory-loop li { margin-bottom: 0.25rem; font-size: 0.86rem; }
+        .habitation-specs, .storage-specs { font-size: 0.86rem; line-height: 1.6; }
+
         .empty-placeholder {
             grid-column: 1 / -1;
             text-align: center;
@@ -136,6 +361,22 @@
             border-radius: 8px;
             border: 1px dashed #323238;
             color: #7c7c8a;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: #121216;
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+            border: 1px solid #2b2b36;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #00ffaa;
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
 
         /* On-demand Sync Bar Styles */
@@ -155,40 +396,250 @@
             border: 1px solid #3f3f4a;
             padding: 8px 12px;
             border-radius: 6px;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             cursor: pointer;
         }
         .sync-select:focus {
             outline: none;
             border-color: #ff9d00;
         }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .sync-btn {
             background: #ff9d00;
             color: #121214;
             font-weight: bold;
-            border: none;
+            border: 1px solid transparent;
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
+            gap: 7px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+            transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.1s ease, filter 0.1s ease;
+            user-select: none;
         }
         .sync-btn:hover:not(:disabled) {
             background: #ffaa1a;
             transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(255, 157, 0, 0.25);
+        }
+        .sync-btn:active:not(:disabled),
+        .sync-btn.depressed {
+            transform: translateY(2px) scale(0.97) !important;
+            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6) !important;
+            filter: brightness(0.88);
         }
         .sync-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.55;
             cursor: not-allowed;
+            box-shadow: none !important;
         }
+        .sync-btn-savegame {
+            background: #2d1e12;
+            color: #ff9d00;
+            border: 1px solid #ff9d00;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+        }
+        .sync-btn-savegame:hover:not(:disabled) {
+            background: #3e2917;
+            color: #ffaa1a;
+            border-color: #ffaa1a;
+            box-shadow: 0 4px 10px rgba(255, 157, 0, 0.25);
+        }
+        .sync-btn-savegame:active:not(:disabled),
+        .sync-btn-savegame.depressed {
+            background: #1c120a !important;
+            border-color: #d48200 !important;
+            color: #d48200 !important;
+        }
+        .sync-btn-savegame.loading {
+            background: #1c120a !important;
+            border-color: #d48200 !important;
+            color: #ffaa1a !important;
+        }
+        .sync-btn-savegame.success {
+            background: rgba(0, 255, 170, 0.15) !important;
+            color: #00ffaa !important;
+            border-color: #00ffaa !important;
+        }
+
         .sync-status-text {
-            font-size: 0.88rem;
+            font-size: 0.86rem;
             color: #8e8e98;
         }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        @keyframes dataPulse { 
+            0% { box-shadow: 0 0 18px rgba(0, 255, 170, 0.7); border-color: #00ffaa; } 
+            100% { box-shadow: none; border-color: #3f3f4e; } 
+        }
+        .data-updated-pulse {
+            animation: dataPulse 1.8s ease-out;
+        }
+
+        /* Inspector Table */
+        .dt-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        .dt-table th {
+            background: #18181f;
+            color: #ff9d00;
+            padding: 10px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 2px solid #2f2f3a;
+            white-space: nowrap;
+        }
+        .dt-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .dt-table th.sortable:hover {
+            background: #252532;
+            color: #ffb833;
+        }
+        .dt-table th .th-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dt-table th .sort-arrow {
+            display: inline-block;
+            font-size: 0.78rem;
+            line-height: 1;
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        .dt-table th .sort-arrow.active-asc {
+            color: #00ffaa;
+            font-weight: 900;
+            text-shadow: 0 0 6px rgba(0, 255, 170, 0.4);
+        }
+        .dt-table th .sort-arrow.active-desc {
+            color: #ff9d00;
+            font-weight: 900;
+            text-shadow: 0 0 6px rgba(255, 157, 0, 0.4);
+        }
+        .dt-table th .sort-arrow.inactive {
+            color: #646476;
+            opacity: 0.6;
+        }
+        .dt-table th.sortable:hover .sort-arrow.inactive {
+            color: #ffaa1a;
+            opacity: 1;
+        }
+        .dt-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #23232b;
+            color: #d1d1db;
+            vertical-align: middle;
+        }
+        .dt-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .dt-table tr:hover {
+            background: rgba(255, 157, 0, 0.06);
+        }
+
+        /* DLC Inclusion Status Pills */
+        .dlc-pills-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .dlc-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.25;
+            transition: all 0.2s ease;
+            user-select: none;
+            cursor: default;
+        }
+        .dlc-pill-active {
+            background: rgba(0, 255, 170, 0.1);
+            color: #00ffaa;
+            border: 1px solid rgba(0, 255, 170, 0.35);
+        }
+        .dlc-pill-present {
+            background: rgba(168, 85, 247, 0.15);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.45);
+        }
+        .dlc-pill-inactive {
+            background: rgba(255, 255, 255, 0.04);
+            color: #7c7c8a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.75;
+        }
+        .dlc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dlc-pill-active .dlc-dot {
+            background: #00ffaa;
+            box-shadow: 0 0 5px rgba(0, 255, 170, 0.8);
+        }
+        .dlc-pill-present .dlc-dot {
+            background: #c084fc;
+            box-shadow: 0 0 6px rgba(192, 132, 252, 0.9);
+        }
+        .dlc-pill-inactive .dlc-dot {
+            background: #5a5a66;
+        }
+        .dlc-query-btn {
+            background: rgba(168, 85, 247, 0.12);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            border-radius: 12px;
+            padding: 2px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            line-height: 1.25;
+        }
+        .dlc-query-btn:hover:not(:disabled) {
+            background: rgba(168, 85, 247, 0.25);
+            border-color: #c084fc;
+            color: #f3e8ff;
+            box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+        }
+        .dlc-query-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .dlc-query-btn.loading {
+            background: rgba(255, 157, 0, 0.15) !important;
+            border-color: #ff9d00 !important;
+            color: #ffaa1a !important;
+        }
+        .dlc-query-btn.success {
+            background: rgba(0, 255, 170, 0.15) !important;
+            border-color: #00ffaa !important;
+            color: #00ffaa !important;
+        }
     </style>
 </head>
 <body>
@@ -196,37 +647,112 @@
     <header>
         <div>
             <h1>X4 Foundations Companion</h1>
-            <div style="font-size: 0.9rem; color: #a9a9b3;">Live Game Engine Telemetry & Station Module Harvester</div>
+            <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-top: 2px;">
+                <span style="font-size: 0.9rem; color: #a9a9b3;">Blueprint Matrix & Categorized Tech Tree Manager</span>
+                <div id="dlc-pills-container" class="dlc-pills-container"></div>
+                <button id="btn-query-dlcs" class="dlc-query-btn" title="Call in-game GetExtensions() API separately to refresh DLC status">
+                    <span id="dlc-query-icon">🔄</span> <span id="dlc-query-text">Query DLCs</span>
+                </button>
+            </div>
         </div>
-        <div>
-            <span id="socket-status" class="status-badge status-offline">Connecting to Server...</span>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <span id="display-mode-badge" class="status-badge" style="display: none; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid #0284c7;">Mode: Detecting...</span>
+            <span id="game-status" class="status-badge status-offline">Game Client: Waiting...</span>
+            <span id="socket-status" class="status-badge status-offline">Server: Connecting...</span>
         </div>
     </header>
 
     <!-- On-Demand In-Game Data Sync Control Bar -->
     <div class="card sync-panel">
-        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: 1; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 1.25rem;">📡</span>
-                <strong>On-Demand Sync:</strong>
+                <strong>Data Sync:</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label for="sync-table-select" style="font-size: 0.88rem; color: #a9a9b3;">Data Table:</label>
+                <label for="sync-table-select" style="font-size: 0.88rem; color: #a9a9b3;">Target Table:</label>
                 <select id="sync-table-select" class="sync-select">
-                    <option value="blueprints">Station Modules & Blueprints</option>
-                    <option value="player">Pilot Profile & Account Telemetry</option>
-                    <option value="ships">Player Fleet & Ships</option>
-                    <option value="stations">Player Stations & Complexes</option>
+                    <option value="modules">Station Modules</option>
+                    <option value="ships">Ships & Vessels</option>
+                    <option value="equipment">Equipment & Weapons</option>
+                    <option value="dlcs">DLC Inclusion Status</option>
+                    <option value="blueprints">All Blueprints (Unified)</option>
+                    <option value="player">Pilot Profile & Telemetry</option>
                     <option value="all">Full Universe Sync (All Tables)</option>
                 </select>
             </div>
-            <button id="btn-request-update" class="sync-btn">
-                <span id="sync-icon">🔄</span> Request Update
+            <button id="btn-request-update" class="sync-btn" title="Request update from running X4 game client">
+                <span id="sync-icon">🔄</span> <span id="sync-btn-text">Request Update</span>
+            </button>
+            <div id="sync-status" class="sync-status-text" style="margin-left: 0.25rem;">Ready to request updates</div>
+        </div>
+        <div style="display: flex; align-items: center; margin-left: auto;">
+            <button id="btn-sync-savegame" class="sync-btn sync-btn-savegame" title="Instantly parse your latest X4 savegame to sync owned blueprints">
+                <span id="sync-savegame-icon">💾</span> <span id="sync-savegame-text">Sync Savegame</span>
             </button>
         </div>
-        <div id="sync-status" class="sync-status-text">Ready to request updates</div>
     </div>
 
+    <!-- Retrieved Data Table Inspector -->
+    <div class="card data-table-panel" id="data-table-panel" style="margin-bottom: 2rem; border-color: #383844;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #29292e; padding-bottom: 0.85rem; margin-bottom: 1rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                    <h2 style="margin: 0; font-size: 1.25rem; color: #ff9d00;">📊 Retrieved Data Table Inspector</h2>
+                    <span id="dt-table-badge" class="status-badge status-online">TABLE: MODULES</span>
+                    <span id="dt-source-badge" class="status-badge" style="display: none; background: rgba(255, 157, 0, 0.15); color: #ffaa1a; border: 1px solid #ff9d00;">💾 SAVEGAME SYNC</span>
+                </div>
+                <div style="font-size: 0.83rem; color: #7c7c8a; margin-top: 0.35rem;">
+                    Payload received at <span id="dt-timestamp" style="color: #00ffaa; font-weight: 500;">--</span> &bull; 
+                    <span id="dt-count" style="color: #ff9d00; font-weight: bold;">0</span> records retrieved
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                <!-- Table Choice Selector Dropdown -->
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <label for="dt-table-choice" style="font-size: 0.84rem; color: #ff9d00; font-weight: bold;">Select Table:</label>
+                    <select id="dt-table-choice" class="sync-select" style="padding: 5px 10px; font-size: 0.85rem; font-weight: bold; border-color: #ff9d00; background: #22222b; color: #fff;">
+                        <option value="player">Player (Pilot Profile)</option>
+                        <option value="modules" selected>Modules (Station Blueprints)</option>
+                        <option value="ships">Ships (Vessel Blueprints)</option>
+                        <option value="equipment">Equipment (Weapons/Shields/Engines)</option>
+                        <option value="dlcs">DLC Inclusion Status</option>
+                        <option value="blueprints">All Blueprints (Unified Catalog)</option>
+                        <option value="all">All Tables (Latest Activity)</option>
+                    </select>
+                </div>
+
+                <!-- History Selector -->
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <label for="dt-history-select" style="font-size: 0.82rem; color: #a9a9b3;">Request History:</label>
+                    <select id="dt-history-select" class="sync-select" style="padding: 4px 8px; font-size: 0.82rem; min-width: 210px;">
+                        <option value="">(Loading recent requests...)</option>
+                    </select>
+                </div>
+
+                <!-- Table Search Filter -->
+                <input type="text" id="dt-filter-input" class="search-box" style="padding: 5px 10px; font-size: 0.82rem; min-width: 170px;" placeholder="Filter rows...">
+
+                <!-- View Mode Toggle -->
+                <div style="display: flex; background: #121214; border: 1px solid #323238; border-radius: 6px; overflow: hidden;">
+                    <button id="btn-dt-view-table" class="filter-btn active" style="padding: 5px 12px; font-size: 0.82rem; border: none; border-radius: 0;">Table View</button>
+                    <button id="btn-dt-view-json" class="filter-btn" style="padding: 5px 12px; font-size: 0.82rem; border: none; border-radius: 0;">Raw JSON</button>
+                </div>
+
+                <button id="btn-dt-copy-json" class="filter-btn" style="padding: 5px 10px; font-size: 0.82rem;" title="Copy JSON to clipboard">📋 Copy</button>
+            </div>
+        </div>
+
+        <!-- Dynamic Content Container -->
+        <div id="dt-content-table" style="max-height: 480px; overflow-y: auto; overflow-x: auto; border: 1px solid #29292e; border-radius: 6px; background: #17171c;"></div>
+
+        <div id="dt-content-json" style="display: none; max-height: 480px; overflow: auto; background: #121214; border: 1px solid #29292e; border-radius: 6px; padding: 1rem;">
+            <pre id="dt-json-pre" style="margin: 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.84rem; color: #00ffaa; white-space: pre-wrap; word-break: break-all;"></pre>
+        </div>
+    </div>
+
+    <!-- Top Summary Dashboard: Pilot Profile & Blueprint Ownership Overview -->
     <div class="grid-top">
         <!-- Player Info Card -->
         <div class="card">
@@ -238,209 +764,727 @@
             <div style="font-size: 0.82rem; color: #7c7c8a;">Last updated: <span id="timestamp">Never</span></div>
         </div>
 
-        <!-- Encyclopedia Overview Card -->
+        <!-- Blueprint Ownership Overview Card -->
         <div class="card">
-            <h2>Module Database Status</h2>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center; margin-top: 0.5rem;">
-                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #00ffaa;" id="count-total">0</div>
-                    <div style="font-size: 0.8rem; color: #7c7c8a;">Total Modules</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <h2>Blueprint Ownership Status</h2>
+                <span id="bp-overall-percent" style="font-size: 1.15rem; font-weight: bold; color: #00ffaa;">0% Owned</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; text-align: center; margin-top: 0.6rem;">
+                <!-- Total Blueprints -->
+                <div style="background: #141419; padding: 0.75rem 0.5rem; border-radius: 6px; border: 1px solid #282834;">
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #ff9d00;" id="count-total-owned">0 / 0</div>
+                    <div style="font-size: 0.76rem; color: #8e8e98; margin-top: 2px;">Total Blueprints</div>
+                    <div class="progress-container"><div id="bar-total" class="progress-fill" style="width: 0%;"></div></div>
                 </div>
-                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #00b37e;" id="count-prod">0</div>
-                    <div style="font-size: 0.8rem; color: #7c7c8a;">Production</div>
+
+                <!-- Modules -->
+                <div style="background: #141419; padding: 0.75rem 0.5rem; border-radius: 6px; border: 1px solid #282834;">
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #00b3ff;" id="count-modules-owned">0 / 0</div>
+                    <div style="font-size: 0.76rem; color: #8e8e98; margin-top: 2px;">Station Modules</div>
+                    <div class="progress-container"><div id="bar-modules" class="progress-fill" style="width: 0%; background: #00b3ff;"></div></div>
                 </div>
-                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #00b3ff;" id="count-hab">0</div>
-                    <div style="font-size: 0.8rem; color: #7c7c8a;">Habitation</div>
+
+                <!-- Ships -->
+                <div style="background: #141419; padding: 0.75rem 0.5rem; border-radius: 6px; border: 1px solid #282834;">
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #ff9d00;" id="count-ships-owned">0 / 0</div>
+                    <div style="font-size: 0.76rem; color: #8e8e98; margin-top: 2px;">Ships & Vessels</div>
+                    <div class="progress-container"><div id="bar-ships" class="progress-fill" style="width: 0%; background: #ff9d00;"></div></div>
                 </div>
-                <div style="background: #121214; padding: 0.8rem; border-radius: 6px;">
-                    <div style="font-size: 1.4rem; font-weight: bold; color: #ff9d00;" id="count-store">0</div>
-                    <div style="font-size: 0.8rem; color: #7c7c8a;">Storage</div>
+
+                <!-- Equipment -->
+                <div style="background: #141419; padding: 0.75rem 0.5rem; border-radius: 6px; border: 1px solid #282834;">
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #b464ff;" id="count-equipment-owned">0 / 0</div>
+                    <div style="font-size: 0.76rem; color: #8e8e98; margin-top: 2px;">Equipment & Weapons</div>
+                    <div class="progress-container"><div id="bar-equipment" class="progress-fill" style="width: 0%; background: #b464ff;"></div></div>
                 </div>
             </div>
-            <div style="font-size: 0.82rem; color: #7c7c8a; margin-top: 1rem;">
-                Last Harvest: <span id="enc-sync-time">Awaiting in-game harvester event</span>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; font-size: 0.82rem; color: #7c7c8a;">
+                <span>Last Harvester Sync: <strong id="enc-sync-time" style="color: #00ffaa;">Awaiting live session</strong></span>
+                <span style="font-style: italic;">Click any card's badge to toggle ownership state</span>
             </div>
         </div>
     </div>
 
-    <!-- Station Modules Directory -->
+    <!-- Categorized Blueprints Interface -->
     <div class="section-header">
-        <h2>Station Modules Encyclopedia</h2>
-        <div class="filter-bar">
-            <input type="text" id="search-input" class="search-box" placeholder="Search modules, wares, macro...">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="Production">Production</button>
-            <button class="filter-btn" data-filter="Habitation">Habitation</button>
-            <button class="filter-btn" data-filter="Storage">Storage</button>
-            <button class="filter-btn" data-filter="Defense">Defense</button>
-            <button class="filter-btn" data-filter="Dock">Dock</button>
+        <div>
+            <h2 style="margin: 0; font-size: 1.4rem;">📦 Categorized Blueprint Matrix</h2>
+            <div style="font-size: 0.85rem; color: #8e8e98; margin-top: 3px;">
+                Browse, sort, and filter your acquired blueprints across Modules, Ships, and Equipment.
+            </div>
         </div>
     </div>
 
-    <div id="modules-container" class="modules-grid">
+    <!-- Primary Group Tabs -->
+    <div class="cat-tabs-container">
+        <button class="cat-tab active" data-group="all">
+            <span>🌟 All Blueprints</span>
+            <span class="tab-badge" id="tab-badge-all">0</span>
+        </button>
+        <button class="cat-tab" data-group="modules">
+            <span>🏭 Station Modules</span>
+            <span class="tab-badge" id="tab-badge-modules">0</span>
+        </button>
+        <button class="cat-tab" data-group="ships">
+            <span>🚀 Ships & Vessels</span>
+            <span class="tab-badge" id="tab-badge-ships">0</span>
+        </button>
+        <button class="cat-tab" data-group="equipment">
+            <span>⚡ Equipment & Upgrades</span>
+            <span class="tab-badge" id="tab-badge-equipment">0</span>
+        </button>
+    </div>
+
+    <!-- Interactive Filtering Toolbar -->
+    <div class="toolbar-panel">
+        <div class="toolbar-row">
+            <!-- Dynamic Subgroup Filter Pills -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 0.82rem; color: #8e8e98; font-weight: bold; text-transform: uppercase;">Category:</span>
+                <div id="subgroup-container" class="subgroup-pills"></div>
+            </div>
+
+            <!-- Ownership Filter -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.82rem; color: #8e8e98; font-weight: bold; text-transform: uppercase;">Ownership:</span>
+                <div class="ownership-toggle-group">
+                    <button class="ownership-btn btn-owned active" data-ownership="owned">🟢 Owned Only (<span id="btn-count-owned">0</span>)</button>
+                    <button class="ownership-btn btn-all" data-ownership="all">⚪ All (<span id="btn-count-all">0</span>)</button>
+                    <button class="ownership-btn btn-unowned" data-ownership="unowned">🔒 Unowned (<span id="btn-count-unowned">0</span>)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar-row" style="padding-top: 0.5rem; border-top: 1px solid #23232e;">
+            <!-- Faction Filter -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="faction-select" style="font-size: 0.82rem; color: #8e8e98; font-weight: bold; text-transform: uppercase;">Faction / Race:</label>
+                <select id="faction-select" class="sync-select" style="padding: 6px 10px; font-size: 0.83rem;">
+                    <option value="all">All Factions</option>
+                    <option value="Argon">Argon Federation</option>
+                    <option value="Terran">Terran Protectorate</option>
+                    <option value="Teladi">Teladi Company</option>
+                    <option value="Paranid">Godrealm of the Paranid</option>
+                    <option value="Split">Split Factions</option>
+                    <option value="Boron">Kingdom of Boron</option>
+                    <option value="General">Commonwealth / General</option>
+                </select>
+            </div>
+
+            <!-- Sort By Selector -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="sort-select" style="font-size: 0.82rem; color: #8e8e98; font-weight: bold; text-transform: uppercase;">Sort Order:</label>
+                <select id="sort-select" class="sync-select" style="padding: 6px 10px; font-size: 0.83rem;">
+                    <option value="owned-first" selected>Owned First</option>
+                    <option value="name-asc">Name (A → Z)</option>
+                    <option value="name-desc">Name (Z → A)</option>
+                    <option value="unowned-first">Unowned First</option>
+                    <option value="faction">Faction / Race</option>
+                    <option value="size-hull">Size / Structural HP</option>
+                </select>
+            </div>
+
+            <!-- Instant Search Box -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-grow: 1; max-width: 380px;">
+                <input type="text" id="blueprint-search" class="search-box" style="width: 100%;" placeholder="🔍 Search name, macro, role, output ware...">
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Filter Info Line -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-size: 0.85rem; color: #8e8e98;">
+        <div>
+            Displaying <strong id="displayed-count" style="color: #ff9d00;">0</strong> blueprints 
+            (<span id="displayed-filter-label" style="color: #00ffaa;">Owned Only</span>)
+        </div>
+        <div id="search-active-indicator" style="display: none; color: #00b3ff;">
+            Filtering by query: "<span id="active-query-text"></span>"
+        </div>
+    </div>
+
+    <!-- Blueprints Cards Grid -->
+    <div id="blueprints-container" class="blueprints-grid">
         <div class="empty-placeholder">
-            <h3>No Station Modules Synced</h3>
-            <p>Load your savegame or start a new game in X4 Foundations with the <strong>BlueprintHarvester</strong> mod active.</p>
-            <p style="font-size: 0.85rem; color: #555560;">The script will automatically harvest all blueprint specifications and transmit them here.</p>
+            <h3>Loading Blueprints Matrix...</h3>
+            <p>Gathering station modules, ships, and equipment specifications.</p>
         </div>
     </div>
 
-    <!-- Include Socket.io client -->
+    <!-- Socket.io Client Script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        let allModules = [];
-        let currentFilter = 'all';
+        // State
+        let allBlueprints = [];
+        let catalogSummary = {};
+        let activeGroup = 'all'; // 'all', 'modules', 'ships', 'equipment'
+        let activeSubgroup = 'all';
+        let activeFaction = 'all';
+        let activeOwnership = 'owned'; // 'owned', 'all', 'unowned'
+        let activeSort = 'owned-first';
         let searchQuery = '';
 
-        function renderModuleCard(item) {
-            let typeSpecsHtml = '';
+        // DLC Definitions & Inclusion Tracking
+        const DLC_DEFINITIONS = [
+            { key: 'ego_dlc_split', name: 'Split Vendetta', short: 'Split' },
+            { key: 'ego_dlc_cradle', name: 'Cradle of Humanity', short: 'Cradle' },
+            { key: 'ego_dlc_pirates', name: 'Tides of Avarice', short: 'Avarice' },
+            { key: 'ego_dlc_boron', name: 'Kingdom End', short: 'Kingdom End' },
+            { key: 'ego_dlc_timelines', name: 'Timelines', short: 'Timelines' },
+            { key: 'ego_dlc_par_update', name: 'Paranid Update', short: 'Paranid' }
+        ];
+        let currentDlcs = {};
 
-            if (item.moduleType === 'Production' && item.production && item.production.output) {
-                const cycleTime = item.production.cycleTime || 60;
-                const cyclesPerHour = 3600 / cycleTime;
-                const totalHourlyOutput = (item.production.amount || 0) * cyclesPerHour;
+        function renderDlcPills(dlcs) {
+            if (dlcs && typeof dlcs === 'object') {
+                const incomingHasAny = Object.values(dlcs).some(v => v && (v.active || v.present || v === true || v === 'active' || v === 'present'));
+                const currentHasAny = Object.values(currentDlcs).some(v => v && (v.active || v.present || v === true || v === 'active' || v === 'present'));
+                if (incomingHasAny || !currentHasAny) {
+                    currentDlcs = { ...currentDlcs, ...dlcs };
+                }
+            }
+            const container = document.getElementById('dlc-pills-container');
+            if (!container) return;
 
-                let inputListHtml = '';
-                if (item.production.inputs && item.production.inputs.length > 0) {
-                    inputListHtml = item.production.inputs.map(input => {
-                        const hourlyInput = (input.amount || 0) * cyclesPerHour;
-                        return `<li>📉 Consumes: <strong>${Math.round(hourlyInput).toLocaleString()}/hr</strong> of ${input.ware}</li>`;
-                    }).join('');
+            container.innerHTML = DLC_DEFINITIONS.map(d => {
+                const status = currentDlcs[d.key];
+                let isActive = false;
+                let isPresent = false;
+
+                if (typeof status === 'object' && status !== null) {
+                    isActive = Boolean(status.active);
+                    isPresent = Boolean(status.present ?? status.active);
+                } else if (typeof status === 'boolean') {
+                    isActive = status;
+                    isPresent = status;
+                } else if (typeof status === 'string') {
+                    isActive = (status === 'active');
+                    isPresent = (status === 'active' || status === 'present');
                 }
 
-                typeSpecsHtml = `
-                    <div class="factory-loop">
-                        <div style="color: #00ffaa; font-weight: bold; margin-bottom: 0.5rem;">
-                            🏭 Production Loop (${cycleTime}s cycle)
-                        </div>
-                        <ul>
-                            <li>📈 Yields: <strong>${Math.round(totalHourlyOutput).toLocaleString()}/hr</strong> of ${item.production.output}</li>
-                            ${inputListHtml}
-                        </ul>
-                    </div>
+                let statusClass = 'dlc-pill-inactive';
+                let statusTitle = `${d.name} (${d.key}): Not Installed / Missing`;
+
+                if (isActive) {
+                    statusClass = 'dlc-pill-active';
+                    statusTitle = `${d.name} (${d.key}): Active in Current Game`;
+                } else if (isPresent) {
+                    statusClass = 'dlc-pill-present';
+                    statusTitle = `${d.name} (${d.key}): Present but Not Active in Current Game`;
+                }
+
+                return `
+                    <span class="dlc-pill ${statusClass}" title="${statusTitle}">
+                        <span class="dlc-dot"></span>
+                        <span>${d.name}</span>
+                    </span>
                 `;
-            } else if (item.moduleType === 'Habitation' && item.habitation) {
-                typeSpecsHtml = `
-                    <div class="habitation-specs">
-                        <div>🧬 Target Workforce Race: <strong>${item.habitation.race || 'All'}</strong></div>
-                        <div>👥 Worker Space Cap: <strong>${(item.habitation.maxCapacity || 0).toLocaleString()} Pilots</strong></div>
-                    </div>
-                `;
-            } else if (item.moduleType === 'Storage' && item.storage) {
-                typeSpecsHtml = `
-                    <div class="storage-specs">
-                        <div>📦 Warehouse Size: <strong>${(item.storage.capacity || 0).toLocaleString()} m³</strong></div>
-                        <div>🧳 Cargo Profiles Accepted: <span style="color: #ff9d00;">${item.storage.tags || 'General'}</span></div>
-                    </div>
-                `;
-            } else if (item.description) {
-                typeSpecsHtml = `<div style="font-size: 0.85rem; color: #8e8e93;">${item.description}</div>`;
+            }).join('');
+        }
+
+        async function fetchDlcStatus() {
+            try {
+                const res = await fetch('/api/dlcs');
+                if (res.ok) {
+                    const dlcs = await res.json();
+                    renderDlcPills(dlcs);
+                }
+            } catch (e) {
+                console.warn('Failed to fetch DLC inclusion status:', e);
+            }
+        }
+
+        async function triggerIsolatedDlcQuery() {
+            const btn = document.getElementById('btn-query-dlcs');
+            const icon = document.getElementById('dlc-query-icon');
+            const text = document.getElementById('dlc-query-text');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('loading');
+                if (icon) {
+                    icon.style.display = 'inline-block';
+                    icon.style.animation = 'spin 1.2s linear infinite';
+                }
+                if (text) text.textContent = 'Querying...';
             }
 
-            const badgeClass = (item.moduleType || 'other').toLowerCase();
-            const hullHP = (item.hull || 100000).toLocaleString();
+            try {
+                const res = await fetch('/api/dlcs/query', { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data && data.dlcs) {
+                    renderDlcPills(data.dlcs);
+                }
+                if (data && data.entry) {
+                    recentRequestsList = [data.entry, ...recentRequestsList.filter(r => r.id !== data.entry.id)];
+                    latestByTableCache['dlcs'] = data.entry;
+                    const dtChoice = document.getElementById('dt-table-choice');
+                    if (dtChoice && dtChoice.value === 'dlcs') {
+                        currentEntry = data.entry;
+                        renderRetrievedData(data.entry);
+                    }
+                    updateHistorySelect();
+                }
+
+                if (btn) {
+                    btn.classList.remove('loading');
+                    btn.classList.add('success');
+                    if (icon) {
+                        icon.textContent = '✅';
+                        icon.style.animation = 'none';
+                    }
+                    if (text) text.textContent = (data && data.source === 'GetExtensions') ? 'GetExtensions() OK' : 'DLCs Synced';
+                }
+            } catch (err) {
+                console.warn('Isolated DLC query failed:', err);
+                if (btn) {
+                    btn.classList.remove('loading');
+                    if (icon) {
+                        icon.textContent = '⚠️';
+                        icon.style.animation = 'none';
+                    }
+                    if (text) text.textContent = 'Query Failed';
+                }
+            } finally {
+                setTimeout(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('loading', 'success');
+                        if (icon) {
+                            icon.textContent = '🔄';
+                            icon.style.animation = 'none';
+                        }
+                        if (text) text.textContent = 'Query DLCs';
+                    }
+                }, 1800);
+            }
+        }
+
+        const btnQueryDlcs = document.getElementById('btn-query-dlcs');
+        if (btnQueryDlcs) {
+            btnQueryDlcs.addEventListener('click', triggerIsolatedDlcQuery);
+        }
+
+        // Initialize DLC pills with placeholder/detected state immediately
+        renderDlcPills();
+        fetchDlcStatus();
+
+        // Subgroup definition per group
+        const subgroupsByGroup = {
+            all: [
+                { id: 'all', label: 'All Items' },
+                { id: 'modules', label: 'Modules' },
+                { id: 'ships', label: 'Ships' },
+                { id: 'equipment', label: 'Equipment' }
+            ],
+            modules: [
+                { id: 'all', label: 'All Modules' },
+                { id: 'Production', label: '🏭 Production' },
+                { id: 'Habitation', label: '🧬 Habitation' },
+                { id: 'Storage', label: '📦 Storage' },
+                { id: 'Defense', label: '🛡️ Defense' },
+                { id: 'Dock', label: '🛸 Dock & Pier' },
+                { id: 'Structural', label: '🏗️ Structural' }
+            ],
+            ships: [
+                { id: 'all', label: 'All Ships' },
+                { id: 'S Class', label: 'S (Fighter/Scout)' },
+                { id: 'M Class', label: 'M (Corvette/Frigate)' },
+                { id: 'L Class', label: 'L (Destroyer/Freighter)' },
+                { id: 'XL Class', label: 'XL (Carrier/Battleship)' }
+            ],
+            equipment: [
+                { id: 'all', label: 'All Equipment' },
+                { id: 'Weapons', label: '⚔️ Weapons' },
+                { id: 'Turrets', label: '🎯 Turrets' },
+                { id: 'Shields', label: '🛡️ Shields' },
+                { id: 'Engines', label: '🚀 Engines' },
+                { id: 'Deployables & Drones', label: '🛰️ Drones & Deployables' }
+            ]
+        };
+
+        // Render Subgroup Pills based on activeGroup
+        function renderSubgroupPills() {
+            const container = document.getElementById('subgroup-container');
+            const items = subgroupsByGroup[activeGroup] || subgroupsByGroup.all;
+            
+            container.innerHTML = items.map(sub => `
+                <button class="subgroup-pill ${activeSubgroup === sub.id ? 'active' : ''}" data-subgroup="${sub.id}">
+                    ${sub.label}
+                </button>
+            `).join('');
+
+            container.querySelectorAll('.subgroup-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.subgroup-pill').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeSubgroup = btn.getAttribute('data-subgroup');
+                    updateBlueprintsList();
+                });
+            });
+        }
+
+        // Toggle Blueprint Ownership via API
+        async function toggleBlueprintOwnership(id, e) {
+            if (e) e.stopPropagation();
+            try {
+                const res = await fetch('/api/blueprints/ownership', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.blueprint) {
+                    const idx = allBlueprints.findIndex(b => b.id === id || b.macro === id);
+                    if (idx !== -1) {
+                        allBlueprints[idx].unlocked = data.blueprint.unlocked;
+                    }
+                    if (data.summary) catalogSummary = data.summary;
+                    updateOverviewStats();
+                    updateBlueprintsList();
+                }
+            } catch (err) {}
+        }
+
+        // Render Single Blueprint Card
+        function renderBlueprintCard(item) {
+            const isOwned = Boolean(item.unlocked);
+            const factionClass = (item.faction || 'general').toLowerCase();
+            const groupClass = `group-${item.group || 'modules'}`;
+
+            // Specific Specs HTML by group
+            let specsHtml = '';
+
+            if (item.group === 'modules') {
+                if (item.moduleType === 'Production' && item.production && item.production.output) {
+                    const cycle = item.production.cycleTime || 60;
+                    const hourly = Math.round((item.production.amount || 0) * (3600 / cycle));
+                    let inputs = '';
+                    if (item.production.inputs && item.production.inputs.length > 0) {
+                        inputs = item.production.inputs.map(inp => {
+                            const hrInp = Math.round((inp.amount || 0) * (3600 / cycle));
+                            return `<li>📉 Consumes: <strong>${hrInp.toLocaleString()}/hr</strong> of ${inp.ware}</li>`;
+                        }).join('');
+                    }
+                    specsHtml = `
+                        <div class="factory-loop">
+                            <div style="color: #00ffaa; font-weight: bold; margin-bottom: 0.35rem;">
+                                🏭 Production Loop (${cycle}s cycle)
+                            </div>
+                            <ul>
+                                <li>📈 Yields: <strong>${hourly.toLocaleString()}/hr</strong> of ${item.production.output}</li>
+                                ${inputs}
+                            </ul>
+                        </div>
+                    `;
+                } else if (item.moduleType === 'Habitation' && item.habitation) {
+                    specsHtml = `
+                        <div class="habitation-specs">
+                            <div>🧬 Target Race: <strong>${item.habitation.race || 'All'}</strong></div>
+                            <div>👥 Workforce Cap: <strong>${(item.habitation.maxCapacity || 0).toLocaleString()} Pilots</strong></div>
+                        </div>
+                    `;
+                } else if (item.moduleType === 'Storage' && item.storage) {
+                    specsHtml = `
+                        <div class="storage-specs">
+                            <div>📦 Cargo Volume: <strong>${(item.storage.capacity || 0).toLocaleString()} m³</strong></div>
+                            <div>🧳 Cargo Type: <span style="color: #ff9d00;">${item.storage.tags || 'Container'}</span></div>
+                        </div>
+                    `;
+                } else {
+                    specsHtml = `<div style="font-size: 0.83rem; color: #8e8e98;">${item.description || 'Standard station module'}</div>`;
+                }
+            } else if (item.group === 'ships') {
+                const s = item.specs || {};
+                specsHtml = `
+                    <div class="specs-grid-2x2">
+                        <div class="spec-item"><div class="spec-label">Hull HP</div><div class="spec-value" style="color: #00ffaa;">${Number(item.hull || 0).toLocaleString()}</div></div>
+                        <div class="spec-item"><div class="spec-label">Shield Mounts</div><div class="spec-value">${s.shields || '1x'}</div></div>
+                        <div class="spec-item"><div class="spec-label">Forward Guns</div><div class="spec-value" style="color: #ff5555;">${s.weapons || '0x'}</div></div>
+                        <div class="spec-item"><div class="spec-label">Turret Mounts</div><div class="spec-value" style="color: #ff9d00;">${s.turrets || '0x'}</div></div>
+                        <div class="spec-item"><div class="spec-label">Speed</div><div class="spec-value">${s.speed || '--'}</div></div>
+                        <div class="spec-item"><div class="spec-label">Cargo Space</div><div class="spec-value">${s.cargo || '--'}</div></div>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #8e8e98;">${item.description || ''}</div>
+                `;
+            } else if (item.group === 'equipment') {
+                const s = item.specs || {};
+                let metrics = [];
+                if (s.slotSize) metrics.push(`<div class="spec-item"><div class="spec-label">Mount Size</div><div class="spec-value" style="color: #00b3ff;">${s.slotSize}</div></div>`);
+                if (s.dps) metrics.push(`<div class="spec-item"><div class="spec-label">Firepower</div><div class="spec-value" style="color: #ff5555;">${s.dps}</div></div>`);
+                if (s.range) metrics.push(`<div class="spec-item"><div class="spec-label">Range</div><div class="spec-value">${s.range}</div></div>`);
+                if (s.capacity) metrics.push(`<div class="spec-item"><div class="spec-label">Capacity</div><div class="spec-value" style="color: #00ffaa;">${s.capacity}</div></div>`);
+                if (s.recharge) metrics.push(`<div class="spec-item"><div class="spec-label">Recharge</div><div class="spec-value">${s.recharge}</div></div>`);
+                if (s.thrust) metrics.push(`<div class="spec-item"><div class="spec-label">Thrust</div><div class="spec-value" style="color: #ff9d00;">${s.thrust}</div></div>`);
+                if (s.travel) metrics.push(`<div class="spec-item"><div class="spec-label">Travel Mode</div><div class="spec-value">${s.travel}</div></div>`);
+
+                specsHtml = `
+                    <div class="specs-grid-2x2">
+                        ${metrics.join('')}
+                    </div>
+                    <div style="font-size: 0.82rem; color: #8e8e98;">${item.description || ''}</div>
+                `;
+            }
 
             return `
-                <div class="card module-card">
+                <div class="bp-card ${isOwned ? 'card-owned' : 'card-unowned'}">
                     <div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
-                            <h3>${item.name || item.id}</h3>
-                            <span class="badge ${badgeClass}">${item.moduleType || 'Module'}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.4rem;">
+                            <div>
+                                <h3>${item.name || item.id}</h3>
+                                <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                                    <span class="badge ${groupClass}">${item.group ? item.group.toUpperCase() : 'MODULE'}</span>
+                                    <span class="badge ${(item.subgroup || 'other').toLowerCase()}">${item.subgroup || item.category || 'General'}</span>
+                                    <span class="faction-tag ${factionClass}">${item.faction || 'General'}</span>
+                                </div>
+                            </div>
+                            <span class="bp-ownership-tag ${isOwned ? 'owned' : 'locked'}" 
+                                  onclick="toggleBlueprintOwnership('${item.id}', event)" 
+                                  title="Click to toggle blueprint ownership">
+                                ${isOwned ? '🟢 OWNED' : '🔒 LOCKED'}
+                            </span>
                         </div>
-                        <div style="font-size: 0.85rem; color: #8e8e93; margin-bottom: 0.75rem;">
-                            🛡️ Structural Integrity: ${hullHP} HP
+                        <div style="font-size: 0.76rem; color: #7c7c8a; font-family: monospace; margin-top: 0.25rem;">
+                            ${item.macro || item.id}
                         </div>
                     </div>
                     <div class="specs-body">
-                        ${typeSpecsHtml}
+                        ${specsHtml}
                     </div>
                 </div>
             `;
         }
 
-        function updateModulesList() {
-            const container = document.getElementById('modules-container');
-            const filtered = allModules.filter(m => {
-                const matchType = (currentFilter === 'all') || (m.moduleType === currentFilter);
-                const q = searchQuery.toLowerCase();
-                const matchSearch = !q || 
-                    (m.name && m.name.toLowerCase().includes(q)) ||
-                    (m.id && m.id.toLowerCase().includes(q)) ||
-                    (m.production && m.production.output && m.production.output.toLowerCase().includes(q));
-                return matchType && matchSearch;
+        // Filter and Sort Blueprints
+        function updateBlueprintsList() {
+            const container = document.getElementById('blueprints-container');
+            const q = searchQuery.toLowerCase().trim();
+
+            let filtered = allBlueprints.filter(item => {
+                // Group Filter (All, Modules, Ships, Equipment)
+                if (activeGroup !== 'all' && item.group !== activeGroup) return false;
+
+                // Subgroup Filter
+                if (activeSubgroup !== 'all') {
+                    if (activeGroup === 'all') {
+                        if (item.group !== activeSubgroup) return false;
+                    } else if (item.subgroup !== activeSubgroup && item.moduleType !== activeSubgroup) {
+                        return false;
+                    }
+                }
+
+                // Faction Filter
+                if (activeFaction !== 'all' && item.faction !== activeFaction) return false;
+
+                // Ownership Filter
+                if (activeOwnership === 'owned' && !item.unlocked) return false;
+                if (activeOwnership === 'unowned' && item.unlocked) return false;
+
+                // Search Query Filter
+                if (q) {
+                    const matchName = item.name && item.name.toLowerCase().includes(q);
+                    const matchId = item.id && item.id.toLowerCase().includes(q);
+                    const matchMacro = item.macro && item.macro.toLowerCase().includes(q);
+                    const matchRole = item.role && item.role.toLowerCase().includes(q);
+                    const matchFaction = item.faction && item.faction.toLowerCase().includes(q);
+                    const matchSubgroup = item.subgroup && item.subgroup.toLowerCase().includes(q);
+                    const matchProd = item.production && item.production.output && item.production.output.toLowerCase().includes(q);
+                    const matchDesc = item.description && item.description.toLowerCase().includes(q);
+                    if (!matchName && !matchId && !matchMacro && !matchRole && !matchFaction && !matchSubgroup && !matchProd && !matchDesc) {
+                        return false;
+                    }
+                }
+
+                return true;
             });
 
-            if (filtered.length === 0) {
-                if (allModules.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-placeholder">
-                            <h3>No Station Modules Synced</h3>
-                            <p>Load your savegame or start a new game in X4 Foundations with the <strong>BlueprintHarvester</strong> mod active.</p>
-                            <p style="font-size: 0.85rem; color: #555560;">The script will automatically harvest all blueprint specifications and transmit them here.</p>
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `<div class="empty-placeholder"><h3>No modules match the filter "${currentFilter}"</h3></div>`;
+            // Sort
+            filtered.sort((a, b) => {
+                if (activeSort === 'name-asc') return (a.name || '').localeCompare(b.name || '');
+                if (activeSort === 'name-desc') return (b.name || '').localeCompare(a.name || '');
+                if (activeSort === 'owned-first') {
+                    const diff = (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0);
+                    return diff !== 0 ? diff : (a.name || '').localeCompare(b.name || '');
                 }
+                if (activeSort === 'unowned-first') {
+                    const diff = (a.unlocked ? 1 : 0) - (b.unlocked ? 1 : 0);
+                    return diff !== 0 ? diff : (a.name || '').localeCompare(b.name || '');
+                }
+                if (activeSort === 'faction') {
+                    const diff = (a.faction || '').localeCompare(b.faction || '');
+                    return diff !== 0 ? diff : (a.name || '').localeCompare(b.name || '');
+                }
+                if (activeSort === 'size-hull') {
+                    return (b.hull || 0) - (a.hull || 0);
+                }
+                return 0;
+            });
+
+            // Update info counter
+            document.getElementById('displayed-count').textContent = filtered.length;
+            const ownershipLabelMap = {
+                owned: 'Owned Only',
+                all: 'All Blueprints (Owned + Unowned)',
+                unowned: 'Unowned Only'
+            };
+            document.getElementById('displayed-filter-label').textContent = ownershipLabelMap[activeOwnership];
+
+            const searchInd = document.getElementById('search-active-indicator');
+            const searchTxt = document.getElementById('active-query-text');
+            if (q) {
+                searchInd.style.display = 'block';
+                searchTxt.textContent = q;
+            } else {
+                searchInd.style.display = 'none';
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-placeholder">
+                        <h3>No Blueprints Match Your Active Filters</h3>
+                        <p>Try switching to <strong>All</strong> ownership, selecting another category tab, or clearing your search term.</p>
+                    </div>
+                `;
                 return;
             }
 
-            container.innerHTML = filtered.map(renderModuleCard).join('');
+            container.innerHTML = filtered.map(renderBlueprintCard).join('');
         }
 
-        function updateCounts() {
-            document.getElementById('count-total').textContent = allModules.length;
-            document.getElementById('count-prod').textContent = allModules.filter(m => m.moduleType === 'Production').length;
-            document.getElementById('count-hab').textContent = allModules.filter(m => m.moduleType === 'Habitation').length;
-            document.getElementById('count-store').textContent = allModules.filter(m => m.moduleType === 'Storage').length;
+        // Update Overview Counters & Tabs
+        function updateOverviewStats() {
+            const totalCount = allBlueprints.length;
+            const totalOwned = allBlueprints.filter(b => b.unlocked).length;
+
+            const modBps = allBlueprints.filter(b => b.group === 'modules');
+            const modOwned = modBps.filter(b => b.unlocked).length;
+
+            const shipBps = allBlueprints.filter(b => b.group === 'ships');
+            const shipOwned = shipBps.filter(b => b.unlocked).length;
+
+            const eqBps = allBlueprints.filter(b => b.group === 'equipment');
+            const eqOwned = eqBps.filter(b => b.unlocked).length;
+
+            const pct = totalCount > 0 ? Math.round((totalOwned / totalCount) * 100) : 0;
+            const modPct = modBps.length > 0 ? Math.round((modOwned / modBps.length) * 100) : 0;
+            const shipPct = shipBps.length > 0 ? Math.round((shipOwned / shipBps.length) * 100) : 0;
+            const eqPct = eqBps.length > 0 ? Math.round((eqOwned / eqBps.length) * 100) : 0;
+
+            document.getElementById('bp-overall-percent').textContent = `${pct}% Owned (${totalOwned}/${totalCount})`;
+            document.getElementById('count-total-owned').textContent = `${totalOwned} / ${totalCount}`;
+            document.getElementById('count-modules-owned').textContent = `${modOwned} / ${modBps.length}`;
+            document.getElementById('count-ships-owned').textContent = `${shipOwned} / ${shipBps.length}`;
+            document.getElementById('count-equipment-owned').textContent = `${eqOwned} / ${eqBps.length}`;
+
+            document.getElementById('bar-total').style.width = `${pct}%`;
+            document.getElementById('bar-modules').style.width = `${modPct}%`;
+            document.getElementById('bar-ships').style.width = `${shipPct}%`;
+            document.getElementById('bar-equipment').style.width = `${eqPct}%`;
+
+            // Tab badges
+            document.getElementById('tab-badge-all').textContent = totalCount;
+            document.getElementById('tab-badge-modules').textContent = modBps.length;
+            document.getElementById('tab-badge-ships').textContent = shipBps.length;
+            document.getElementById('tab-badge-equipment').textContent = eqBps.length;
+
+            // Toolbar ownership button counts (based on active group)
+            const activeGroupList = (activeGroup === 'all') ? allBlueprints : allBlueprints.filter(b => b.group === activeGroup);
+            document.getElementById('btn-count-owned').textContent = activeGroupList.filter(b => b.unlocked).length;
+            document.getElementById('btn-count-all').textContent = activeGroupList.length;
+            document.getElementById('btn-count-unowned').textContent = activeGroupList.filter(b => !b.unlocked).length;
         }
 
         function setEncyclopedia(data) {
-            allModules = data.blueprints || [];
+            allBlueprints = data.blueprints || [];
+            catalogSummary = data.summary || {};
             if (data.lastSynced) {
-                document.getElementById('enc-sync-time').textContent = new Date(data.lastSynced).toLocaleTimeString();
+                document.getElementById('enc-sync-time').textContent = new Date(data.lastSynced).toLocaleTimeString() + ' (' + new Date(data.lastSynced).toLocaleDateString() + ')';
             }
-            updateCounts();
-            updateModulesList();
+            updateOverviewStats();
+            renderSubgroupPills();
+            updateBlueprintsList();
         }
 
-        // Initialize Filter & Search Listeners
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
-                updateModulesList();
+        // Setup UI Listeners
+        // Category Tabs
+        document.querySelectorAll('.cat-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeGroup = tab.getAttribute('data-group');
+                activeSubgroup = 'all'; // reset subgroup when switching category tab
+                renderSubgroupPills();
+                updateOverviewStats();
+                updateBlueprintsList();
             });
         });
 
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            searchQuery = e.target.value;
-            updateModulesList();
+        // Ownership Filter Buttons
+        document.querySelectorAll('.ownership-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.ownership-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeOwnership = btn.getAttribute('data-ownership');
+                updateBlueprintsList();
+            });
         });
 
-        // Initialize Socket.io Connection
+        // Faction Selector
+        const factionSelect = document.getElementById('faction-select');
+        factionSelect.addEventListener('change', () => {
+            activeFaction = factionSelect.value;
+            updateBlueprintsList();
+        });
+
+        // Sort Selector
+        const sortSelect = document.getElementById('sort-select');
+        sortSelect.addEventListener('change', () => {
+            activeSort = sortSelect.value;
+            updateBlueprintsList();
+        });
+
+        // Search Input
+        const searchInput = document.getElementById('blueprint-search');
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            updateBlueprintsList();
+        });
+
+        // =========================================================================
+        // Socket.IO & Game Telemetry Integration
+        // =========================================================================
         const socket = io();
-        const statusEl = document.getElementById('socket-status');
+        const socketStatusEl = document.getElementById('socket-status');
+        const gameStatusEl = document.getElementById('game-status');
 
         socket.on('connect', () => {
-            statusEl.textContent = 'Server Connected';
-            statusEl.className = 'status-badge status-online';
+            socketStatusEl.textContent = 'Server: Connected';
+            socketStatusEl.className = 'status-badge status-online';
         });
 
         socket.on('disconnect', () => {
-            statusEl.textContent = 'Server Offline';
-            statusEl.className = 'status-badge status-offline';
+            socketStatusEl.textContent = 'Server: Disconnected';
+            socketStatusEl.className = 'status-badge status-offline';
+        });
+
+        socket.on('dlcs_updated', (dlcs) => {
+            renderDlcPills(dlcs);
         });
 
         socket.on('game_state_changed', (state) => {
+            if (state && state.dlcs) {
+                renderDlcPills(state.dlcs);
+            }
             if (state && state.player) {
-                document.getElementById('pilot-name').textContent = state.player.name || 'Unknown';
+                document.getElementById('pilot-name').textContent = state.player.name || 'Commander';
                 document.getElementById('pilot-credits').textContent = Number(state.player.credits || 0).toLocaleString();
                 document.getElementById('pilot-sector').textContent = state.player.sector || 'Deep Space';
-                document.getElementById('timestamp').textContent = state.lastUpdated ? new Date(state.lastUpdated).toLocaleTimeString() : 'Never';
+            }
+            if (state && state.lastUpdated) {
+                document.getElementById('timestamp').textContent = new Date(state.lastUpdated).toLocaleTimeString();
             }
         });
 
@@ -448,64 +1492,1149 @@
             setEncyclopedia(data);
         });
 
-        // --- On-Demand Data Table Update Handlers ---
-        const syncSelect = document.getElementById('sync-table-select');
-        const syncBtn = document.getElementById('btn-request-update');
-        const syncStatus = document.getElementById('sync-status');
-        const syncIcon = document.getElementById('sync-icon');
+        const syncStatusText = document.getElementById('sync-status');
+        let pendingCommandTable = null;
+        let commandTimeoutTimer = null;
 
-        async function triggerTableUpdate() {
-            const table = syncSelect.value;
-            const tableName = syncSelect.options[syncSelect.selectedIndex].text;
-
-            syncBtn.disabled = true;
-            syncIcon.style.display = 'inline-block';
-            syncIcon.style.animation = 'spin 1s linear infinite';
-            syncStatus.innerHTML = `<span style="color: #ff9d00;">⏳ Dispatching harvest request for <strong>${tableName}</strong>...</span>`;
-
-            try {
-                // Emit over WebSocket and call REST API
-                socket.emit('request_table_update', { table });
-                const res = await fetch('/api/request-update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ table })
-                });
-                const data = await res.json();
-                if (data && data.command) {
-                    syncStatus.innerHTML = `<span style="color: #00ffaa;">📡 Queued in-game command (ID: ${data.command.id}) for <strong>${table}</strong></span>`;
+        socket.on('commands_dispatched', (data) => {
+            if (data && data.commands && data.commands.length > 0) {
+                const targetTables = data.commands.map(c => c.table.toUpperCase()).join(', ');
+                if (pendingCommandTable) {
+                    syncStatusText.innerHTML = `⚡ In-game Lua client picked up command for [<strong>${targetTables}</strong>]. Harvesting data...`;
                 }
-            } catch (err) {
-                syncStatus.innerHTML = `<span style="color: #f75a68;">❌ Failed to queue request: ${err.message}</span>`;
-                syncBtn.disabled = false;
-                syncIcon.style.animation = 'none';
             }
-        }
-
-        syncBtn.addEventListener('click', triggerTableUpdate);
-
-        // Listen for command queued confirmation
-        socket.on('command_queued', (cmd) => {
-            syncStatus.innerHTML = `<span style="color: #ffaa1a;">📬 Queued for X4 client: <strong>${cmd.table}</strong> (Command: ${cmd.id})</span>`;
         });
 
-        // Listen for table updated confirmation events
-        socket.on('table_updated', (info) => {
-            syncBtn.disabled = false;
-            syncIcon.style.animation = 'none';
-            const timeStr = new Date(info.timestamp || Date.now()).toLocaleTimeString();
-            syncStatus.innerHTML = `<span style="color: #00ffaa;"> Table <strong>${info.table}</strong> synced at ${timeStr}! ${info.summary ? '(' + info.summary + ')' : ''}</span>`;
+        socket.on('table_updated', (data) => {
+            if (!data || !data.table) return;
+
+            const updatedTable = String(data.table).toLowerCase();
+            if (updatedTable === 'dlcs' && data.entry && data.entry.data) {
+                renderDlcPills(data.entry.data);
+            }
+            const pendingTable = pendingCommandTable ? String(pendingCommandTable).toLowerCase() : null;
+
+            // STRICT ISOLATION: Only table requests are tied to Savegame Sync consideration and only for that particular request.
+            // No other LUA actions, MD processing, or background updates for other tables may affect this request or display.
+            if (pendingTable && pendingTable === updatedTable) {
+                if (commandTimeoutTimer) {
+                    clearTimeout(commandTimeoutTimer);
+                    commandTimeoutTimer = null;
+                }
+                pendingCommandTable = null;
+                const isGameEngine = data.entry ? (data.entry.source === 'game_engine') : (data.source === 'game_engine');
+                if (isGameEngine) {
+                    syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${data.table.toUpperCase()}</strong>]: ${data.summary || (data.count + ' records synced')}`;
+                } else {
+                    syncStatusText.innerHTML = `💾 Synced [<strong>${data.table.toUpperCase()}</strong>] from savegame: ${data.summary || (data.count + ' records synced')}`;
+                }
+            }
+
+            // Only refresh the inspector if the user is currently inspecting THIS exact table
+            const dtChoice = document.getElementById('dt-table-choice');
+            if (dtChoice) {
+                const currentView = dtChoice.value.toLowerCase();
+                if (currentView === updatedTable) {
+                    if (data.entry) {
+                        currentEntry = data.entry;
+                        renderRetrievedData(data.entry);
+                    }
+                }
+            }
         });
 
-        // Initial fetch on page load
+        socket.on('blueprint_ownership_changed', (data) => {
+            const idx = allBlueprints.findIndex(b => b.id === data.id || b.macro === data.id);
+            if (idx !== -1) {
+                allBlueprints[idx].unlocked = data.unlocked;
+            }
+            if (data.summary) catalogSummary = data.summary;
+            updateOverviewStats();
+            updateBlueprintsList();
+        });
+
+        // Fetch initial data
+        fetch('/api/state')
+            .then(res => res.json())
+            .then(state => {
+                if (state && state.dlcs) {
+                    renderDlcPills(state.dlcs);
+                }
+                if (state && state.player) {
+                    document.getElementById('pilot-name').textContent = state.player.name || 'Commander';
+                    document.getElementById('pilot-credits').textContent = Number(state.player.credits || 0).toLocaleString();
+                    document.getElementById('pilot-sector').textContent = state.player.sector || 'Deep Space';
+                }
+            }).catch(() => {});
+
         fetch('/api/encyclopedia')
             .then(res => res.json())
             .then(data => {
-                if (data && data.blueprints) {
-                    setEncyclopedia(data);
+                setEncyclopedia(data);
+            }).catch(() => {});
+
+        // On-Demand Data Request Buttons
+        const syncTableSelect = document.getElementById('sync-table-select');
+        const btnRequestUpdate = document.getElementById('btn-request-update');
+        const syncIcon = document.getElementById('sync-icon');
+        const syncBtnText = document.getElementById('sync-btn-text');
+
+        const btnSyncSavegame = document.getElementById('btn-sync-savegame');
+        const syncSavegameIcon = document.getElementById('sync-savegame-icon');
+        const syncSavegameText = document.getElementById('sync-savegame-text');
+
+        let x4DisplayConfig = null;
+        let isGameClientActive = false;
+
+        async function triggerTableUpdate() {
+            const selectedTable = syncTableSelect.value;
+            pendingCommandTable = selectedTable.toLowerCase();
+
+            btnRequestUpdate.disabled = true;
+            btnRequestUpdate.classList.add('depressed');
+            if (syncIcon) {
+                syncIcon.style.display = 'inline-block';
+                syncIcon.style.animation = 'spin 1.5s linear infinite';
+            }
+
+            // Check config.xml display mode (borderless vs fullscreen)
+            let displayConfig = x4DisplayConfig;
+            if (!displayConfig) {
+                try {
+                    const cfgRes = await fetch('/api/display-config');
+                    if (cfgRes.ok) {
+                        displayConfig = await cfgRes.json();
+                        x4DisplayConfig = displayConfig;
+                    }
+                } catch (e) {}
+            }
+
+            const isBorderless = displayConfig ? (displayConfig.borderless === true) : true;
+            const isFullscreen = displayConfig ? (displayConfig.fullscreen === true && !isBorderless) : false;
+
+            // If game client is offline, skip delay and announce savegame sync
+            if (!isGameClientActive) {
+                if (syncBtnText) syncBtnText.textContent = 'Syncing Savegame...';
+                syncStatusText.innerHTML = `💾 Game client is offline. Synchronizing [<strong>${selectedTable.toUpperCase()}</strong>] from savegame...`;
+            } else if (isFullscreen) {
+                syncBtnText.textContent = 'Switch to X4 (2s)...';
+                syncStatusText.innerHTML = `⏳ <strong style="color: #ffaa1a;">2-Second Focus Delay:</strong> Switch to X4 now so the game engine is unpaused in the foreground...`;
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                syncBtnText.textContent = 'Switch to X4 (1s)...';
+                syncStatusText.innerHTML = `⏳ <strong style="color: #ffaa1a;">1-Second Focus Delay:</strong> Switch to X4 now so the game engine is unpaused in the foreground...`;
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                if (syncBtnText) syncBtnText.textContent = 'Requesting in X4...';
+                syncStatusText.innerHTML = `📡 Issuing live harvest request for [<strong>${selectedTable.toUpperCase()}</strong>] to game engine...`;
+            } else {
+                if (syncBtnText) syncBtnText.textContent = 'Requesting in X4...';
+                syncStatusText.innerHTML = `📡 Issuing live harvest request for [<strong>${selectedTable.toUpperCase()}</strong>] to game engine...`;
+            }
+
+            if (syncIcon) syncIcon.style.animation = 'spin 0.8s linear infinite';
+
+            try {
+                const res = await fetch('/api/request-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ table: selectedTable, action: 'HARVEST_TABLE' })
+                });
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
                 }
-            })
-            .catch(() => {});
+                const data = await res.json();
+                pendingCommandTable = null;
+
+                if (data && data.entry) {
+                    if (data.dlcs) {
+                        renderDlcPills(data.dlcs);
+                    }
+                    const isGameEngine = data.source === 'game_engine' || data.entry.source === 'game_engine';
+                    if (isGameEngine) {
+                        syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${selectedTable.toUpperCase()}</strong>]: ${data.entry.recordCount || 0} items synced`;
+                    } else {
+                        const recCount = data.entry.recordCount || 0;
+                        syncStatusText.innerHTML = `💾 Game client offline: Data updated via Savegame Sync for [<strong>${selectedTable.toUpperCase()}</strong>] (${recCount} items)`;
+                    }
+
+                    // Refresh table inspector immediately
+                    recentRequestsList = [data.entry, ...recentRequestsList.filter(r => r.id !== data.entry.id)];
+                    latestByTableCache[selectedTable.toLowerCase()] = data.entry;
+                    currentEntry = data.entry;
+                    const dtChoice = document.getElementById('dt-table-choice');
+                    if (dtChoice) dtChoice.value = selectedTable.toLowerCase();
+                    updateHistorySelect();
+                    renderRetrievedData(data.entry);
+
+                    if (syncBtnText) syncBtnText.textContent = isGameEngine ? 'Game Synced!' : 'Savegame Synced';
+                } else {
+                    throw new Error(data.message || data.error || 'No entry returned from request-update');
+                }
+            } catch (err) {
+                pendingCommandTable = null;
+                console.warn('Live API request failed or game client unreachable; falling back to Sync Savegame:', err);
+                const safeErrMsg = (err.message || '').replace(/</g, '&lt;');
+                syncStatusText.innerHTML = `⚠️ API call failed (${safeErrMsg}). Updating data via <strong style="color: #ffaa1a;">Sync Savegame</strong>...`;
+                if (syncBtnText) syncBtnText.textContent = 'Syncing Savegame...';
+
+                try {
+                    const fallbackRes = await fetch('/api/sync-savegame', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table: selectedTable })
+                    });
+                    const fallbackData = await fallbackRes.json();
+                    if (fallbackRes.ok && fallbackData.status === 'success') {
+                        const count = fallbackData.entry?.recordCount ?? fallbackData.totalOwned ?? 0;
+                        syncStatusText.innerHTML = `💾 Game client offline: Data updated via Savegame Sync for [<strong>${selectedTable.toUpperCase()}</strong>] (${count} items)`;
+                        if (fallbackData.entry) {
+                            recentRequestsList = [fallbackData.entry, ...recentRequestsList.filter(r => r.id !== fallbackData.entry.id)];
+                            latestByTableCache[selectedTable.toLowerCase()] = fallbackData.entry;
+                            currentEntry = fallbackData.entry;
+                            const dtChoice = document.getElementById('dt-table-choice');
+                            if (dtChoice) dtChoice.value = selectedTable.toLowerCase();
+                            updateHistorySelect();
+                            renderRetrievedData(fallbackData.entry);
+                        }
+                        if (syncBtnText) syncBtnText.textContent = 'Savegame Synced';
+                    } else {
+                        const errReason = fallbackData.error || fallbackData.message || fallbackData.reason || 'Unknown error';
+                        syncStatusText.textContent = `Savegame sync fallback failed: ${errReason}`;
+                        if (syncBtnText) syncBtnText.textContent = 'Sync Failed';
+                    }
+                } catch (fallbackErr) {
+                    syncStatusText.textContent = `Failed to sync savegame: ${fallbackErr.message}`;
+                    if (syncBtnText) syncBtnText.textContent = 'Sync Failed';
+                }
+            } finally {
+                setTimeout(() => {
+                    btnRequestUpdate.disabled = false;
+                    btnRequestUpdate.classList.remove('depressed');
+                    if (syncIcon) syncIcon.style.animation = 'none';
+                    if (syncBtnText) syncBtnText.textContent = 'Request Update';
+                }, 1500);
+            }
+        }
+
+        btnRequestUpdate.addEventListener('click', triggerTableUpdate);
+
+        if (btnSyncSavegame) {
+            btnSyncSavegame.addEventListener('click', async () => {
+                btnSyncSavegame.disabled = true;
+                btnSyncSavegame.classList.add('depressed', 'loading');
+                if (syncSavegameIcon) {
+                    syncSavegameIcon.textContent = '⏳';
+                    syncSavegameIcon.style.display = 'inline-block';
+                    syncSavegameIcon.style.animation = 'spin 0.8s linear infinite';
+                }
+                const selectedTable = syncTableSelect.value;
+                syncStatusText.textContent = `Parsing latest X4 savegame for [${selectedTable.toUpperCase()}]...`;
+                try {
+                    const res = await fetch('/api/sync-savegame', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table: selectedTable })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        syncStatusText.innerHTML = `💾 Savegame Synced! Total Owned: ${data.totalOwned} (Modules: ${data.totalModulesOwned}, Ships: ${data.summary?.ships?.owned ?? 0}, Equip: ${data.summary?.equipment?.owned ?? 0}).`;
+                        if (syncSavegameIcon) {
+                            syncSavegameIcon.textContent = '✅';
+                            syncSavegameIcon.style.animation = 'none';
+                        }
+                        if (syncSavegameText) syncSavegameText.textContent = 'Savegame Synced!';
+                        btnSyncSavegame.classList.remove('loading');
+                        btnSyncSavegame.classList.add('success');
+
+                        // Refresh table inspector to selected table
+                        const dtChoice = document.getElementById('dt-table-choice');
+                        if (dtChoice) {
+                            dtChoice.value = selectedTable;
+                        }
+                        if (data.entry) {
+                            recentRequestsList = [data.entry, ...recentRequestsList.filter(r => r.id !== data.entry.id)];
+                            latestByTableCache[selectedTable.toLowerCase()] = data.entry;
+                            currentEntry = data.entry;
+                            updateHistorySelect();
+                            renderRetrievedData(data.entry);
+                        }
+                    } else {
+                        const errReason = data.error || data.message || data.reason || 'Unknown error';
+                        syncStatusText.textContent = `Savegame sync failed: ${errReason}`;
+                        if (syncSavegameIcon) {
+                            syncSavegameIcon.textContent = '⚠️';
+                            syncSavegameIcon.style.animation = 'none';
+                        }
+                        if (syncSavegameText) syncSavegameText.textContent = 'Sync Failed';
+                    }
+                } catch (err) {
+                    syncStatusText.textContent = `Savegame sync error: ${err.message}`;
+                    if (syncSavegameIcon) {
+                        syncSavegameIcon.textContent = '❌';
+                        syncSavegameIcon.style.animation = 'none';
+                    }
+                    if (syncSavegameText) syncSavegameText.textContent = 'Error';
+                } finally {
+                    setTimeout(() => {
+                        btnSyncSavegame.disabled = false;
+                        btnSyncSavegame.classList.remove('depressed', 'loading', 'success');
+                        if (syncSavegameIcon) {
+                            syncSavegameIcon.textContent = '💾';
+                            syncSavegameIcon.style.animation = 'none';
+                        }
+                        if (syncSavegameText) syncSavegameText.textContent = 'Sync Savegame';
+                    }, 1600);
+                }
+            });
+        }
+
+        // Polling Game Client & Display Config
+        async function pollGameStatus() {
+            try {
+                const res = await fetch('/api/poll-status');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                if (data.displayConfig) {
+                    x4DisplayConfig = data.displayConfig;
+                    const modeBadge = document.getElementById('display-mode-badge');
+                    if (modeBadge) {
+                        modeBadge.style.display = 'inline-block';
+                        if (x4DisplayConfig.borderless) {
+                            modeBadge.textContent = 'Mode: Borderless';
+                            modeBadge.title = 'X4 config.xml has borderless=true (instant dispatch, no delay)';
+                        } else if (x4DisplayConfig.fullscreen) {
+                            modeBadge.textContent = 'Mode: Fullscreen';
+                            modeBadge.title = 'X4 config.xml has fullscreen=true (2s focus delay)';
+                        } else {
+                            modeBadge.textContent = 'Mode: Windowed';
+                            modeBadge.title = 'X4 config.xml has windowed mode (instant dispatch)';
+                        }
+                    }
+                }
+                isGameClientActive = Boolean(data && data.luaActive);
+                if (data.luaActive) {
+                    gameStatusEl.textContent = `Game Client: Active (${data.luaSecondsAgo}s ago)`;
+                    gameStatusEl.className = 'status-badge status-online';
+                } else if (data.lastLuaPoll && data.luaSecondsAgo <= 60) {
+                    gameStatusEl.textContent = `Game Client: Inactive / Paused (${data.luaSecondsAgo}s ago)`;
+                    gameStatusEl.className = 'status-badge status-idle';
+                } else if (data.lastLuaPoll) {
+                    gameStatusEl.textContent = `Game Client: Offline (${data.luaSecondsAgo}s ago)`;
+                    gameStatusEl.className = 'status-badge status-offline';
+                } else {
+                    gameStatusEl.textContent = 'Game Client: Waiting...';
+                    gameStatusEl.className = 'status-badge status-offline';
+                }
+            } catch {
+                isGameClientActive = false;
+                gameStatusEl.textContent = 'Game Client: Offline';
+                gameStatusEl.className = 'status-badge status-offline';
+            }
+        }
+        setInterval(pollGameStatus, 2000);
+        pollGameStatus();
+
+        // =========================================================================
+        // Retrieved Data Table Inspector Logic
+        // =========================================================================
+        let recentRequestsList = [];
+        let latestByTableCache = {};
+        let currentEntry = null;
+        let dtViewMode = 'table';
+        let dtFilterQuery = '';
+        let dtSortCol = null;
+        let dtSortDir = 'asc'; // 'asc' or 'desc'
+
+        window.handleDtSort = function(colKey) {
+            if (dtSortCol === colKey) {
+                dtSortDir = (dtSortDir === 'asc') ? 'desc' : 'asc';
+            } else {
+                dtSortCol = colKey;
+                dtSortDir = 'asc';
+            }
+            if (currentEntry) renderRetrievedData(currentEntry);
+        };
+
+        function parseSortValue(val) {
+            if (val === null || val === undefined || val === '--' || val === '') return null;
+            if (typeof val === 'number') return val;
+            if (typeof val === 'boolean') return val ? 1 : 0;
+            const str = String(val).trim();
+            const numMatch = str.match(/^(-?[\d,]+(\.\d+)?)/);
+            if (numMatch) {
+                const parsed = parseFloat(numMatch[1].replace(/,/g, ''));
+                if (!isNaN(parsed)) return parsed;
+            }
+            return str.toLowerCase();
+        }
+
+        function compareValues(a, b, dir) {
+            const valA = parseSortValue(a);
+            const valB = parseSortValue(b);
+
+            if (valA === valB) return 0;
+            if (valA === null) return 1;
+            if (valB === null) return -1;
+
+            let res = 0;
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                res = valA < valB ? -1 : (valA > valB ? 1 : 0);
+            } else {
+                res = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' });
+            }
+            return dir === 'desc' ? -res : res;
+        }
+
+        function renderSortableTh(colKey, label, customStyle = '') {
+            const isCurrent = (dtSortCol === colKey);
+            let arrowHtml = '';
+            let titleText = `Sort by ${label}`;
+            if (isCurrent) {
+                if (dtSortDir === 'asc') {
+                    arrowHtml = `<span class="sort-arrow active-asc">▲</span>`;
+                    titleText = `${label}: Sorted Increasing (Low to High / A to Z). Click for Decreasing.`;
+                } else {
+                    arrowHtml = `<span class="sort-arrow active-desc">▼</span>`;
+                    titleText = `${label}: Sorted Decreasing (High to Low / Z to A). Click for Increasing.`;
+                }
+            } else {
+                arrowHtml = `<span class="sort-arrow inactive">⇅</span>`;
+                titleText = `Click to sort by ${label}`;
+            }
+
+            return `<th class="sortable" style="${customStyle}" onclick="handleDtSort('${colKey}')" title="${titleText}">
+                <span class="th-content">
+                    <span>${label}</span>
+                    ${arrowHtml}
+                </span>
+            </th>`;
+        }
+
+        const dtPanel = document.getElementById('data-table-panel');
+        const dtTableChoice = document.getElementById('dt-table-choice');
+        const dtTableBadge = document.getElementById('dt-table-badge');
+        const dtSourceBadge = document.getElementById('dt-source-badge');
+        const dtTimestamp = document.getElementById('dt-timestamp');
+        const dtCount = document.getElementById('dt-count');
+        const dtHistorySelect = document.getElementById('dt-history-select');
+        const dtFilterInput = document.getElementById('dt-filter-input');
+        const btnDtViewTable = document.getElementById('btn-dt-view-table');
+        const btnDtViewJson = document.getElementById('btn-dt-view-json');
+        const btnDtCopyJson = document.getElementById('btn-dt-copy-json');
+        const dtContentTable = document.getElementById('dt-content-table');
+        const dtContentJson = document.getElementById('dt-content-json');
+        const dtJsonPre = document.getElementById('dt-json-pre');
+
+        function updateHistorySelect() {
+            dtHistorySelect.innerHTML = '';
+            const chosen = dtTableChoice ? dtTableChoice.value : 'all';
+            let filteredList = recentRequestsList;
+            if (chosen !== 'all') {
+                filteredList = recentRequestsList.filter(r => r.table === chosen);
+            }
+
+            if (filteredList.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = `(No ${chosen.toUpperCase()} requests yet)`;
+                dtHistorySelect.appendChild(opt);
+                return;
+            }
+
+            filteredList.forEach(req => {
+                const opt = document.createElement('option');
+                opt.value = req.id;
+                const timeStr = new Date(req.timestamp).toLocaleTimeString();
+                opt.textContent = `[${req.table.toUpperCase()}] ${timeStr} (${req.recordCount} items)`;
+                if (currentEntry && currentEntry.id === req.id) opt.selected = true;
+                dtHistorySelect.appendChild(opt);
+            });
+        }
+
+        async function loadRecentRequests() {
+            try {
+                const res = await fetch('/api/recent-requests');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data) {
+                    if (Array.isArray(data.requests)) recentRequestsList = data.requests;
+                    if (data.latestByTable) latestByTableCache = data.latestByTable;
+
+                    const chosen = dtTableChoice ? dtTableChoice.value : 'modules';
+                    if (chosen === 'all') {
+                        currentEntry = recentRequestsList[0] || null;
+                    } else if (latestByTableCache[chosen]) {
+                        currentEntry = latestByTableCache[chosen];
+                    } else {
+                        currentEntry = recentRequestsList.find(r => r.table === chosen) || recentRequestsList[0] || null;
+                    }
+
+                    updateHistorySelect();
+                    if (currentEntry) renderRetrievedData(currentEntry);
+                }
+            } catch (err) {}
+        }
+
+        function renderRetrievedData(entry) {
+            if (!entry) return;
+            currentEntry = entry;
+
+            dtTableBadge.textContent = `TABLE: ${entry.table.toUpperCase()}`;
+
+            // Only show Savegame Sync pill if that fulfilled the update. Erase pill for API/game engine responses.
+            if (entry.source === 'savegame_sync' || entry.source === 'savegame') {
+                dtSourceBadge.style.display = 'inline-flex';
+                dtSourceBadge.textContent = '💾 SAVEGAME SYNC';
+                dtSourceBadge.style.background = 'rgba(255, 157, 0, 0.15)';
+                dtSourceBadge.style.color = '#ffaa1a';
+                dtSourceBadge.style.borderColor = '#ff9d00';
+            } else {
+                dtSourceBadge.style.display = 'none';
+            }
+
+            dtTimestamp.textContent = new Date(entry.timestamp).toLocaleTimeString() + ' (' + new Date(entry.timestamp).toLocaleDateString() + ')';
+            dtCount.textContent = entry.recordCount || 0;
+
+            dtPanel.classList.remove('data-updated-pulse');
+            void dtPanel.offsetWidth;
+            dtPanel.classList.add('data-updated-pulse');
+
+            dtJsonPre.textContent = JSON.stringify(entry.data, null, 2);
+
+            if (entry.table === 'dlcs' && entry.data) {
+                renderDlcsTable(entry.data);
+            } else if (entry.table === 'player' && entry.data) {
+                renderPlayerTable(entry.data);
+            } else if (entry.table === 'ships' && Array.isArray(entry.data)) {
+                renderShipsTable(entry.data);
+            } else if (entry.table === 'equipment' && Array.isArray(entry.data)) {
+                renderEquipmentTable(entry.data);
+            } else if ((entry.table === 'modules' || entry.table === 'blueprints') && Array.isArray(entry.data)) {
+                renderBlueprintsTable(entry.data);
+            } else if (Array.isArray(entry.data)) {
+                renderGenericArrayTable(entry.data);
+            } else if (typeof entry.data === 'object' && entry.data !== null) {
+                renderGenericObjectTable(entry.data);
+            } else {
+                dtContentTable.innerHTML = `<div style="padding: 1.5rem; color: #a9a9b3;">Payload: ${String(entry.data)}</div>`;
+            }
+        }
+
+        function renderDlcsTable(dlcsData) {
+            renderDlcPills(dlcsData);
+            let dlcRows = DLC_DEFINITIONS.map((d, idx) => {
+                const status = dlcsData ? dlcsData[d.key] : null;
+                let isActive = false;
+                let isPresent = false;
+                if (typeof status === 'object' && status !== null) {
+                    isActive = Boolean(status.active);
+                    isPresent = Boolean(status.present ?? status.active);
+                } else if (typeof status === 'boolean') {
+                    isActive = status;
+                    isPresent = status;
+                } else if (typeof status === 'string') {
+                    isActive = (status === 'active');
+                    isPresent = (status === 'active' || status === 'present');
+                }
+
+                return {
+                    index: idx + 1,
+                    key: d.key,
+                    name: d.name,
+                    isActive,
+                    isPresent,
+                    statusText: isActive ? 'ACTIVE' : (isPresent ? 'PRESENT' : 'INACTIVE')
+                };
+            });
+
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                dlcRows = dlcRows.filter(r =>
+                    r.name.toLowerCase().includes(q) ||
+                    r.key.toLowerCase().includes(q) ||
+                    r.statusText.toLowerCase().includes(q)
+                );
+            }
+
+            let tbody = dlcRows.map(r => {
+                let badgeClass = 'dlc-pill-inactive';
+                let badgeLabel = '⚪ Not Installed';
+                let descText = 'Extension files not found in game installation or savegame header.';
+
+                if (r.isActive) {
+                    badgeClass = 'dlc-pill-active';
+                    badgeLabel = '🟢 Active in Current Game';
+                    descText = 'Active in current game session (GetExtensions().active == true or active savegame patch).';
+                } else if (r.isPresent) {
+                    badgeClass = 'dlc-pill-present';
+                    badgeLabel = '🟣 Present (Not Active in Game)';
+                    descText = 'Installed/present on system, but active boolean flag is false for current game/save.';
+                }
+
+                return `
+                    <tr>
+                        <td style="color: #7c7c8a; font-family: monospace; font-size: 0.8rem;">${r.index}</td>
+                        <td>
+                            <strong style="color: #fff;">${r.name}</strong>
+                            <div style="font-size: 0.76rem; color: #7c7c8a; font-family: monospace;">${r.key}</div>
+                        </td>
+                        <td>
+                            <span class="dlc-pill ${badgeClass}">
+                                <span class="dlc-dot"></span>
+                                <span>${badgeLabel}</span>
+                            </span>
+                        </td>
+                        <td style="color: #8e8e98; font-size: 0.84rem;">
+                            ${descText}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            dtContentTable.innerHTML = `
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 48px;">#</th>
+                            <th>DLC / Expansion Pack</th>
+                            <th style="width: 30%;">Current Game Session Status</th>
+                            <th style="width: 42%;">API Detection Context</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tbody || '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: #7c7c8a;">No DLC entries found</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderPlayerTable(player) {
+            let playerRows = [
+                {
+                    key: 'param',
+                    param: 'Pilot Persona Name',
+                    valHtml: `<td style="font-size: 1.05rem; font-weight: bold; color: #fff;">${player.name || 'Commander'}</td>`,
+                    valSort: player.name || 'Commander',
+                    desc: 'Active pilot identity in current game session'
+                },
+                {
+                    key: 'credits',
+                    param: 'Bank Balance (Credits)',
+                    valHtml: `<td style="font-size: 1.15rem; font-weight: bold; color: #ff9d00;">${Number(player.credits || 0).toLocaleString()} <span style="font-size: 0.85rem; color: #888;">Cr</span></td>`,
+                    valSort: Number(player.credits || 0),
+                    desc: 'Direct player personal account balance'
+                },
+                {
+                    key: 'sector',
+                    param: 'Current Sector Location',
+                    valHtml: `<td style="font-size: 1.05rem; font-weight: bold; color: #00b3ff;">${player.sector || 'Deep Space'}</td>`,
+                    valSort: player.sector || 'Deep Space',
+                    desc: 'Sector containing the active player ship/suit'
+                },
+                {
+                    key: 'sync',
+                    param: 'Sync Transmission',
+                    valHtml: `<td style="color: #d1d1db;">${currentEntry ? new Date(currentEntry.timestamp).toISOString() : 'Live'}</td>`,
+                    valSort: currentEntry ? currentEntry.timestamp : 'Live',
+                    desc: 'Payload delivered via in-game LUA HTTP request'
+                }
+            ];
+
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                playerRows = playerRows.filter(r =>
+                    r.param.toLowerCase().includes(q) ||
+                    String(r.valSort).toLowerCase().includes(q) ||
+                    r.desc.toLowerCase().includes(q)
+                );
+            }
+
+            if (dtSortCol) {
+                playerRows.sort((a, b) => {
+                    let valA, valB;
+                    if (dtSortCol === 'param') { valA = a.param; valB = b.param; }
+                    else if (dtSortCol === 'val') { valA = a.valSort; valB = b.valSort; }
+                    else if (dtSortCol === 'desc') { valA = a.desc; valB = b.desc; }
+                    return compareValues(valA, valB, dtSortDir);
+                });
+            }
+
+            let tbody = playerRows.map(r => `
+                <tr>
+                    <td><strong style="color: #00ffaa;">${r.param}</strong></td>
+                    ${r.valHtml}
+                    <td style="color: #8e8e98;">${r.desc}</td>
+                </tr>
+            `).join('');
+
+            let html = `
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            ${renderSortableTh('param', 'Game Parameter', 'width: 25%;')}
+                            ${renderSortableTh('val', 'Retrieved Live Value', 'width: 40%;')}
+                            ${renderSortableTh('desc', 'Engine Context / Meaning', 'width: 35%;')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tbody || '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching parameters found</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+            dtContentTable.innerHTML = html;
+        }
+
+        function renderShipsTable(ships) {
+            let prepared = ships.map((s, idx) => ({ ...s, _origIndex: idx + 1 }));
+            let filtered = prepared;
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                filtered = prepared.filter(s =>
+                    (s.name && s.name.toLowerCase().includes(q)) ||
+                    (s.role && s.role.toLowerCase().includes(q)) ||
+                    (s.size && s.size.toLowerCase().includes(q)) ||
+                    (s.faction && s.faction.toLowerCase().includes(q))
+                );
+            }
+
+            if (dtSortCol) {
+                filtered.sort((a, b) => {
+                    let valA, valB;
+                    switch (dtSortCol) {
+                        case 'index': valA = a._origIndex; valB = b._origIndex; break;
+                        case 'name': valA = a.name; valB = b.name; break;
+                        case 'size': valA = a.size; valB = b.size; break;
+                        case 'role': valA = a.role; valB = b.role; break;
+                        case 'faction': valA = a.faction; valB = b.faction; break;
+                        case 'hull': valA = a.hull; valB = b.hull; break;
+                        case 'weapons': valA = a.specs?.weapons; valB = b.specs?.weapons; break;
+                        case 'turrets': valA = a.specs?.turrets; valB = b.specs?.turrets; break;
+                        case 'speed': valA = a.specs?.speed; valB = b.specs?.speed; break;
+                        case 'status': valA = a.unlocked ? 1 : 0; valB = b.unlocked ? 1 : 0; break;
+                        default: valA = a[dtSortCol]; valB = b[dtSortCol];
+                    }
+                    return compareValues(valA, valB, dtSortDir);
+                });
+            }
+
+            let rows = filtered.map((s) => {
+                const specs = s.specs || {};
+                return `
+                    <tr>
+                        <td style="color: #7c7c8a; font-family: monospace; font-size: 0.8rem;">${s._origIndex}</td>
+                        <td>
+                            <strong style="color: #fff;">${s.name}</strong>
+                            <div style="font-size: 0.76rem; color: #7c7c8a; font-family: monospace;">${s.macro || s.id}</div>
+                        </td>
+                        <td><span class="badge" style="background: rgba(255, 157, 0, 0.2); color: #ff9d00;">${s.size || 'M'} Class</span></td>
+                        <td style="color: #00b3ff;">${s.role || 'Vessel'}</td>
+                        <td><span class="faction-tag ${(s.faction || 'general').toLowerCase()}">${s.faction || 'General'}</span></td>
+                        <td style="color: #00ffaa; font-family: monospace;">${Number(s.hull || 0).toLocaleString()}</td>
+                        <td style="color: #ff5555;">${specs.weapons || '--'}</td>
+                        <td style="color: #ff9d00;">${specs.turrets || '--'}</td>
+                        <td>${specs.speed || '--'}</td>
+                        <td>
+                            ${s.unlocked 
+                                ? '<span class="status-badge status-online">OWNED</span>' 
+                                : '<span class="status-badge" style="background: rgba(142, 142, 147, 0.15); color: #8e8e98;">LOCKED</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            let sortInfo = dtSortCol 
+                ? `<span style="color: #00ffaa; margin-left: 0.75rem;">Sorted by <strong>${dtSortCol.toUpperCase()}</strong> (${dtSortDir === 'asc' ? 'Increasing ▲' : 'Decreasing ▼'})</span>` 
+                : '';
+
+            dtContentTable.innerHTML = `
+                <div style="padding: 8px 14px; background: #1c1c24; border-bottom: 1px solid #29292e; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: #a9a9b3;">
+                    <span>Showing <strong>${filtered.length}</strong> of <strong>${ships.length}</strong> ships ${sortInfo}</span>
+                    ${dtFilterQuery ? `<span style="color: #ff9d00;">Filtered by: "${dtFilterQuery}"</span>` : ''}
+                </div>
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            ${renderSortableTh('index', '#', 'width: 48px;')}
+                            ${renderSortableTh('name', 'Ship Name')}
+                            ${renderSortableTh('size', 'Size')}
+                            ${renderSortableTh('role', 'Role')}
+                            ${renderSortableTh('faction', 'Faction')}
+                            ${renderSortableTh('hull', 'Hull HP')}
+                            ${renderSortableTh('weapons', 'Weapons')}
+                            ${renderSortableTh('turrets', 'Turrets')}
+                            ${renderSortableTh('speed', 'Speed')}
+                            ${renderSortableTh('status', 'Status')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows || '<tr><td colspan="10" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching ships found</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderEquipmentTable(equipment) {
+            let prepared = equipment.map((e, idx) => ({ ...e, _origIndex: idx + 1 }));
+            let filtered = prepared;
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                filtered = prepared.filter(e =>
+                    (e.name && e.name.toLowerCase().includes(q)) ||
+                    (e.subgroup && e.subgroup.toLowerCase().includes(q)) ||
+                    (e.slotSize && e.slotSize.toLowerCase().includes(q)) ||
+                    (e.faction && e.faction.toLowerCase().includes(q))
+                );
+            }
+
+            if (dtSortCol) {
+                filtered.sort((a, b) => {
+                    let valA, valB;
+                    switch (dtSortCol) {
+                        case 'index': valA = a._origIndex; valB = b._origIndex; break;
+                        case 'name': valA = a.name; valB = b.name; break;
+                        case 'subgroup': valA = a.subgroup; valB = b.subgroup; break;
+                        case 'slotSize': valA = a.slotSize; valB = b.slotSize; break;
+                        case 'faction': valA = a.faction; valB = b.faction; break;
+                        case 'primarySpec':
+                            valA = a.specs?.dps || a.specs?.capacity || a.specs?.thrust;
+                            valB = b.specs?.dps || b.specs?.capacity || b.specs?.thrust;
+                            break;
+                        case 'secondarySpec':
+                            valA = a.specs?.range || a.specs?.recharge || a.specs?.travel;
+                            valB = b.specs?.range || b.specs?.recharge || b.specs?.travel;
+                            break;
+                        case 'status': valA = a.unlocked ? 1 : 0; valB = b.unlocked ? 1 : 0; break;
+                        default: valA = a[dtSortCol]; valB = b[dtSortCol];
+                    }
+                    return compareValues(valA, valB, dtSortDir);
+                });
+            }
+
+            let rows = filtered.map((e) => {
+                const specs = e.specs || {};
+                let primarySpec = specs.dps ? `<span style="color: #ff5555; font-weight: bold;">${specs.dps}</span>` :
+                                  specs.capacity ? `<span style="color: #00ffaa; font-weight: bold;">${specs.capacity}</span>` :
+                                  specs.thrust ? `<span style="color: #ff9d00; font-weight: bold;">${specs.thrust}</span>` : '--';
+
+                return `
+                    <tr>
+                        <td style="color: #7c7c8a; font-family: monospace; font-size: 0.8rem;">${e._origIndex}</td>
+                        <td>
+                            <strong style="color: #fff;">${e.name}</strong>
+                            <div style="font-size: 0.76rem; color: #7c7c8a; font-family: monospace;">${e.macro || e.id}</div>
+                        </td>
+                        <td><span class="badge" style="background: rgba(180, 100, 255, 0.2); color: #b464ff;">${e.subgroup || 'Equipment'}</span></td>
+                        <td style="color: #00b3ff; font-weight: bold;">${e.slotSize || 'M'} Mount</td>
+                        <td><span class="faction-tag ${(e.faction || 'general').toLowerCase()}">${e.faction || 'General'}</span></td>
+                        <td>${primarySpec}</td>
+                        <td style="color: #8e8e98;">${specs.range || specs.recharge || specs.travel || '--'}</td>
+                        <td>
+                            ${e.unlocked 
+                                ? '<span class="status-badge status-online">OWNED</span>' 
+                                : '<span class="status-badge" style="background: rgba(142, 142, 147, 0.15); color: #8e8e98;">LOCKED</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            let sortInfo = dtSortCol 
+                ? `<span style="color: #00ffaa; margin-left: 0.75rem;">Sorted by <strong>${dtSortCol.toUpperCase()}</strong> (${dtSortDir === 'asc' ? 'Increasing ▲' : 'Decreasing ▼'})</span>` 
+                : '';
+
+            dtContentTable.innerHTML = `
+                <div style="padding: 8px 14px; background: #1c1c24; border-bottom: 1px solid #29292e; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: #a9a9b3;">
+                    <span>Showing <strong>${filtered.length}</strong> of <strong>${equipment.length}</strong> equipment upgrades ${sortInfo}</span>
+                    ${dtFilterQuery ? `<span style="color: #ff9d00;">Filtered by: "${dtFilterQuery}"</span>` : ''}
+                </div>
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            ${renderSortableTh('index', '#', 'width: 48px;')}
+                            ${renderSortableTh('name', 'Equipment Name')}
+                            ${renderSortableTh('subgroup', 'Type')}
+                            ${renderSortableTh('slotSize', 'Mount Size')}
+                            ${renderSortableTh('faction', 'Faction')}
+                            ${renderSortableTh('primarySpec', 'Primary Spec')}
+                            ${renderSortableTh('secondarySpec', 'Secondary Spec')}
+                            ${renderSortableTh('status', 'Status')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows || '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching equipment found</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderBlueprintsTable(blueprints) {
+            let prepared = blueprints.map((m, idx) => ({ ...m, _origIndex: idx + 1 }));
+            let filtered = prepared;
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                filtered = prepared.filter(b => 
+                    (b.name && b.name.toLowerCase().includes(q)) ||
+                    (b.id && b.id.toLowerCase().includes(q)) ||
+                    (b.moduleType && b.moduleType.toLowerCase().includes(q)) ||
+                    (b.macro && b.macro.toLowerCase().includes(q)) ||
+                    (b.production && b.production.output && b.production.output.toLowerCase().includes(q))
+                );
+            }
+
+            if (dtSortCol) {
+                filtered.sort((a, b) => {
+                    let valA, valB;
+                    switch (dtSortCol) {
+                        case 'index': valA = a._origIndex; valB = b._origIndex; break;
+                        case 'name': valA = a.name; valB = b.name; break;
+                        case 'category': valA = a.moduleType || a.group; valB = b.moduleType || b.group; break;
+                        case 'faction': valA = a.faction; valB = b.faction; break;
+                        case 'hull': valA = a.hull; valB = b.hull; break;
+                        case 'production':
+                            valA = a.production?.output || '';
+                            valB = b.production?.output || '';
+                            break;
+                        case 'workforce': valA = a.habitation?.maxCapacity; valB = b.habitation?.maxCapacity; break;
+                        case 'storage': valA = a.storage?.capacity; valB = b.storage?.capacity; break;
+                        case 'status': valA = a.unlocked ? 1 : 0; valB = b.unlocked ? 1 : 0; break;
+                        default: valA = a[dtSortCol]; valB = b[dtSortCol];
+                    }
+                    return compareValues(valA, valB, dtSortDir);
+                });
+            }
+
+            let rows = filtered.map((m) => {
+                let badgeClass = (m.moduleType || 'structural').toLowerCase();
+                if (!['production', 'habitation', 'storage', 'defense', 'dock', 'structural'].includes(badgeClass)) badgeClass = 'other';
+
+                let prodInfo = '--';
+                if (m.moduleType === 'Production' && m.production && m.production.output) {
+                    const cycle = m.production.cycleTime || 60;
+                    const hourly = Math.round((m.production.amount || 0) * (3600 / cycle));
+                    prodInfo = `<span style="color: #00ffaa; font-weight: 500;">${m.production.output}</span> (${hourly.toLocaleString()}/hr)`;
+                }
+
+                let habInfo = '--';
+                if (m.habitation && m.habitation.maxCapacity > 0) {
+                    habInfo = `<span style="color: #00b3ff; font-weight: 500;">${m.habitation.maxCapacity.toLocaleString()}</span> (${m.habitation.race || 'All'})`;
+                }
+
+                let storeInfo = '--';
+                if (m.storage && m.storage.capacity > 0) {
+                    storeInfo = `<span style="color: #ff9d00; font-weight: 500;">${(m.storage.capacity / 1000).toLocaleString()}k</span> m³`;
+                }
+
+                let hullStr = Number(m.hull || 100000).toLocaleString();
+
+                return `
+                    <tr>
+                        <td style="color: #7c7c8a; font-family: monospace; font-size: 0.8rem;">${m._origIndex}</td>
+                        <td>
+                            <strong style="color: #fff;">${m.name}</strong>
+                            <div style="font-size: 0.76rem; color: #7c7c8a; font-family: monospace;">${m.macro || m.id}</div>
+                        </td>
+                        <td><span class="badge ${badgeClass}">${m.moduleType || m.group || 'Module'}</span></td>
+                        <td><span class="faction-tag ${(m.faction || 'general').toLowerCase()}">${m.faction || 'General'}</span></td>
+                        <td style="color: #00ffaa; font-family: monospace;">${hullStr}</td>
+                        <td>${prodInfo}</td>
+                        <td>${habInfo}</td>
+                        <td>${storeInfo}</td>
+                        <td>
+                            ${m.unlocked 
+                                ? '<span class="status-badge status-online">OWNED</span>' 
+                                : '<span class="status-badge" style="background: rgba(142, 142, 147, 0.15); color: #8e8e98;">LOCKED</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            let sortInfo = dtSortCol 
+                ? `<span style="color: #00ffaa; margin-left: 0.75rem;">Sorted by <strong>${dtSortCol.toUpperCase()}</strong> (${dtSortDir === 'asc' ? 'Increasing ▲' : 'Decreasing ▼'})</span>` 
+                : '';
+
+            dtContentTable.innerHTML = `
+                <div style="padding: 8px 14px; background: #1c1c24; border-bottom: 1px solid #29292e; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: #a9a9b3;">
+                    <span>Showing <strong>${filtered.length}</strong> of <strong>${blueprints.length}</strong> modules ${sortInfo}</span>
+                    ${dtFilterQuery ? `<span style="color: #ff9d00;">Filtered by: "${dtFilterQuery}"</span>` : ''}
+                </div>
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            ${renderSortableTh('index', '#', 'width: 48px;')}
+                            ${renderSortableTh('name', 'Station Module')}
+                            ${renderSortableTh('category', 'Category')}
+                            ${renderSortableTh('faction', 'Faction')}
+                            ${renderSortableTh('hull', 'Hull')}
+                            ${renderSortableTh('production', 'Production Output')}
+                            ${renderSortableTh('workforce', 'Workforce')}
+                            ${renderSortableTh('storage', 'Storage')}
+                            ${renderSortableTh('status', 'Status')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows || '<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching items found</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderGenericObjectTable(obj) {
+            let entries = Object.entries(obj).map(([key, val]) => ({
+                key,
+                val,
+                displayVal: (typeof val === 'object' && val !== null) ? JSON.stringify(val) : String(val)
+            }));
+
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                entries = entries.filter(e =>
+                    e.key.toLowerCase().includes(q) ||
+                    e.displayVal.toLowerCase().includes(q)
+                );
+            }
+
+            if (dtSortCol === 'field') {
+                entries.sort((a, b) => compareValues(a.key, b.key, dtSortDir));
+            } else if (dtSortCol === 'value') {
+                entries.sort((a, b) => compareValues(a.displayVal, b.displayVal, dtSortDir));
+            }
+
+            let rows = entries.map(e => `
+                <tr>
+                    <td style="font-weight: bold; color: #00ffaa; width: 30%;">${e.key}</td>
+                    <td style="color: #fff; font-family: monospace;">${e.displayVal}</td>
+                </tr>
+            `).join('');
+
+            dtContentTable.innerHTML = `
+                <table class="dt-table">
+                    <thead>
+                        <tr>
+                            ${renderSortableTh('field', 'Field Name', 'width: 30%;')}
+                            ${renderSortableTh('value', 'Retrieved Value')}
+                        </tr>
+                    </thead>
+                    <tbody>${rows || '<tr><td colspan="2" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching fields</td></tr>'}</tbody>
+                </table>
+            `;
+        }
+
+        function renderGenericArrayTable(arr) {
+            if (arr.length === 0) {
+                dtContentTable.innerHTML = '<div style="padding: 2rem; text-align: center; color: #7c7c8a;">Empty array retrieved</div>';
+                return;
+            }
+            const keys = Object.keys(arr[0] || {});
+            let items = arr.map((item, idx) => ({ ...item, _origIndex: idx + 1 }));
+
+            if (dtFilterQuery) {
+                const q = dtFilterQuery.toLowerCase();
+                items = items.filter(item =>
+                    keys.some(k => String(item[k] ?? '').toLowerCase().includes(q))
+                );
+            }
+
+            if (dtSortCol && (keys.includes(dtSortCol) || dtSortCol === 'index')) {
+                items.sort((a, b) => {
+                    let valA = dtSortCol === 'index' ? a._origIndex : a[dtSortCol];
+                    let valB = dtSortCol === 'index' ? b._origIndex : b[dtSortCol];
+                    return compareValues(valA, valB, dtSortDir);
+                });
+            }
+
+            let headers = renderSortableTh('index', '#', 'width: 48px;') + keys.map(k => renderSortableTh(k, k)).join('');
+            let rows = items.map((item) => {
+                let cols = keys.map(k => {
+                    let val = item[k];
+                    return `<td>${(typeof val === 'object' && val !== null) ? JSON.stringify(val) : String(val ?? '')}</td>`;
+                }).join('');
+                return `<tr><td style="color: #7c7c8a; font-family: monospace; font-size: 0.8rem;">${item._origIndex}</td>${cols}</tr>`;
+            }).join('');
+
+            dtContentTable.innerHTML = `
+                <table class="dt-table">
+                    <thead><tr>${headers}</tr></thead>
+                    <tbody>${rows || '<tr><td colspan="' + (keys.length + 1) + '" style="text-align: center; padding: 2rem; color: #7c7c8a;">No matching rows</td></tr>'}</tbody>
+                </table>
+            `;
+        }
+
+        // View Mode Toggles
+        btnDtViewTable.addEventListener('click', () => {
+            dtViewMode = 'table';
+            btnDtViewTable.classList.add('active');
+            btnDtViewJson.classList.remove('active');
+            dtContentTable.style.display = 'block';
+            dtContentJson.style.display = 'none';
+        });
+
+        btnDtViewJson.addEventListener('click', () => {
+            dtViewMode = 'json';
+            btnDtViewJson.classList.add('active');
+            btnDtViewTable.classList.remove('active');
+            dtContentTable.style.display = 'none';
+            dtContentJson.style.display = 'block';
+        });
+
+        // Inspector Table Choice Selector
+        dtTableChoice.addEventListener('change', () => {
+            dtSortCol = null;
+            dtSortDir = 'asc';
+            const chosen = dtTableChoice.value;
+            if (syncTableSelect) {
+                syncTableSelect.value = (chosen === 'modules' || chosen === 'ships' || chosen === 'equipment' || chosen === 'player' || chosen === 'all') ? chosen : 'blueprints';
+            }
+
+            if (chosen === 'all') {
+                currentEntry = recentRequestsList[0] || null;
+            } else if (latestByTableCache[chosen]) {
+                currentEntry = latestByTableCache[chosen];
+            } else {
+                currentEntry = recentRequestsList.find(r => r.table === chosen) || null;
+            }
+
+            updateHistorySelect();
+            if (currentEntry) renderRetrievedData(currentEntry);
+        });
+
+        dtHistorySelect.addEventListener('change', () => {
+            const selectedId = dtHistorySelect.value;
+            if (!selectedId) return;
+            const entry = recentRequestsList.find(r => r.id === selectedId);
+            if (entry) renderRetrievedData(entry);
+        });
+
+        dtFilterInput.addEventListener('input', (e) => {
+            dtFilterQuery = e.target.value.trim();
+            if (currentEntry) renderRetrievedData(currentEntry);
+        });
+
+        btnDtCopyJson.addEventListener('click', () => {
+            if (!dtJsonPre.textContent) return;
+            navigator.clipboard.writeText(dtJsonPre.textContent).then(() => {
+                const orig = btnDtCopyJson.textContent;
+                btnDtCopyJson.textContent = '✅ Copied!';
+                setTimeout(() => { btnDtCopyJson.textContent = orig; }, 1500);
+            });
+        });
+
+        // Real-time Socket.IO Table updates
+        socket.on('table_retrieved', (entry) => {
+            if (!entry) return;
+            recentRequestsList.unshift(entry);
+            if (recentRequestsList.length > 100) recentRequestsList.pop();
+            latestByTableCache[entry.table] = entry;
+
+            const chosen = dtTableChoice ? dtTableChoice.value : 'modules';
+            if (chosen === 'all' || chosen === entry.table) {
+                currentEntry = entry;
+                renderRetrievedData(entry);
+            }
+            updateHistorySelect();
+        });
+
+        // Initial Load
+        loadRecentRequests();
     </script>
 </body>
 </html>

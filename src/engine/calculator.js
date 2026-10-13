@@ -1,4 +1,4 @@
-import { WARES_DB, DEPENDENCIES, PRESET_BLUEPRINTS, getWareHourlyRatePerModule, getWareCycleYield, mapMacroToWare, MACRO_TO_WARE, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
+import { WARES_DB, DEPENDENCIES, PRESET_BLUEPRINTS, getWareHourlyRatePerModule, getWareCycleYield, mapMacroToWare, MACRO_TO_WARE, isTerranWare, isBlueprintTerran, isTerranFaction, NO_PP_WARES } from '../data/wares.js';
 import { state, saveActiveBlueprintToStorage } from '../state/store.js';
 import { getSectorSunlight, calculateSolarOutput } from '../data/sectors.js';
 import { calculateBlueprintWorkforce, calculateRequiredWorkforce, calculateWorkforceEfficiency } from './workforce.js';
@@ -7,7 +7,7 @@ import { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMe
 export { calculateBlueprintWorkforce, calculateRequiredWorkforce, calculateWorkforceEfficiency };
 export { accumulateRawMiningRates, calculateScrapMetalEcDemand, calculateScrapMetalRawScrapDemand, calculateMiningRequirements, RAW_MINERAL_WARES };
 export { WARE_PRICES, getWareUnitPrice } from './prices.js';
-export { calculateBuildCosts } from './buildCost.js';
+export { calculateBuildCosts, calculateBuildCost, showUndefinedModuleWarningPopup, showUndefinedModuleDlcPopup, checkModuleDlcStatus, searchCuckooExtensionsTable } from './buildCost.js';
 
 export function getPPDownstreamWares() {
   const suppressedSet = new Set();
@@ -214,6 +214,9 @@ export function computeLayerTotals() {
         ? baselineCalc.rateNeeded 
         : (modCount * getWareHourlyRatePerModule(wareId, state.workforceBonus));
       let prodRate = calculateLiveOutputRate(wareId, inPlanCount > 0 ? inPlanCount : modCount, optimumRate);
+      if (state.customOutputs && state.customOutputs[wareId] !== undefined) {
+        prodRate = state.customOutputs[wareId];
+      }
       const isPPChecked = (ware.level >= 1 && ware.level <= 3) && Boolean(
         (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[wareId]) ||
         (!state.activeBlueprint && state.ppStates && state.ppStates[wareId])
@@ -226,7 +229,7 @@ export function computeLayerTotals() {
       // Hourly Recipe Consumption
       if (ware.recipe) {
         Object.entries(ware.recipe).forEach(([inputId, inputQty]) => {
-          let consRate = (state.activeBlueprint ? inPlanCount : modCount) * inputQty;
+          let consRate = modCount * inputQty;
           if (inputId === 'EC') {
             if (isPPChecked) {
               consRate = 0;
@@ -276,49 +279,25 @@ export function computeLayerTotals() {
   totals.solarModulesNeeded = remainingECNeeded > 0 ? Math.ceil(remainingECNeeded / ecSolarPerModule) : 0;
   totals.terSolarModulesNeeded = remainingECNeeded > 0 ? Math.ceil(remainingECNeeded / terSolarPerModule) : 0;
 
-  if (state.activeBlueprint) {
-    if (inPlanTerSolarCount > 0 && inPlanSolarCount === 0) {
-      // Station blueprint uses Terran solar
-      state.calculatedDemand['TerEC'] = { modulesNeeded: totals.terSolarModulesNeeded, rateNeeded: totals.totalECNeeded };
-      state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (inPlanSolarCount > 0 && inPlanTerSolarCount === 0) {
-      // Station blueprint uses Commonwealth solar
-      state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: totals.totalECNeeded };
-      state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (inPlanSolarCount > 0 && inPlanTerSolarCount > 0) {
-      // Mixed solar station (e.g. Prod Max)
-      state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: inPlanSolarCount * ecSolarPerModule };
-      state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: inPlanTerSolarCount * terSolarPerModule };
-    } else {
-      // Neither solar module installed yet in blueprint
-      if (isBlueprintTerran(state.activeBlueprint) || state.factionConstructionMethod === 'terran') {
-        state.calculatedDemand['TerEC'] = { modulesNeeded: totals.terSolarModulesNeeded, rateNeeded: totals.totalECNeeded };
-        state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
-      } else {
-        state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: totals.totalECNeeded };
-        state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
-      }
-    }
+  if (inPlanTerSolarCount > 0 && inPlanSolarCount === 0) {
+    // Station blueprint uses Terran solar
+    state.calculatedDemand['TerEC'] = { modulesNeeded: totals.terSolarModulesNeeded, rateNeeded: totals.totalECNeeded };
+    state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
+  } else if (inPlanSolarCount > 0 && inPlanTerSolarCount === 0) {
+    // Station blueprint uses Commonwealth solar
+    state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: totals.totalECNeeded };
+    state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
+  } else if (inPlanSolarCount > 0 && inPlanTerSolarCount > 0) {
+    // Mixed solar station (e.g. Prod Max)
+    state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: inPlanSolarCount * ecSolarPerModule };
+    state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: inPlanTerSolarCount * terSolarPerModule };
   } else {
-    // Single Target Mode
-    if (state.selectedWareId === 'TerEC') {
-      totals.terSolarModulesNeeded = 1;
-      totals.totalECProduced = terSolarPerModule;
-      state.calculatedDemand['TerEC'] = { modulesNeeded: 1, rateNeeded: terSolarPerModule };
-      state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (state.selectedWareId === 'EC') {
-      totals.solarModulesNeeded = 1;
-      totals.totalECProduced = ecSolarPerModule;
-      state.calculatedDemand['EC'] = { modulesNeeded: 1, rateNeeded: ecSolarPerModule };
-      state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (state.selectedWareId && isTerranWare(state.selectedWareId) && WARES_DB[state.selectedWareId] && WARES_DB[state.selectedWareId].level !== 4) {
+    // Neither solar module installed yet in blueprint
+    if (state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || isTerranFaction(state.factionConstructionMethod))) {
       state.calculatedDemand['TerEC'] = { modulesNeeded: totals.terSolarModulesNeeded, rateNeeded: totals.totalECNeeded };
       state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
-    } else if (state.selectedWareId && totals.totalECNeeded > 0) {
-      state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: totals.totalECNeeded };
-      state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
     } else {
-      state.calculatedDemand['EC'] = { modulesNeeded: 0, rateNeeded: 0 };
+      state.calculatedDemand['EC'] = { modulesNeeded: totals.solarModulesNeeded, rateNeeded: totals.totalECNeeded };
       state.calculatedDemand['TerEC'] = { modulesNeeded: 0, rateNeeded: 0 };
     }
   }
@@ -335,80 +314,84 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
   if (options.workforceBonus !== undefined) state.workforceBonus = options.workforceBonus;
   if (options.ppStates !== undefined && activeBp) activeBp.ppStates = options.ppStates;
 
-  // CASE 1: Full Station Blueprint loaded (always use blueprint modules for all totals)
-  if (activeBp) {
-    if (!activeBp.modules) activeBp.modules = {};
-    if (!activeBp.rawMacros) activeBp.rawMacros = {};
-    const bpModules = activeBp.modules;
+  const hasCustomOutputs = Boolean(state.customOutputs && Object.keys(state.customOutputs).some(k => state.customOutputs[k] !== undefined && state.customOutputs[k] !== null && state.customOutputs[k] !== ''));
 
-    if (!activeBp.ppStates) activeBp.ppStates = {};
-    delete activeBp.ppStates['ScrapHullParts'];
-    delete activeBp.ppStates['ScrapClaytronics'];
-    delete activeBp.ppStates['TerCompSubstrate'];
-    delete activeBp.ppStates['TerSilCarbide'];
+  // CASE 1: Full Station Blueprint loaded or custom output overrides active
+  if (activeBp || hasCustomOutputs) {
+    if (activeBp && !activeBp.modules) activeBp.modules = {};
+    if (activeBp && !activeBp.rawMacros) activeBp.rawMacros = {};
+    const bpModules = (activeBp && activeBp.modules) || {};
 
-    // Rule: If any inputs to Hull Parts has 0 module count, then check PP for Hull Part
-    const hullWare = WARES_DB['HullParts'];
-    if (hullWare && hullWare.recipe) {
-      const anyInputZero = Object.keys(hullWare.recipe).some(inpId => {
-        if (inpId === 'EC' || inpId === 'TerEC') {
-          return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+    if (activeBp) {
+      if (!activeBp.ppStates) activeBp.ppStates = {};
+      delete activeBp.ppStates['ScrapHullParts'];
+      delete activeBp.ppStates['ScrapClaytronics'];
+      delete activeBp.ppStates['TerCompSubstrate'];
+      delete activeBp.ppStates['TerSilCarbide'];
+
+      // Rule: If any inputs to Hull Parts has 0 module count, then check PP for Hull Part
+      const hullWare = WARES_DB['HullParts'];
+      if (hullWare && hullWare.recipe) {
+        const anyInputZero = Object.keys(hullWare.recipe).some(inpId => {
+          if (inpId === 'EC' || inpId === 'TerEC') {
+            return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+          }
+          return (bpModules[inpId] || 0) === 0;
+        });
+
+        if (anyInputZero) {
+          if (!state.activeBlueprint._manualHullPartsPP) {
+            state.activeBlueprint.ppStates['HullParts'] = true;
+            state.activeBlueprint._autoHullPartsPP = true;
+          }
+        } else if (state.activeBlueprint._autoHullPartsPP) {
+          delete state.activeBlueprint.ppStates['HullParts'];
+          delete state.activeBlueprint._autoHullPartsPP;
+          delete state.activeBlueprint._manualHullPartsPP;
         }
-        return (bpModules[inpId] || 0) === 0;
-      });
-
-      if (anyInputZero) {
-        if (!state.activeBlueprint._manualHullPartsPP) {
-          state.activeBlueprint.ppStates['HullParts'] = true;
-          state.activeBlueprint._autoHullPartsPP = true;
-        }
-      } else if (state.activeBlueprint._autoHullPartsPP) {
-        delete state.activeBlueprint.ppStates['HullParts'];
-        delete state.activeBlueprint._autoHullPartsPP;
-        delete state.activeBlueprint._manualHullPartsPP;
       }
-    }
 
-    const telWare = WARES_DB['TelParts'];
-    if (telWare && telWare.recipe && bpModules['TelParts'] !== undefined) {
-      const anyTelInputZero = Object.keys(telWare.recipe).some(inpId => {
-        if (inpId === 'EC' || inpId === 'TerEC') {
-          return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
-        }
-        return (bpModules[inpId] || 0) === 0;
-      });
+      const telWare = WARES_DB['TelParts'];
+      if (telWare && telWare.recipe && bpModules['TelParts'] !== undefined) {
+        const anyTelInputZero = Object.keys(telWare.recipe).some(inpId => {
+          if (inpId === 'EC' || inpId === 'TerEC') {
+            return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+          }
+          return (bpModules[inpId] || 0) === 0;
+        });
 
-      if (anyTelInputZero) {
-        if (!state.activeBlueprint._manualTelPartsPP) {
-          state.activeBlueprint.ppStates['TelParts'] = true;
-          state.activeBlueprint._autoTelPartsPP = true;
+        if (anyTelInputZero) {
+          if (!state.activeBlueprint._manualTelPartsPP) {
+            state.activeBlueprint.ppStates['TelParts'] = true;
+            state.activeBlueprint._autoTelPartsPP = true;
+          }
+        } else if (state.activeBlueprint._autoTelPartsPP) {
+          delete state.activeBlueprint.ppStates['TelParts'];
+          delete state.activeBlueprint._autoTelPartsPP;
+          delete state.activeBlueprint._manualTelPartsPP;
         }
-      } else if (state.activeBlueprint._autoTelPartsPP) {
-        delete state.activeBlueprint.ppStates['TelParts'];
-        delete state.activeBlueprint._autoTelPartsPP;
-        delete state.activeBlueprint._manualTelPartsPP;
       }
-    }
 
-    // Rule: If any inputs to Claytronics has 0 module count, then check PP for Claytronics
-    const clayWare = WARES_DB['Claytronics'];
-    if (clayWare && clayWare.recipe) {
-      const anyClayInputZero = Object.keys(clayWare.recipe).some(inpId => {
-        if (inpId === 'EC' || inpId === 'TerEC') {
-          return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
-        }
-        return (bpModules[inpId] || 0) === 0;
-      });
+      // Rule: If any inputs to Claytronics has 0 module count, then check PP for Claytronics
+      const clayWare = WARES_DB['Claytronics'];
+      if (clayWare && clayWare.recipe) {
+        const anyClayInputZero = Object.keys(clayWare.recipe).some(inpId => {
+          if (inpId === 'EC' || inpId === 'TerEC') {
+            return ((bpModules['EC'] || 0) + (bpModules['TerEC'] || 0)) === 0;
+          }
+          return (bpModules[inpId] || 0) === 0;
+        });
 
-      if (anyClayInputZero) {
-        if (!state.activeBlueprint._manualClaytronicsPP) {
-          state.activeBlueprint.ppStates['Claytronics'] = true;
-          state.activeBlueprint._autoClaytronicsPP = true;
+        if (anyClayInputZero) {
+          if (!state.activeBlueprint._manualClaytronicsPP) {
+            state.activeBlueprint.ppStates['Claytronics'] = true;
+            state.activeBlueprint._autoClaytronicsPP = true;
+          }
+        } else if (state.activeBlueprint._autoClaytronicsPP) {
+          delete state.activeBlueprint.ppStates['Claytronics'];
+          delete state.activeBlueprint._autoClaytronicsPP;
+          delete state.activeBlueprint._manualClaytronicsPP;
         }
-      } else if (state.activeBlueprint._autoClaytronicsPP) {
-        delete state.activeBlueprint.ppStates['Claytronics'];
-        delete state.activeBlueprint._autoClaytronicsPP;
-        delete state.activeBlueprint._manualClaytronicsPP;
       }
     }
 
@@ -421,12 +404,32 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
     Object.keys(WARES_DB).filter(id => WARES_DB[id].level === 3).forEach(id => {
       const ware = WARES_DB[id];
       const planned = bpModules[id] || 0;
+      const modRate = getWareHourlyRatePerModule(id, state.workforceBonus);
+      const customOut = (state.customOutputs && state.customOutputs[id] !== undefined && state.customOutputs[id] !== null && state.customOutputs[id] !== '')
+        ? Number(state.customOutputs[id])
+        : null;
 
-      if (planned > 0 && ware.recipe) {
-        Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
-          if (!state.calculatedDemand[inpId]) state.calculatedDemand[inpId] = { rateNeeded: 0, modulesNeeded: 0 };
-          state.calculatedDemand[inpId].rateNeeded += planned * inpQty;
-        });
+      let effectiveOutput = 0;
+      if (customOut !== null) {
+        effectiveOutput = customOut;
+      } else if (planned > 0) {
+        effectiveOutput = planned * modRate;
+      } else if (!activeBp && state.selectedWareId === id) {
+        effectiveOutput = modRate;
+      }
+
+      if (effectiveOutput > 0) {
+        const l3Needed = (modRate > 0) ? Math.ceil(effectiveOutput / modRate) : 0;
+        state.calculatedDemand[id].rateNeeded = effectiveOutput;
+        state.calculatedDemand[id].modulesNeeded = (customOut !== null) ? l3Needed : (planned > 0 ? planned : l3Needed);
+
+        if (ware.recipe) {
+          Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
+            if (!state.calculatedDemand[inpId]) state.calculatedDemand[inpId] = { rateNeeded: 0, modulesNeeded: 0 };
+            const reqInpRate = modRate > 0 ? (effectiveOutput * (inpQty / modRate)) : 0;
+            state.calculatedDemand[inpId].rateNeeded += reqInpRate;
+          });
+        }
       }
     });
 
@@ -435,13 +438,39 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
       const ware = WARES_DB[id];
       const planned = bpModules[id] || 0;
       const modRate = getWareHourlyRatePerModule(id, state.workforceBonus);
-      const neededFromL3 = state.calculatedDemand[id] && state.calculatedDemand[id].rateNeeded > 0 ? Math.ceil(state.calculatedDemand[id].rateNeeded / modRate) : 0;
-      const activeModCount = planned > 0 ? Math.max(planned, neededFromL3) : (state.populateMatrix ? neededFromL3 : 0);
+      const customOut = (state.customOutputs && state.customOutputs[id] !== undefined && state.customOutputs[id] !== null && state.customOutputs[id] !== '')
+        ? Number(state.customOutputs[id])
+        : null;
+      const downstreamDemand = state.calculatedDemand[id] ? state.calculatedDemand[id].rateNeeded : 0;
+      const installedOutput = planned * modRate;
 
-      if (activeModCount > 0 && ware.recipe) {
+      // Re-evaluate if output satisfies downstream demand
+      const currentTargetOutput = (customOut !== null) ? customOut : installedOutput;
+      const neededFromL3 = (downstreamDemand > 0 && modRate > 0) ? Math.ceil(downstreamDemand / modRate) : 0;
+
+      let modulesNeeded = 0;
+      if (customOut !== null) {
+        modulesNeeded = (modRate > 0) ? Math.ceil(Math.max(customOut, downstreamDemand) / modRate) : 0;
+      } else if (downstreamDemand > 0) {
+        modulesNeeded = neededFromL3;
+      } else if (planned > 0) {
+        modulesNeeded = planned;
+      } else if (!activeBp && state.selectedWareId === id) {
+        modulesNeeded = 1;
+      }
+
+      state.calculatedDemand[id].rateNeeded = downstreamDemand > 0 ? downstreamDemand : currentTargetOutput;
+      state.calculatedDemand[id].modulesNeeded = modulesNeeded;
+
+      // Effective output to propagate upstream to Level 1 and Level 0
+      const isSelectedL2 = (!activeBp && state.selectedWareId === id);
+      const effectiveOutput = Math.max(customOut !== null ? customOut : 0, installedOutput, downstreamDemand, isSelectedL2 ? modRate : 0);
+
+      if (effectiveOutput > 0 && ware.recipe) {
         Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
           if (!state.calculatedDemand[inpId]) state.calculatedDemand[inpId] = { rateNeeded: 0, modulesNeeded: 0 };
-          state.calculatedDemand[inpId].rateNeeded += activeModCount * inpQty;
+          const reqInpRate = modRate > 0 ? (effectiveOutput * (inpQty / modRate)) : 0;
+          state.calculatedDemand[inpId].rateNeeded += reqInpRate;
         });
       }
     });
@@ -453,36 +482,41 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
     sortedLevel1.forEach(id => {
       const ware = WARES_DB[id];
       const planned = bpModules[id] || 0;
-      const modRate = getWareHourlyRatePerModule(id, state.workforceBonus);
-      const neededFromL23 = state.calculatedDemand[id] && state.calculatedDemand[id].rateNeeded > 0 ? Math.ceil(state.calculatedDemand[id].rateNeeded / modRate) : 0;
+      const modRate = (id === 'ScrapHullParts' || id === 'ScrapClaytronics')
+        ? calculateLiveOutputRate(id, 1, 0)
+        : getWareHourlyRatePerModule(id, state.workforceBonus);
+      const downstreamDemand = state.calculatedDemand[id] ? state.calculatedDemand[id].rateNeeded : 0;
+      const installedOutput = (id === 'ScrapHullParts' || id === 'ScrapClaytronics')
+        ? calculateLiveOutputRate(id, planned, 0)
+        : (planned * modRate);
+
+      const neededFromL23 = (downstreamDemand > 0 && modRate > 0) ? Math.ceil(downstreamDemand / modRate) : 0;
       const isAlloProc = id === 'AllographyneScrapProc';
       const hasAlloFrag = Boolean(bpModules['AllographyneFragments'] > 0);
-      const activeModCount = planned > 0 ? Math.max(planned, neededFromL23) : ((state.populateMatrix || (isAlloProc && hasAlloFrag)) ? neededFromL23 : 0);
+      const isSelectedL1 = (!activeBp && state.selectedWareId === id);
 
-      if (activeModCount > 0 && ware.recipe) {
+      // Re-evaluate if output satisfies downstream demand
+      let modulesNeeded = 0;
+      if (planned > 0) {
+        modulesNeeded = downstreamDemand > 0 ? neededFromL23 : planned;
+      } else {
+        modulesNeeded = (state.populateMatrix || (isAlloProc && hasAlloFrag) || downstreamDemand > 0 || isSelectedL1) ? (downstreamDemand > 0 ? neededFromL23 : (isSelectedL1 ? 1 : 0)) : 0;
+      }
+
+      state.calculatedDemand[id].rateNeeded = downstreamDemand > 0 ? downstreamDemand : (isSelectedL1 ? modRate : installedOutput);
+      state.calculatedDemand[id].modulesNeeded = modulesNeeded;
+
+      const effectiveOutput = Math.max(installedOutput, downstreamDemand, isSelectedL1 ? modRate : 0);
+
+      if (effectiveOutput > 0 && ware.recipe) {
         Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
           if ((id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') && (inpId === 'RawScrap' || inpId === 'ScrapProc' || inpId === 'EC')) {
             return; // Dynamically handled
           }
           if (!state.calculatedDemand[inpId]) state.calculatedDemand[inpId] = { rateNeeded: 0, modulesNeeded: 0 };
-          state.calculatedDemand[inpId].rateNeeded += activeModCount * inpQty;
+          const reqInpRate = modRate > 0 ? (effectiveOutput * (inpQty / modRate)) : 0;
+          state.calculatedDemand[inpId].rateNeeded += reqInpRate;
         });
-      }
-    });
-
-    // 4. Calculate modulesNeeded strictly for Level 1-3 wares
-    Object.entries(state.calculatedDemand).forEach(([inputId, data]) => {
-      const inputWare = WARES_DB[inputId];
-      if (inputWare && inputWare.level > 0 && inputWare.level <= 3) {
-        const modRate = (inputId === 'ScrapHullParts' || inputId === 'ScrapClaytronics')
-          ? calculateLiveOutputRate(inputId, 1, 0)
-          : getWareHourlyRatePerModule(inputId, state.workforceBonus);
-        const neededFromDownstream = data.rateNeeded > 0 ? Math.ceil(data.rateNeeded / modRate) : 0;
-        const planned = bpModules[inputId] || 0;
-
-        const isAlloProc = inputId === 'AllographyneScrapProc';
-        const hasAlloFrag = Boolean(bpModules['AllographyneFragments'] > 0);
-        data.modulesNeeded = planned > 0 ? Math.max(planned, neededFromDownstream) : ((state.populateMatrix || (isAlloProc && hasAlloFrag)) ? neededFromDownstream : 0);
       }
     });
 
@@ -528,150 +562,7 @@ export function calculateFactoryRequirements(blueprint = state.activeBlueprint, 
     };
   }
 
-  // CASE 2: Single Target Mode with a specific card selected
-  if (state.selectedWareId && WARES_DB[state.selectedWareId]) {
-    const selectedWare = WARES_DB[state.selectedWareId];
 
-    if (selectedWare.level === 4) {
-      // Level 4 cards are application/build sinks and never impose upstream demands
-      Object.keys(WARES_DB).forEach(id => {
-        state.calculatedDemand[id] = { rateNeeded: 0, modulesNeeded: 0 };
-      });
-      accumulateRawMiningRates();
-      computeLayerTotals();
-      return {
-        demand: state.calculatedDemand,
-        layerTotals: state.layerTotals,
-        workforceSummary: state.workforceSummary
-      };
-    } else {
-      // Level 1, 2, 3 selected target or Level 0 EC/TerEC
-      const isTargetEC = state.selectedWareId === 'EC' || state.selectedWareId === 'TerEC';
-      const targetOutputRate = (isTargetEC || state.selectedWareId === 'ScrapHullParts' || state.selectedWareId === 'ScrapClaytronics')
-        ? calculateLiveOutputRate(state.selectedWareId, 1, 0)
-        : getWareHourlyRatePerModule(state.selectedWareId, state.workforceBonus);
-
-      state.calculatedDemand[state.selectedWareId] = {
-        rateNeeded: targetOutputRate,
-        modulesNeeded: 1
-      };
-
-      let queue = [{ id: state.selectedWareId, requiredRate: targetOutputRate }];
-
-      while (queue.length > 0) {
-        const { id, requiredRate } = queue.shift();
-        const ware = WARES_DB[id];
-
-        if (ware && ware.recipe) {
-          const wareModRate = (id === 'ScrapHullParts' || id === 'ScrapClaytronics')
-            ? calculateLiveOutputRate(id, 1, 0)
-            : getWareHourlyRatePerModule(id, state.workforceBonus);
-
-          Object.entries(ware.recipe).forEach(([inputId, inputQty]) => {
-            const inputRatePerMod = inputQty;
-            const ratePerUnit = inputRatePerMod / wareModRate;
-            const totalInputRateNeeded = requiredRate * ratePerUnit;
-
-            if (!state.calculatedDemand[inputId]) {
-              state.calculatedDemand[inputId] = { rateNeeded: 0, modulesNeeded: 0 };
-            }
-
-            state.calculatedDemand[inputId].rateNeeded += totalInputRateNeeded;
-
-            const inputWare = WARES_DB[inputId];
-            if (inputWare && inputWare.level > 0) {
-              const modRate = (inputId === 'ScrapHullParts' || inputId === 'ScrapClaytronics')
-                ? calculateLiveOutputRate(inputId, 1, 0)
-                : getWareHourlyRatePerModule(inputId, state.workforceBonus);
-              state.calculatedDemand[inputId].modulesNeeded = Math.ceil(state.calculatedDemand[inputId].rateNeeded / modRate);
-            }
-
-            queue.push({ id: inputId, requiredRate: totalInputRateNeeded });
-          });
-        }
-      }
-    }
-
-    if (!state.ppStates) state.ppStates = {};
-    delete state.ppStates['ScrapHullParts'];
-    delete state.ppStates['ScrapClaytronics'];
-    delete state.ppStates['TerCompSubstrate'];
-    delete state.ppStates['TerSilCarbide'];
-
-    // Rule: If any inputs to Hull Parts has 0 module count, then check PP for Hull Part
-    const hullWare = WARES_DB['HullParts'];
-    if (hullWare && hullWare.recipe) {
-      const anyInputZero = Object.keys(hullWare.recipe).some(inpId => {
-        if (inpId === 'EC' || inpId === 'TerEC') {
-          const ecCalc = state.calculatedDemand['EC'];
-          const terEcCalc = state.calculatedDemand['TerEC'];
-          const ecCount = ((ecCalc && ecCalc.modulesNeeded) || 0) + ((terEcCalc && terEcCalc.modulesNeeded) || 0);
-          return ecCount === 0;
-        }
-        const inpCalc = state.calculatedDemand[inpId];
-        return !inpCalc || (inpCalc.modulesNeeded || 0) === 0;
-      });
-
-      if (anyInputZero) {
-        if (!state._manualHullPartsPP) {
-          state.ppStates['HullParts'] = true;
-          state._autoHullPartsPP = true;
-        }
-      } else if (state._autoHullPartsPP) {
-        delete state.ppStates['HullParts'];
-        delete state._autoHullPartsPP;
-        delete state._manualHullPartsPP;
-      }
-    }
-
-    // Rule: If any inputs to Claytronics has 0 module count, then check PP for Claytronics
-    const clayWare = WARES_DB['Claytronics'];
-    if (clayWare && clayWare.recipe) {
-      const anyClayInputZero = Object.keys(clayWare.recipe).some(inpId => {
-        if (inpId === 'EC' || inpId === 'TerEC') {
-          const ecCalc = state.calculatedDemand['EC'];
-          const terEcCalc = state.calculatedDemand['TerEC'];
-          const ecCount = ((ecCalc && ecCalc.modulesNeeded) || 0) + ((terEcCalc && terEcCalc.modulesNeeded) || 0);
-          return ecCount === 0;
-        }
-        const inpCalc = state.calculatedDemand[inpId];
-        return !inpCalc || (inpCalc.modulesNeeded || 0) === 0;
-      });
-
-      if (anyClayInputZero) {
-        if (!state._manualClaytronicsPP) {
-          state.ppStates['Claytronics'] = true;
-          state._autoClaytronicsPP = true;
-        }
-      } else if (state._autoClaytronicsPP) {
-        delete state.ppStates['Claytronics'];
-        delete state._autoClaytronicsPP;
-        delete state._manualClaytronicsPP;
-      }
-    }
-
-    const scrapRaw = calculateScrapMetalRawScrapDemand();
-    state.scrapRawDemand = scrapRaw;
-    const smTotalDemand = (scrapRaw.genRawScrapDemand || 0) + (scrapRaw.terRawScrapDemand || 0);
-    const procBaseRate = (WARES_DB['ScrapProc'] && WARES_DB['ScrapProc'].baseRate) || 9000;
-    const procNeeds = smTotalDemand > 0 ? Math.ceil(smTotalDemand / procBaseRate) : 0;
-
-    if (smTotalDemand > 0) {
-      if (!state.calculatedDemand['ScrapProc']) {
-        state.calculatedDemand['ScrapProc'] = { rateNeeded: 0, modulesNeeded: 0 };
-      }
-      state.calculatedDemand['ScrapProc'].rateNeeded = smTotalDemand;
-      state.calculatedDemand['ScrapProc'].modulesNeeded = procNeeds;
-    }
-
-    accumulateRawMiningRates();
-    computeLayerTotals();
-    return {
-      demand: state.calculatedDemand,
-      layerTotals: state.layerTotals,
-      workforceSummary: state.workforceSummary
-    };
-  }
 
   computeLayerTotals();
   return {

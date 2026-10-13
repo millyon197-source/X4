@@ -1,13 +1,235 @@
 import './style.css';
-import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB } from './data/wares.js';
-import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents } from './state/store.js';
+import { PRESET_BLUEPRINTS, mapMacroToWare, WARES_DB, getFriendlyModuleName } from './data/wares.js';
+import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprintInternalStorage, collapseAllBiComponents, clearCustomOutputs, hasLoadedBlueprint } from './state/store.js';
 import { calculateFactoryRequirements, getPrimaryMacroForWare } from './engine/calculator.js';
 import { applyMatchNeeds } from './engine/matchNeeds.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
-import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId } from './ui/matrixView.js';
-import { renderPlannedTabHTML, filterPlannedModules } from './ui/plannedView.js';
+import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId, showNoBlueprintPopup, alignSubdueLevel4, updateModuleCountFromDiff } from './ui/matrixView.js';
+import { renderPlannedTabHTML, filterPlannedModules, setupCumulativeMacroDropdown, alignAddMacroDropdown, focusPlannedModule, getKnownMacrosList } from './ui/plannedView.js';
+import { isWorkforceStructure, hasWorkforceStructures, autoSupportWorkforceWithFoodAndMedicine, calculateBlueprintWorkforce, applySupportWorkforce, getMostProminentFaction, getLargestOwnedHabitatMacro, isWorkforceFullySupported } from './engine/workforce.js';
 import { version as appVersion } from '../package.json';
 import { escapeHtml } from './html.js';
+import { showCreateBlueprintModal, generateBlueprintXML, downloadXMLFile, showToastNotification } from './engine/blueprintExporter.js';
+import { io } from 'socket.io-client';
+import { isWareModuleOwned } from './engine/blueprintOwnership.js';
+import { fetchDlcStatus, setDlcStatus, getDLCs, getDlcStatus, showUndefinedModuleDlcPopup, checkModuleDlcStatus } from './engine/cuckooDlcLookup.js';
+
+export async function fetchServerBlueprints(isUserTriggered = false) {
+  try {
+    let updateData = null;
+    if (isUserTriggered) {
+      try {
+        let reqRes = null;
+        try {
+          reqRes = await fetch('/api/request-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ table: 'all', action: 'HARVEST_TABLE' })
+          });
+        } catch (eReq1) {
+          reqRes = await fetch('http://localhost:3000/api/request-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ table: 'all', action: 'HARVEST_TABLE' })
+          });
+        }
+        if (reqRes && reqRes.ok) {
+          updateData = await reqRes.json();
+        }
+      } catch (eReq) {
+        console.warn('request-update failed, falling back to direct sync-savegame:', eReq.message);
+        try {
+          await fetch('/api/sync-savegame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ table: 'all' })
+          });
+        } catch (e0) {
+          try {
+            await fetch('http://localhost:3000/api/sync-savegame', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ table: 'all' })
+            });
+          } catch (e00) {}
+        }
+      }
+    }
+
+    // If request-update returned valid entries directly, apply them (filtering modules and equipment)
+    if (updateData?.entry?.data && Array.isArray(updateData.entry.data) && updateData.entry.data.length > 0) {
+      const modules = updateData.entry.data.filter(b => !b.group || b.group === 'modules' || b.group === 'equipment');
+      store.setServerModules(modules);
+      if (typeof renderApp === 'function') {
+        renderApp();
+      }
+      if (isUserTriggered) {
+        const owned = modules.filter(m => Boolean(m.unlocked)).length;
+        const sourceLabel = updateData.source === 'game_engine' ? 'live game' : 'savegame';
+        showToastNotification(`Synced ${modules.length} blueprints (${owned} owned, ${modules.length - owned} unowned) via ${sourceLabel}`);
+      }
+      return modules;
+    }
+
+    let res = null;
+    try {
+      res = await fetch('/api/blueprints/all');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (e1) {
+      try {
+        res = await fetch('http://localhost:3000/api/blueprints/all');
+      } catch (e2) {
+        res = await fetch('/api/blueprints/modules').catch(() => null);
+      }
+    }
+    if (res && res.ok) {
+      const rawData = await res.json();
+      if (Array.isArray(rawData)) {
+        const modules = rawData.filter(b => !b.group || b.group === 'modules' || b.group === 'equipment');
+        store.setServerModules(modules);
+        if (typeof renderApp === 'function') {
+          renderApp();
+        }
+        if (isUserTriggered) {
+          const owned = modules.filter(m => Boolean(m.unlocked)).length;
+          showToastNotification(`Synced ${modules.length} blueprints (${owned} owned, ${modules.length - owned} unowned)`);
+        }
+        return modules;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch blueprints from server:', err.message);
+    if (isUserTriggered) {
+      showToastNotification('Could not connect to companion server on port 3000');
+    }
+  }
+  return null;
+}
+
+let socket = null;
+export function initSocketConnection() {
+  if (socket) return;
+  try {
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const socketUrl = isLocal ? 'http://localhost:3000' : undefined;
+
+    socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      timeout: 5000
+    });
+
+    socket.on('connect', () => {
+      console.log('🔌 Connected to companion server websocket:', socket.id);
+      fetchServerBlueprints(false);
+      fetchDlcStatus().then(() => renderApp()).catch(() => {});
+    });
+
+    socket.on('blueprint_ownership_changed', (data) => {
+      if (data && data.id) {
+        store.updateModuleOwnership(data.id, data.unlocked);
+        renderApp();
+      }
+    });
+
+    socket.on('encyclopedia_updated', (data) => {
+      if (data && Array.isArray(data.blueprints)) {
+        const mods = data.blueprints.filter(b => b.group === 'modules' || b.group === 'equipment');
+        store.setServerModules(mods);
+        renderApp();
+      } else if (data && Array.isArray(data.modules)) {
+        store.setServerModules(data.modules);
+        renderApp();
+      }
+    });
+
+    socket.on('dlcs_updated', (dlcs) => {
+      if (dlcs) {
+        const changed = setDlcStatus(dlcs);
+        if (changed) renderApp();
+      }
+    });
+
+    socket.on('game_state_changed', (stateData) => {
+      if (stateData && stateData.dlcs) {
+        const changed = setDlcStatus(stateData.dlcs);
+        if (changed) renderApp();
+      }
+    });
+
+    socket.on('table_updated', (data) => {
+      if (data && data.table === 'dlcs') {
+        const targetDlcs = data.dlcs || data.entry?.data;
+        if (targetDlcs) {
+          const changed = setDlcStatus(targetDlcs);
+          if (changed) renderApp();
+        }
+      }
+      if (data && (data.table === 'modules' || data.table === 'all' || data.table === 'blueprints')) {
+        fetchServerBlueprints(false);
+      }
+    });
+
+    socket.on('reload_ui', (data) => {
+      reloadAppUI(data);
+    });
+
+    socket.on('game_loaded', (data) => {
+      reloadAppUI(data);
+    });
+  } catch (err) {
+    console.warn('Socket.IO initialization error:', err);
+  }
+}
+
+let isReloadingUI = false;
+
+/**
+ * Reloads the app UI upon detection of <event_game_loaded/> from the game backend.
+ * Re-fetches fresh blueprint & DLC data, triggers a toast notification,
+ * and reloads the browser UI page.
+ * 
+ * @param {Object} [data]
+ */
+export function reloadAppUI(data = {}) {
+  if (isReloadingUI) return;
+  isReloadingUI = true;
+  console.log('🔄 [MD event_game_loaded] Game loaded detected: reloading app UI...', data);
+
+  try {
+    showToastNotification('Game load detected — Reloading UI...');
+  } catch (e) {}
+
+  if (typeof window !== 'undefined' && window.location && typeof window.location.reload === 'function') {
+    setTimeout(() => {
+      window.location.reload();
+    }, 450);
+  } else {
+    fetchServerBlueprints(true);
+    fetchDlcStatus().catch(() => {});
+    if (typeof renderApp === 'function') {
+      renderApp();
+    }
+    setTimeout(() => { isReloadingUI = false; }, 2000);
+  }
+}
+
+// Continuously sync DLC status with companion server every 2 seconds
+if (typeof window !== 'undefined') {
+  setInterval(async () => {
+    try {
+      const updated = await fetchDlcStatus();
+      if (updated) {
+        const changed = setDlcStatus(updated);
+        if (changed) {
+          console.log('🔄 DLC status updated via 2s companion sync, re-rendering app:', updated);
+          renderApp();
+        }
+      }
+    } catch (e) {}
+  }, 2000);
+}
 
 if (typeof window !== 'undefined') {
   window.state = state;
@@ -16,8 +238,27 @@ if (typeof window !== 'undefined') {
   window.calculateFactoryRequirements = calculateFactoryRequirements;
   window.renderMatrixTabHTML = renderMatrixTabHTML;
   window.updateInspector = updateInspector;
+  window.updateModuleCountFromDiff = updateModuleCountFromDiff;
+  window.alignSubdueLevel4 = alignSubdueLevel4;
   window.isHostedMode = isHostedMode;
   window.clearBlueprintInternalStorage = clearBlueprintInternalStorage;
+  window.calculateBlueprintWorkforce = calculateBlueprintWorkforce;
+  window.applySupportWorkforce = applySupportWorkforce;
+  window.getMostProminentFaction = getMostProminentFaction;
+  window.getLargestOwnedHabitatMacro = getLargestOwnedHabitatMacro;
+  window.isWorkforceFullySupported = isWorkforceFullySupported;
+  window.saveCurrentPanelAsBlueprint = saveCurrentPanelAsBlueprint;
+  window.renderApp = renderApp;
+  window.fetchServerBlueprints = fetchServerBlueprints;
+  window.reloadAppUI = reloadAppUI;
+  window.initSocketConnection = initSocketConnection;
+  window.isWareModuleOwned = isWareModuleOwned;
+  window.fetchDlcStatus = fetchDlcStatus;
+  window.setDlcStatus = setDlcStatus;
+  window.getDLCs = getDLCs;
+  window.getDlcStatus = getDlcStatus;
+  window.showUndefinedModuleDlcPopup = showUndefinedModuleDlcPopup;
+  window.checkModuleDlcStatus = checkModuleDlcStatus;
   try {
     if (typeof __IS_HOSTED__ !== 'undefined') {
       window.__IS_HOSTED__ = Boolean(__IS_HOSTED__);
@@ -151,6 +392,97 @@ export function restorePlannedPositions() {
   setTimeout(restoreFocus, 40);
 }
 
+export function saveCurrentPanelAsBlueprint() {
+  if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+    rebuildBlueprintFromMacros();
+  }
+  calculateFactoryRequirements();
+
+  let rawMacros = {};
+  if (state.activeBlueprint && state.activeBlueprint.rawMacros) {
+    for (const [macro, qty] of Object.entries(state.activeBlueprint.rawMacros)) {
+      if (qty > 0) rawMacros[macro] = qty;
+    }
+  }
+
+  if (Object.keys(rawMacros).length === 0 && state.modules && Object.keys(state.modules).length > 0) {
+    for (const [key, count] of Object.entries(state.modules)) {
+      if (count > 0) {
+        const macro = key.endsWith('_macro') ? key : getPrimaryMacroForWare(key);
+        if (macro) {
+          rawMacros[macro] = (rawMacros[macro] || 0) + count;
+        }
+      }
+    }
+  }
+
+  if (Object.keys(rawMacros).length === 0 && state.activeBlueprint && state.activeBlueprint.modules) {
+    for (const [wareId, count] of Object.entries(state.activeBlueprint.modules)) {
+      if (count > 0) {
+        const macro = getPrimaryMacroForWare(wareId);
+        if (macro) {
+          rawMacros[macro] = (rawMacros[macro] || 0) + count;
+        }
+      }
+    }
+  }
+
+  const totalModules = Object.values(rawMacros).reduce((sum, n) => sum + n, 0);
+  if (totalModules === 0) {
+    showNoBlueprintPopup();
+    return;
+  }
+
+  const defaultName = (state.activeBlueprint && state.activeBlueprint.name) || 'Custom Station Plan';
+
+  showCreateBlueprintModal({
+    defaultName,
+    totalModules,
+    onSave: async (chosenName) => {
+      const originalXml = (state.originalBlueprint && state.originalBlueprint.rawXml) ||
+                          (state.activeBlueprint && state.activeBlueprint.rawXml) ||
+                          null;
+      const xmlContent = generateBlueprintXML(chosenName, rawMacros, { originalXml });
+      const safeFileName = chosenName.replace(/[<>:"/\\|?*]+/g, '_').trim() || 'Custom Station Plan';
+
+      downloadXMLFile(xmlContent, `${safeFileName}.xml`);
+
+      try {
+        fetch('/api/save-blueprint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: `${safeFileName}.xml`, xmlContent })
+        }).catch(() => {});
+      } catch (e) {}
+
+      if (!state.activeBlueprint) {
+        state.activeBlueprint = {
+          name: chosenName,
+          totalModules,
+          modules: {},
+          rawMacros: { ...rawMacros },
+          rootMacros: { ...rawMacros },
+          rawXml: xmlContent
+        };
+      } else {
+        state.activeBlueprint.name = chosenName;
+        state.activeBlueprint.rawMacros = { ...rawMacros };
+        state.activeBlueprint.rawXml = xmlContent;
+        state.activeBlueprint.totalModules = totalModules;
+      }
+
+      if (state.originalBlueprint) {
+        state.originalBlueprint.name = chosenName;
+        state.originalBlueprint.rawXml = xmlContent;
+      }
+
+      saveActiveBlueprintToStorage();
+      renderApp();
+      showToastNotification(`Blueprint "${safeFileName}.xml" saved successfully!`);
+    }
+  });
+}
+
 function renderApp() {
   try {
 
@@ -159,12 +491,18 @@ function renderApp() {
     }
     calculateFactoryRequirements();
 
-    if (state.activeTab === 'planned') {
+    const isTransitionFromMatrix = (state._prevTab === 'matrix' && state.activeTab === 'planned');
+    state._prevTab = state.activeTab;
+
+    if (state.activeTab === 'planned' && !isTransitionFromMatrix) {
       savePlannedPositions();
     }
 
     const winScrollY = window.scrollY || document.documentElement.scrollTop;
     const winScrollX = window.scrollX || document.documentElement.scrollLeft;
+
+    const prevInsBody = document.getElementById('insBody');
+    const preRenderInsScrollTop = prevInsBody ? prevInsBody.scrollTop : 0;
 
     let preRenderCenteredWareId = null;
     let preRenderVpScrollLeft = 0;
@@ -229,89 +567,77 @@ function renderApp() {
 
       <div class="calc-bar">
         <div class="calc-bar-row">
-          <div class="calc-group" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-            <input type="file" id="xmlFileInput" accept=".xml" style="display:none;" />
-            <button class="btn-upload" id="btnUploadXML" style="padding:0.25rem 0.65rem; font-size:0.75rem;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-              Upload .XML Blueprint
-            </button>
-            ${state.activeBlueprint ? `
-              <div class="bp-tags-list">
-                <div class="bp-tag active-bp-tag">
-                  <strong id="activeBpName" class="active-bp-name" title="Click to reload this blueprint">${escapeHtml(state.activeBlueprint.name)} 🔄</strong>
-                  <span class="bp-entries-badge">${state.activeBlueprint.totalModules} Entries</span>
-                  <button id="btnRemoveActiveBP" class="btn-remove-bp-tag" title="Remove active blueprint">&times;</button>
-                </div>
-
-                ${(!isHostedMode() && state.loadedBlueprints) ? (state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
-                  const encName = encodeURIComponent(b.name);
-                  return `
-                    <div class="bp-tag prev-bp-tag">
-                      <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to switch to ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
-                      <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
-                      <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
-                    </div>
-                  `;
-                }).join('') : ''}
-              </div>
-            ` : `
-              ${(!isHostedMode() && state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
+          <div class="calc-group" style="display:flex; flex-direction:column; align-items:flex-start; gap:0.4rem; flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <input type="file" id="xmlFileInput" accept=".xml" style="display:none;" />
+              <button class="btn-upload" id="btnUploadXML" style="padding:0.25rem 0.65rem; font-size:0.75rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload .XML Blueprint
+              </button>
+              <button class="btn-upload btn-sync-blueprints" id="btnSyncBlueprints" style="padding:0.25rem 0.65rem; font-size:0.75rem;" title="Sync Station Module Blueprints from Companion Server">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                ${state.serverModules ? `Blueprints (${state.serverModulesOwnedCount}/${state.serverModulesTotalCount})` : 'Sync Blueprints'}
+              </button>
+              ${state.activeBlueprint ? `
                 <div class="bp-tags-list">
-                  ${state.loadedBlueprints.map(b => {
+                  <div class="bp-tag active-bp-tag">
+                    <strong id="activeBpName" class="active-bp-name" title="Click to reload this blueprint">${escapeHtml(state.activeBlueprint.name)} 🔄</strong>
+                    <span class="bp-entries-badge">${state.activeBlueprint.totalModules} Entries</span>
+                    <button id="btnRemoveActiveBP" class="btn-remove-bp-tag" title="Remove active blueprint">&times;</button>
+                  </div>
+
+                  ${(!isHostedMode() && state.loadedBlueprints) ? (state.loadedBlueprints || []).filter(b => b.name !== state.activeBlueprint.name).map(b => {
                     const encName = encodeURIComponent(b.name);
                     return `
                       <div class="bp-tag prev-bp-tag">
-                        <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to load ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
+                        <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to switch to ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
                         <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
                         <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
                       </div>
                     `;
-                  }).join('')}
+                  }).join('') : ''}
                 </div>
-              ` : ''}
-            `}
-          </div>
-          ${state.activeTab === 'matrix' ? `
-            <div class="slider-group">
-              <label for="workforceSlider" class="${state.workforceBonus === 0 ? 'flash-wf-label' : ''}">Workforce Eff Bonus:</label>
-              <button class="btn-qty" id="btnWfDec" title="Decrease workforce bonus by 1% (or 0.1% with Shift)">&lt;</button>
-              <input type="range" id="workforceSlider" min="0" max="100" step="0.1" value="${state.workforceBonus}" />
-              <button class="btn-qty" id="btnWfInc" title="Increase workforce bonus by 1% (or 0.1% with Shift)">&gt;</button>
-              <span id="wfBonusValue" style="font-weight:700; color:#34d399; min-width:45px; cursor:pointer;" title="Click to enter exact Workforce % or Current/Optimal workers">+${Number.isInteger(state.workforceBonus) ? state.workforceBonus : parseFloat(state.workforceBonus.toFixed(2))}%</span>
+              ` : `
+                ${(!isHostedMode() && state.loadedBlueprints && state.loadedBlueprints.length > 0) ? `
+                  <div class="bp-tags-list">
+                    ${state.loadedBlueprints.map(b => {
+                      const encName = encodeURIComponent(b.name);
+                      return `
+                        <div class="bp-tag prev-bp-tag">
+                          <span class="btn-switch-bp" data-bp-name="${encName}" title="Click to load ${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
+                          <span class="bp-entries-badge prev-badge">${b.totalModules}</span>
+                          <button class="btn-remove-prev-bp" data-bp-name="${encName}" title="Remove from list">&times;</button>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                ` : ''}
+              `}
             </div>
-          ` : ''}
+            ${state.activeTab === 'matrix' ? `
+              <div class="web-subdue-line" style="display:flex; align-items:center; width:100%; position:relative; min-height:28px;">
+                <div class="slider-group" style="margin:0;">
+                  <label for="workforceSlider" class="${state.workforceBonus === 0 ? 'flash-wf-label' : ''}">Workforce Eff Bonus:</label>
+                  <button class="btn-qty" id="btnWfDec" title="Decrease workforce bonus by 1% (or 0.1% with Shift)">&lt;</button>
+                  <input type="range" id="workforceSlider" min="0" max="100" step="0.1" value="${state.workforceBonus}" />
+                  <button class="btn-qty" id="btnWfInc" title="Increase workforce bonus by 1% (or 0.1% with Shift)">&gt;</button>
+                  <span id="wfBonusValue" style="font-weight:700; color:#34d399; min-width:45px; cursor:pointer;" title="Click to enter exact Workforce % or Current/Optimal workers">+${Number.isInteger(state.workforceBonus) ? state.workforceBonus : parseFloat(state.workforceBonus.toFixed(2))}%</span>
+                </div>
+                <label id="lblSubdueLevel4" style="position:absolute; left:${state.subdueL4Left !== null && state.subdueL4Left !== undefined ? `${state.subdueL4Left}px` : (state.subdueL4MarginLeft ? `${state.subdueL4MarginLeft}px` : 'auto')}; top:50%; transform:translateY(-50%); font-size:0.8rem; color:#a78bfa; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:rgba(167,139,250,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(167,139,250,0.35); user-select:none; white-space:nowrap; transition:left 0.15s ease;" title="When checked, hides the Level 4 Applications column and expands remaining columns across the panel">
+                  <input type="checkbox" id="chkSubdueLevel4" ${state.subdueLevel4 ? 'checked' : ''} style="cursor:pointer;" />
+                  Subdue Level 4
+                </label>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="calc-group bi-header-slot" style="width:360px; margin-right:-1.5rem; display:flex; justify-content:center; align-items:center; align-self:flex-start; min-height:28px; margin-left:auto; flex-shrink:0;">
+            <button class="btn-upload btn-create-bp btn-save-panel-xml" id="btnCreateXML" style="padding:0.25rem 0.75rem; font-size:0.75rem;" title="Save current panel modules as an .xml blueprint file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              Save Panel as .XML Blueprint
+            </button>
+          </div>
         </div>
-        ${state.activeTab === 'matrix' ? `
-          <div class="calc-bar-row">
-            <div class="calc-group">
-              <label id="lblSubdueEcCalc" style="font-size:0.8rem; color:#fbbf24; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(245,158,11,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(245,158,11,0.35); user-select:none;" title="When checked, hides the EC consumption badges on all ware cards">
-                <input type="checkbox" id="chkSubdueEcCalc" ${state.subdueEcCalc ? 'checked' : ''} style="cursor:pointer;" />
-                Subdue EC Calc
-              </label>
-            </div>
-            <div class="calc-group">
-              <label id="lblSubdueLevel4" style="font-size:0.8rem; color:#a78bfa; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(167,139,250,0.12); padding:0.25rem 0.65rem; border-radius:6px; border:1px solid rgba(167,139,250,0.35); user-select:none;" title="When checked, hides the Level 4 Applications column and expands remaining columns across the panel">
-                <input type="checkbox" id="chkSubdueLevel4" ${state.subdueLevel4 ? 'checked' : ''} style="cursor:pointer;" />
-                Subdue Level 4
-              </label>
-            </div>
-            <div class="calc-group">
-              ${(() => {
-                const isStmActive = Boolean(state.selectedWareId || !state.activeBlueprint || state.currentPreset === 'all');
-                return `
-                  <label id="lblToggleSTM" style="font-size:0.8rem; color:#38bdf8; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:${isStmActive ? 'rgba(56,189,248,0.2)' : 'rgba(56,189,248,0.08)'}; padding:0.25rem 0.65rem; border-radius:6px; border:1px solid ${isStmActive ? 'rgba(56,189,248,0.5)' : 'rgba(56,189,248,0.25)'}; user-select:none;" title="${isStmActive ? 'Checked: Single Target Mode is active. Uncheck to exit STM.' : 'Unchecked: Blueprint mode is active. Check to switch to Single Target Mode.'}">
-                    <input type="checkbox" id="chkToggleSTM" ${isStmActive ? 'checked' : ''} style="cursor:pointer;" />
-                    STM
-                  </label>
-                  <button class="btn-filter ${isStmActive ? 'active' : ''}" data-preset="all" id="btnToggleSTM" style="display:none;">${isStmActive ? 'Exit STM' : 'Single Target Mode'}</button>
-                  ${isStmActive ? `
-                    <span id="singleTargetModeWording" style="color:#94a3b8; font-style:italic; font-size:0.8rem;">(Single Target Mode)</span>
-                  ` : ''}
-                `;
-              })()}
-            </div>
-          </div>
-        ` : ''}
       </div>
     </div>
 
@@ -329,8 +655,26 @@ function renderApp() {
     setupEvents({ isSearchFocused, searchSelStart, searchSelEnd });
 
     if (state.activeTab === 'planned') {
-      restorePlannedPositions();
+      const wareToFocus = state._pendingFocusWareId || null;
+      if (wareToFocus) {
+        if (state.plannedScroll) {
+          delete state.plannedScroll.tableTop;
+          delete state.plannedScroll.tableLeft;
+          delete state.plannedScroll.wrapperTop;
+          delete state.plannedScroll.winY;
+          delete state.plannedScroll.lastFocusedId;
+          delete state.plannedScroll.lastFocusedMacro;
+          delete state.plannedScroll.lastFocusedField;
+        }
+      } else {
+        restorePlannedPositions();
+      }
       filterPlannedModules();
+      requestAnimationFrame(alignAddMacroDropdown);
+      if (wareToFocus) {
+        focusPlannedModule(wareToFocus);
+        state._pendingFocusWareId = null;
+      }
     } else {
       if (winScrollY > 0 || winScrollX > 0) {
         window.scrollTo(winScrollX, winScrollY);
@@ -339,9 +683,19 @@ function renderApp() {
         });
       }
       updateInspector(state.selectedWareId, renderApp);
+      const newInsBody = document.getElementById('insBody');
+      if (newInsBody && preRenderInsScrollTop > 0) {
+        newInsBody.scrollTop = preRenderInsScrollTop;
+        requestAnimationFrame(() => {
+          if (newInsBody) newInsBody.scrollTop = preRenderInsScrollTop;
+        });
+      }
       filterWares();
       setTimeout(drawLines, 50);
-      const wareToCenter = state.selectedWareId || state.lastFocusedWareId;
+      alignSubdueLevel4();
+      requestAnimationFrame(alignSubdueLevel4);
+      setTimeout(alignSubdueLevel4, 60);
+      const wareToCenter = state.selectedWareId;
       if (wareToCenter) {
         setTimeout(() => {
           centerOnWare(wareToCenter);
@@ -361,6 +715,8 @@ function updateLiveMatrixContent() {
     const prevVp = document.getElementById('viewport');
     const vpScrollTop = prevVp ? prevVp.scrollTop : 0;
     const vpScrollLeft = prevVp ? prevVp.scrollLeft : 0;
+    const prevIns = document.getElementById('insBody');
+    const insScrollTop = prevIns ? prevIns.scrollTop : 0;
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = renderMatrixTabHTML();
@@ -369,6 +725,13 @@ function updateLiveMatrixContent() {
       mainWrapper.replaceWith(newWrapper);
       setupMatrixEvents();
       updateInspector(state.selectedWareId, renderApp);
+      const newIns = document.getElementById('insBody');
+      if (newIns && insScrollTop > 0) {
+        newIns.scrollTop = insScrollTop;
+        requestAnimationFrame(() => {
+          if (newIns) newIns.scrollTop = insScrollTop;
+        });
+      }
       filterWares();
       const newVp = document.getElementById('viewport');
       if (newVp) {
@@ -376,6 +739,8 @@ function updateLiveMatrixContent() {
         newVp.scrollLeft = vpScrollLeft;
       }
       setTimeout(drawLines, 20);
+      alignSubdueLevel4();
+      setTimeout(alignSubdueLevel4, 30);
     }
   } else {
     renderApp();
@@ -385,19 +750,102 @@ function updateLiveMatrixContent() {
 function setupMatrixEvents() {
   document.querySelectorAll('.ware-card').forEach(card => {
     card.addEventListener('mouseenter', () => {
-      highlightGraph(card.dataset.id);
+      if (!state.selectedWareId) {
+        highlightGraph(card.dataset.id);
+      }
     });
     card.addEventListener('mouseleave', () => {
-      if (state.searchQuery && state.searchQuery.trim()) {
-        filterWares();
-      } else {
-        highlightGraph(state.selectedWareId);
+      if (!state.selectedWareId) {
+        if (state.searchQuery && state.searchQuery.trim()) {
+          filterWares();
+        } else {
+          highlightGraph(null);
+        }
       }
     });
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.pp-checkbox-label')) return;
+      if (e.target.closest('.pp-checkbox-label') || e.target.closest('.pill-output-input') || e.target.closest('.btn-reset-output')) return;
       e.stopPropagation();
       selectWare(card.dataset.id, renderApp);
+    });
+  });
+
+  document.querySelectorAll('.pill-output-input').forEach(input => {
+    const handleAttemptWithoutBlueprint = (e) => {
+      if (state.activeTab === 'matrix' && !hasLoadedBlueprint()) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        input.value = '0';
+        input.blur();
+        showNoBlueprintPopup();
+        return true;
+      }
+      return false;
+    };
+
+    input.addEventListener('pointerdown', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+      e.stopPropagation();
+    });
+
+    input.addEventListener('mousedown', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+      e.stopPropagation();
+    });
+
+    input.addEventListener('click', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+      e.stopPropagation();
+    });
+
+    input.addEventListener('focus', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        input.blur();
+      }
+    });
+
+    input.addEventListener('input', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+    });
+
+    input.addEventListener('change', (e) => {
+      if (handleAttemptWithoutBlueprint(e)) return;
+      e.stopPropagation();
+      const wareId = input.dataset.wareId;
+      const rawVal = input.value.trim();
+      if (rawVal === '') {
+        store.setCustomOutput(wareId, null);
+      } else {
+        const intVal = parseInt(rawVal, 10);
+        if (isNaN(intVal) || intVal < 0) {
+          store.setCustomOutput(wareId, null);
+        } else {
+          store.setCustomOutput(wareId, intVal);
+        }
+      }
+      updateLiveMatrixContent();
+    });
+  });
+
+  document.querySelectorAll('.btn-reset-output').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.activeTab === 'matrix' && !hasLoadedBlueprint()) {
+        e.preventDefault();
+        showNoBlueprintPopup();
+        return;
+      }
+      const wareId = btn.dataset.wareId;
+      store.setCustomOutput(wareId, null);
+      updateLiveMatrixContent();
     });
   });
 
@@ -494,6 +942,11 @@ function setupMatrixEvents() {
       sectorSelect.focus();
     });
   }
+
+  const vp = document.getElementById('viewport');
+  if (vp) {
+    vp.addEventListener('scroll', alignSubdueLevel4, { passive: true });
+  }
 }
 
 function setupEvents(searchFocusState = {}) {
@@ -513,10 +966,27 @@ function setupEvents(searchFocusState = {}) {
 
   if (tabBtnPlanned) {
     tabBtnPlanned.addEventListener('click', () => {
+      const fromMatrix = state.activeTab === 'matrix';
       state.activeTab = 'planned';
       try {
         sessionStorage.setItem('x4_active_tab', 'planned');
       } catch (e) {}
+      if (fromMatrix && (state.selectedWareId || state.lastFocusedWareId)) {
+        const targetWare = state.selectedWareId || state.lastFocusedWareId;
+        const hasInPlan = Boolean(state.activeBlueprint?.rawMacros && Object.entries(state.activeBlueprint.rawMacros).some(([m, q]) => q > 0 && mapMacroToWare(m) === targetWare));
+        if (hasInPlan || !state.lastSelectedAddMacro) {
+          state._pendingFocusWareId = targetWare;
+          if (state.plannedScroll) {
+            delete state.plannedScroll.tableTop;
+            delete state.plannedScroll.tableLeft;
+            delete state.plannedScroll.wrapperTop;
+            delete state.plannedScroll.winY;
+            delete state.plannedScroll.lastFocusedId;
+            delete state.plannedScroll.lastFocusedMacro;
+            delete state.plannedScroll.lastFocusedField;
+          }
+        }
+      }
       renderApp();
     });
   }
@@ -525,7 +995,10 @@ function setupEvents(searchFocusState = {}) {
   const xmlFileInput = document.getElementById('xmlFileInput');
 
   if (btnUploadXML && xmlFileInput) {
-    btnUploadXML.addEventListener('click', () => xmlFileInput.click());
+    btnUploadXML.addEventListener('click', () => {
+      xmlFileInput.value = '';
+      xmlFileInput.click();
+    });
     xmlFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -535,6 +1008,24 @@ function setupEvents(searchFocusState = {}) {
       }
     });
   }
+
+  const btnSyncBlueprints = document.getElementById('btnSyncBlueprints');
+  if (btnSyncBlueprints) {
+    btnSyncBlueprints.addEventListener('click', async () => {
+      btnSyncBlueprints.disabled = true;
+      btnSyncBlueprints.style.opacity = '0.7';
+      await fetchServerBlueprints(true);
+      btnSyncBlueprints.disabled = false;
+      btnSyncBlueprints.style.opacity = '1';
+    });
+  }
+
+  document.querySelectorAll('.btn-save-panel-xml, #btnCreateXML').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      saveCurrentPanelAsBlueprint();
+    });
+  });
 
   const btnClearBP = document.getElementById('btnClearBP');
   if (btnClearBP) {
@@ -732,26 +1223,22 @@ function setupEvents(searchFocusState = {}) {
     });
   }
 
-  const chkSubdueEcCalc = document.getElementById('chkSubdueEcCalc');
-  if (chkSubdueEcCalc) {
-    chkSubdueEcCalc.addEventListener('change', (e) => {
-      state.subdueEcCalc = e.target.checked;
-      renderApp();
-    });
-  }
 
   const chkSubdueLevel4 = document.getElementById('chkSubdueLevel4');
   if (chkSubdueLevel4) {
     chkSubdueLevel4.addEventListener('change', (e) => {
-      state.subdueLevel4 = e.target.checked;
+      const isChecked = e.target.checked;
+      if (store && typeof store.setSubdueLevel4 === 'function') {
+        store.setSubdueLevel4(isChecked);
+      } else {
+        state.subdueLevel4 = isChecked;
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try {
+            localStorage.setItem('x4_subdue_level4', String(isChecked));
+          } catch (err) {}
+        }
+      }
       renderApp();
-    });
-  }
-
-  const chkToggleSTM = document.getElementById('chkToggleSTM');
-  if (chkToggleSTM) {
-    chkToggleSTM.addEventListener('change', () => {
-      document.getElementById('btnToggleSTM')?.click();
     });
   }
 
@@ -759,82 +1246,21 @@ function setupEvents(searchFocusState = {}) {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const presetKey = btn.dataset.preset;
-      if (presetKey === 'all') {
-        const isStmActive = Boolean(state.selectedWareId || !state.activeBlueprint || state.currentPreset === 'all');
-        const currentFocus = state.selectedWareId || getCenteredWareId() || state.lastFocusedWareId;
-        if (currentFocus) {
-          state.lastFocusedWareId = currentFocus;
-        }
-
-        if (isStmActive) {
-          // Exiting STM: deselect any card and restore previous blueprint if available
-          state.selectedWareId = null;
-          state.calculatedDemand = {};
-          if (state.previousBlueprint) {
-            state.activeBlueprint = state.previousBlueprint;
-            state.currentPreset = state.previousPreset || (state.previousBlueprint.name === 'Prod Max' ? 'prod_max' : 'blueprint');
-            state.selectedSector = state.activeBlueprint.sector || null;
-            state.workforceBonus = typeof state.activeBlueprint.workforceBonus === 'number' ? state.activeBlueprint.workforceBonus : 0;
-            state.previousBlueprint = null;
-            state.previousPreset = null;
-          } else if (state.activeBlueprint) {
-            state.currentPreset = state.activeBlueprint.name === 'Prod Max' ? 'prod_max' : 'blueprint';
-          } else if (state.loadedBlueprints && state.loadedBlueprints.length > 0) {
-            const bp = state.loadedBlueprints[0];
-            state.activeBlueprint = {
-              name: bp.name,
-              totalModules: bp.totalModules,
-              modules: { ...bp.modules },
-              rawMacros: { ...(bp.rawMacros || {}) },
-              rootMacros: { ...(bp.rawMacros || bp.rootMacros || {}) },
-              sector: bp.sector || null,
-              workforceBonus: typeof bp.workforceBonus === 'number' ? bp.workforceBonus : 0,
-              ppStates: bp.ppStates ? { ...bp.ppStates } : {},
-              baselineDemand: null,
-              baselineLayerTotals: null
-            };
-            state.selectedSector = bp.sector || null;
-            state.workforceBonus = typeof bp.workforceBonus === 'number' ? bp.workforceBonus : 0;
-            state.currentPreset = Object.keys(PRESET_BLUEPRINTS).find(k => PRESET_BLUEPRINTS[k].name === bp.name) || 'blueprint';
-          } else {
-            state.currentPreset = 'all';
-          }
-        } else {
-          // Entering Single Target Mode: stash active blueprint so it can be restored on exit
-          if (state.activeBlueprint) {
-            state.previousBlueprint = {
-              name: state.activeBlueprint.name,
-              totalModules: state.activeBlueprint.totalModules,
-              modules: { ...state.activeBlueprint.modules },
-              rawMacros: { ...(state.activeBlueprint.rawMacros || {}) },
-              rootMacros: { ...(state.activeBlueprint.rootMacros || state.activeBlueprint.rawMacros || {}) },
-              sector: state.selectedSector || state.activeBlueprint.sector || null,
-              workforceBonus: state.workforceBonus,
-              ppStates: state.activeBlueprint.ppStates ? { ...state.activeBlueprint.ppStates } : {}
-            };
-            state.previousPreset = state.currentPreset;
-          }
-          state.activeBlueprint = null;
-          state.currentPreset = 'all';
-          state.selectedWareId = null;
-          state.calculatedDemand = {};
-          state.selectedSector = null;
-          state.workforceBonus = 0;
-        }
-        saveActiveBlueprintToStorage();
-        renderApp();
-        return;
-      }
 
       if (isHostedMode()) {
         clearBlueprintInternalStorage();
       }
-      state.previousBlueprint = null;
-      state.previousPreset = null;
       state.currentPreset = presetKey;
       state.selectedWareId = null;
       state.lastFocusedWareId = null;
       state.calculatedDemand = {};
+      clearCustomOutputs();
+      state.supportWorkforce = false;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem('x4_support_workforce', 'false');
+        }
+      } catch (e) {}
       if (PRESET_BLUEPRINTS[state.currentPreset]) {
         const p = PRESET_BLUEPRINTS[state.currentPreset];
         const existingLb = !isHostedMode() ? (state.loadedBlueprints || []).find(b => b && b.name === p.name) : null;
@@ -863,7 +1289,6 @@ function setupEvents(searchFocusState = {}) {
           rawMacros: { ...(p.rawMacros || {}) }
         };
         state.subdueEcCalc = true;
-        state.subdueLevel4 = true;
 
         if (isHostedMode()) {
           state.loadedBlueprints = [{
@@ -966,6 +1391,15 @@ function setupEvents(searchFocusState = {}) {
   if (selectFactionMethod) {
     selectFactionMethod.addEventListener('change', (e) => {
       state.factionConstructionMethod = e.target.value;
+      state.constructionMethod = e.target.value;
+      if (hasWorkforceStructures(state.activeBlueprint)) {
+        state.filterStructuresPlanned = false;
+        state.filterAgriFoodPlanned = false;
+        autoSupportWorkforceWithFoodAndMedicine(state.activeBlueprint, state.factionConstructionMethod, true);
+        rebuildBlueprintFromMacros();
+        saveActiveBlueprintToStorage();
+        calculateFactoryRequirements();
+      }
       renderApp();
     });
   }
@@ -1014,6 +1448,13 @@ function setupEvents(searchFocusState = {}) {
   if (addMacroSelect) {
     addMacroSelect.addEventListener('change', (e) => {
       const macro = e.target.value;
+      state.lastSelectedAddMacro = macro || null;
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          if (macro) sessionStorage.setItem('x4_last_selected_add_macro', macro);
+          else sessionStorage.removeItem('x4_last_selected_add_macro');
+        }
+      } catch (err) {}
       if (macro) {
         const wareId = mapMacroToWare(macro);
         state.selectedWareId = wareId;
@@ -1021,13 +1462,33 @@ function setupEvents(searchFocusState = {}) {
     });
   }
 
+  setupCumulativeMacroDropdown();
+
   if (btnAddMacro && addMacroSelect) {
     btnAddMacro.addEventListener('click', () => {
-      const selectedMacro = addMacroSelect.value;
+      let selectedMacro = addMacroSelect.value;
+      if (!selectedMacro && state.lastSelectedAddMacro) {
+        selectedMacro = state.lastSelectedAddMacro;
+        let opt = Array.from(addMacroSelect.options).find(o => o.value === selectedMacro);
+        if (!opt) {
+          const newOpt = document.createElement('option');
+          newOpt.value = selectedMacro;
+          let friendly = getFriendlyModuleName(selectedMacro, state.factionConstructionMethod);
+          newOpt.textContent = `${friendly} (${selectedMacro})`;
+          addMacroSelect.appendChild(newOpt);
+        }
+        addMacroSelect.value = selectedMacro;
+      }
       if (!selectedMacro) {
         alert('Please select a macro module to add.');
         return;
       }
+      state.lastSelectedAddMacro = selectedMacro;
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          sessionStorage.setItem('x4_last_selected_add_macro', selectedMacro);
+        }
+      } catch (err) {}
 
       if (!state.activeBlueprint) {
         state.activeBlueprint = {
@@ -1048,6 +1509,12 @@ function setupEvents(searchFocusState = {}) {
       const addedWareId = mapMacroToWare(selectedMacro);
       state.selectedWareId = addedWareId;
 
+      if (isWorkforceStructure(selectedMacro)) {
+        state.filterStructuresPlanned = false;
+        state.filterAgriFoodPlanned = false;
+        autoSupportWorkforceWithFoodAndMedicine(state.activeBlueprint, state.factionConstructionMethod);
+      }
+
       rebuildBlueprintFromMacros();
       saveActiveBlueprintToStorage();
       calculateFactoryRequirements();
@@ -1062,12 +1529,25 @@ function setupEvents(searchFocusState = {}) {
       state.activeBlueprint.rootMacros = { ...state.activeBlueprint.rawMacros };
     }
 
-    if (isDelete || newQty < 0) {
+    const oldQty = state.activeBlueprint.rawMacros[macro] || 0;
+
+    if (isDelete || newQty <= 0) {
       delete state.activeBlueprint.rootMacros[macro];
       delete state.activeBlueprint.rawMacros[macro];
     } else {
       state.activeBlueprint.rootMacros[macro] = Math.max(0, newQty);
       state.activeBlueprint.rawMacros[macro] = Math.max(0, newQty);
+    }
+
+    if (!isDelete && newQty > oldQty && isWorkforceStructure(macro)) {
+      state.filterStructuresPlanned = false;
+      state.filterAgriFoodPlanned = false;
+      autoSupportWorkforceWithFoodAndMedicine(state.activeBlueprint, state.factionConstructionMethod);
+    }
+
+    const wareId = mapMacroToWare(macro);
+    if (!wareId) {
+      state.selectedWareId = null;
     }
 
     rebuildBlueprintFromMacros();
@@ -1129,17 +1609,67 @@ function setupEvents(searchFocusState = {}) {
     });
   });
 
+  if (state.activeTab === 'planned') {
+    document.querySelectorAll('.macro-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        const macro = row.getAttribute('data-macro');
+        const wareId = mapMacroToWare(macro);
+        if (wareId) {
+          state.selectedWareId = wareId;
+          state.lastFocusedWareId = wareId;
+        }
+        document.querySelectorAll('.macro-row.macro-row-focused').forEach(r => r.classList.remove('macro-row-focused'));
+        row.classList.add('macro-row-focused');
+        const qtyInput = row.querySelector('.macro-qty-input');
+        if (qtyInput) qtyInput.focus();
+      });
+    });
+
+    document.querySelectorAll('.macro-qty-input').forEach(input => {
+      input.addEventListener('focus', () => {
+        const row = input.closest('.macro-row');
+        if (row) {
+          document.querySelectorAll('.macro-row.macro-row-focused').forEach(r => r.classList.remove('macro-row-focused'));
+          row.classList.add('macro-row-focused');
+          const macro = row.getAttribute('data-macro');
+          const wareId = mapMacroToWare(macro);
+          if (wareId) {
+            state.selectedWareId = wareId;
+            state.lastFocusedWareId = wareId;
+          }
+        }
+      });
+    });
+  }
+
   // Matrix View Events
   if (state.activeTab === 'matrix') {
     setupMatrixEvents();
     window.addEventListener('resize', drawLines);
+    window.addEventListener('resize', alignSubdueLevel4);
   }
 }
 
+if (state.activeBlueprint && state.activeBlueprint.rawXml) {
+  rebuildBlueprintFromMacros();
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderApp);
+  document.addEventListener('DOMContentLoaded', () => {
+    if (state.activeBlueprint && state.activeBlueprint.rawXml) {
+      rebuildBlueprintFromMacros();
+    }
+    renderApp();
+    fetchServerBlueprints(false);
+    fetchDlcStatus().catch(() => {});
+    initSocketConnection();
+  });
 } else {
   renderApp();
+  fetchServerBlueprints(false);
+  fetchDlcStatus().catch(() => {});
+  initSocketConnection();
 }
 
 window.addEventListener('scroll', () => {

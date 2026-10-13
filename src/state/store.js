@@ -1,4 +1,5 @@
 import { mapMacroToWare, PRESET_BLUEPRINTS, WARES_DB } from '../data/wares.js';
+import blueprintsCatalog from '../data/blueprints_catalog.json' with { type: 'json' };
 
 // ============================================================================
 // X4 Station Analyzer: Consolidated Reactive State Store & Persistence
@@ -35,29 +36,75 @@ export function clearBlueprintInternalStorage() {
   state.loadedBlueprints = [];
   state.activeBlueprint = null;
   state.originalBlueprint = null;
-  state.previousBlueprint = null;
-  state.previousPreset = null;
   state.selectedSector = null;
   state.workforceBonus = 0;
   state.selectedWareId = null;
   state.lastFocusedWareId = null;
   state.ppStates = {};
   state.calculatedDemand = {};
+  state.customOutputs = {};
 }
+
+export function clearCustomOutputs() {
+  state.customOutputs = {};
+  if (state.activeBlueprint) {
+    state.activeBlueprint.customOutputs = {};
+  }
+  if (typeof store !== 'undefined' && store && store.state) {
+    store.state.customOutputs = {};
+    if (store.state.activeBlueprint) {
+      store.state.activeBlueprint.customOutputs = {};
+    }
+  }
+}
+
+export function hasLoadedBlueprint() {
+  if (!state.activeBlueprint) return false;
+  const bp = state.activeBlueprint;
+  if (bp.totalModules && bp.totalModules > 0) return true;
+  if (bp.modules && Object.values(bp.modules).some(c => c > 0)) return true;
+  if (bp.rawMacros && Object.values(bp.rawMacros).some(c => c > 0)) return true;
+  return false;
+}
+
 
 let savedBlueprint = null;
 let savedOriginalBlueprint = null;
 let savedLoadedBlueprints = [];
-let savedPreset = 'all';
+let savedPreset = 'prod_max';
 let savedPriceType = 'avg';
 let savedShowConstructionBudget = true;
+let savedShowNeedsConstructionBudget = true;
+let savedNeedsBudgetMode = 'deficit';
 let savedWfCollapsed = false;
 let savedNcCollapsed = false;
 let savedRawMiningCollapsed = false;
 let savedDiffCollapsed = false;
+let savedUnownedCollapsed = false;
+let savedSubdueLevel4 = null;
+let savedSupportWorkforce = false;
+let savedServerModules = null;
+let savedServerModulesOwned = 0;
+let savedServerModulesTotal = 0;
 
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
+    const smStr = localStorage.getItem('x4_server_modules');
+    if (smStr) {
+      try {
+        const parsedSm = JSON.parse(smStr);
+        if (Array.isArray(parsedSm) && parsedSm.length > 0) {
+          savedServerModules = parsedSm;
+          savedServerModulesTotal = parsedSm.length;
+          savedServerModulesOwned = parsedSm.filter(m => m.unlocked).length;
+        }
+      } catch (e) {}
+    }
+    if ((!savedServerModules || savedServerModules.length === 0) && blueprintsCatalog && Array.isArray(blueprintsCatalog.blueprints)) {
+      savedServerModules = blueprintsCatalog.blueprints;
+      savedServerModulesTotal = savedServerModules.length;
+      savedServerModulesOwned = savedServerModules.filter(m => m.unlocked).length;
+    }
     const bpStr = localStorage.getItem('x4_active_blueprint');
     if (bpStr) {
       savedBlueprint = JSON.parse(bpStr);
@@ -82,6 +129,14 @@ try {
     if (budgetStr !== null) {
       savedShowConstructionBudget = budgetStr === 'true';
     }
+    const needsBudgetStr = localStorage.getItem('x4_show_needs_construction_budget');
+    if (needsBudgetStr !== null) {
+      savedShowNeedsConstructionBudget = needsBudgetStr === 'true';
+    }
+    const needsBudgetModeStr = localStorage.getItem('x4_needs_budget_mode');
+    if (needsBudgetModeStr === 'deficit' || needsBudgetModeStr === 'total') {
+      savedNeedsBudgetMode = needsBudgetModeStr;
+    }
     const wfColStr = localStorage.getItem('x4_wf_summary_collapsed');
     if (wfColStr !== null) {
       savedWfCollapsed = wfColStr === 'true';
@@ -98,6 +153,16 @@ try {
     if (diffColStr !== null) {
       savedDiffCollapsed = diffColStr === 'true';
     }
+    const unownedColStr = localStorage.getItem('x4_unowned_collapsed');
+    if (unownedColStr !== null) {
+      savedUnownedCollapsed = unownedColStr === 'true';
+    }
+    const subdueL4Str = localStorage.getItem('x4_subdue_level4');
+    if (subdueL4Str !== null) {
+      savedSubdueLevel4 = subdueL4Str === 'true';
+    }
+    // Support Workforce starts unchecked on initial load
+    savedSupportWorkforce = false;
   }
 } catch (e) {
   console.error('Error loading initial state from localStorage', e);
@@ -261,26 +326,44 @@ try {
   }
 } catch (e) {}
 
-let savedPreviousBlueprint = null;
-let savedPreviousPreset = null;
 let savedLastFocusedWare = null;
 let savedBpLevelCollapsed = { 1: true, 2: true, 3: true };
+let savedAddMacroSearchQuery = '';
+let savedLastSelectedAddMacro = null;
 try {
   if (typeof window !== 'undefined' && window.sessionStorage) {
-    const prevBpStr = sessionStorage.getItem('x4_previous_blueprint');
-    if (prevBpStr) savedPreviousBlueprint = JSON.parse(prevBpStr);
-    const prevPrStr = sessionStorage.getItem('x4_previous_preset');
-    if (prevPrStr) savedPreviousPreset = prevPrStr;
     const lastFocStr = sessionStorage.getItem('x4_last_focused_ware');
     if (lastFocStr) savedLastFocusedWare = lastFocStr;
     const collapsedStr = sessionStorage.getItem('x4_bp_level_collapsed');
     if (collapsedStr) savedBpLevelCollapsed = JSON.parse(collapsedStr);
+    const savedAddQ = sessionStorage.getItem('x4_add_macro_search_query');
+    if (savedAddQ) savedAddMacroSearchQuery = savedAddQ;
+    const savedAddM = sessionStorage.getItem('x4_last_selected_add_macro');
+    if (savedAddM) savedLastSelectedAddMacro = savedAddM;
   }
 } catch (e) {}
 
-if (savedPreset === 'all' && savedBlueprint && !savedPreviousBlueprint) {
-  savedPreviousBlueprint = savedBlueprint;
-  savedBlueprint = null;
+if (!savedBlueprint && PRESET_BLUEPRINTS && PRESET_BLUEPRINTS['prod_max']) {
+  const p = PRESET_BLUEPRINTS['prod_max'];
+  savedBlueprint = {
+    name: p.name,
+    totalModules: p.totalModules,
+    modules: { ...p.modules },
+    rawMacros: { ...(p.rawMacros || {}) },
+    rootMacros: { ...(p.rawMacros || {}) },
+    sector: null,
+    workforceBonus: 0,
+    ppStates: {},
+    baselineDemand: null,
+    baselineLayerTotals: null
+  };
+  savedOriginalBlueprint = {
+    name: p.name,
+    totalModules: p.totalModules,
+    modules: { ...p.modules },
+    rawMacros: { ...(p.rawMacros || {}) }
+  };
+  savedPreset = 'prod_max';
 }
 
 export const DEFAULT_STATE = {
@@ -291,10 +374,20 @@ export const DEFAULT_STATE = {
   activeTab: 'matrix',   // 'matrix' | 'planned'
   priceType: 'avg',      // 'min' | 'avg' | 'max'
   showConstructionBudget: true,
+  showNeedsConstructionBudget: true,
+  needsBudgetMode: 'deficit',
   workforceSummaryCollapsed: false,
   nonContributingCollapsed: false,
   rawMiningCollapsed: false,
   moduleDiffCollapsed: false,
+  unownedCollapsed: false,
+  customOutputs: {},
+  supportWorkforce: false,
+  addMacroSearchQuery: '',
+  lastSelectedAddMacro: null,
+  serverModules: null,
+  serverModulesOwnedCount: 0,
+  serverModulesTotalCount: 0,
 };
 
 export const state = {
@@ -302,27 +395,37 @@ export const state = {
   workforceCount: 0,
   sunlightPct: 100,
   constructionMethod: 'commonwealth',
+  serverModules: (savedServerModules && savedServerModules.length > 0) ? savedServerModules : (blueprintsCatalog?.blueprints || null),
+  serverModulesOwnedCount: savedServerModulesOwned || (blueprintsCatalog?.blueprints ? blueprintsCatalog.blueprints.filter(m => m.unlocked).length : 0),
+  serverModulesTotalCount: savedServerModulesTotal || (blueprintsCatalog?.blueprints ? blueprintsCatalog.blueprints.length : 0),
   priceType: savedPriceType || 'avg',
   showConstructionBudget: savedShowConstructionBudget !== undefined ? savedShowConstructionBudget : true,
+  showNeedsConstructionBudget: savedShowNeedsConstructionBudget !== undefined ? savedShowNeedsConstructionBudget : true,
+  needsBudgetMode: savedNeedsBudgetMode || 'deficit',
   workforceSummaryCollapsed: savedWfCollapsed !== undefined ? savedWfCollapsed : false,
   nonContributingCollapsed: savedNcCollapsed !== undefined ? savedNcCollapsed : false,
   rawMiningCollapsed: savedRawMiningCollapsed !== undefined ? savedRawMiningCollapsed : false,
   moduleDiffCollapsed: savedDiffCollapsed !== undefined ? savedDiffCollapsed : false,
+  unownedCollapsed: savedUnownedCollapsed !== undefined ? savedUnownedCollapsed : false,
   activeTab: savedActiveTab, // 'matrix' or 'planned'
   activeBlueprint: savedBlueprint,
   originalBlueprint: savedOriginalBlueprint,
   loadedBlueprints: savedLoadedBlueprints,
-  previousBlueprint: savedPreviousBlueprint,
-  previousPreset: savedPreviousPreset,
   selectedWareId: null,
+  focusedBiPanel: null,
   lastFocusedWareId: savedLastFocusedWare,
   selectedSector: savedSector,
   currentPreset: savedPreset,
   searchQuery: '',
+  addMacroSearchQuery: savedAddMacroSearchQuery || '',
+  lastSelectedAddMacro: savedLastSelectedAddMacro || null,
   workforceBonus: savedWorkforceBonus,
+  supportWorkforce: savedSupportWorkforce !== undefined ? savedSupportWorkforce : false,
   subdueZeroX: false,
   subdueEcCalc: savedBlueprint ? true : false,
-  subdueLevel4: savedBlueprint ? true : false,
+  subdueLevel4: savedSubdueLevel4 !== null ? savedSubdueLevel4 : true,
+  subdueL4Left: null,
+  subdueL4MarginLeft: 0,
   inspectorSingle: false,
   macroSortAsc: true,
   factionConstructionMethod: 'commonwealth',
@@ -336,6 +439,7 @@ export const state = {
   plannedScroll: savedPlannedScroll,
   ppStates: {},
   calculatedDemand: {},
+  customOutputs: (savedBlueprint && savedBlueprint.customOutputs) ? { ...savedBlueprint.customOutputs } : {},
   layerTotals: {
     L1: { totalProd: 0, totalCons: 0, ecConsumed: 0, activeModules: 0 },
     L2: { totalProd: 0, totalCons: 0, ecConsumed: 0, activeModules: 0 },
@@ -355,7 +459,9 @@ export function collapseAllBiComponents() {
   state.bpLevelCollapsed = { 1: true, 2: true, 3: true };
   state.moduleDiffCollapsed = true;
   state.showConstructionBudget = false;
+  state.showNeedsConstructionBudget = false;
   state.nonContributingCollapsed = true;
+  state.unownedCollapsed = false;
 
   if (typeof window !== 'undefined') {
     try {
@@ -363,13 +469,18 @@ export function collapseAllBiComponents() {
       localStorage.setItem('x4_wf_summary_collapsed', 'true');
       sessionStorage.setItem('x4_bp_level_collapsed', JSON.stringify({ 1: true, 2: true, 3: true }));
       localStorage.setItem('x4_diff_collapsed', 'true');
+      localStorage.setItem('x4_unowned_collapsed', 'false');
       localStorage.setItem('x4_show_construction_budget', 'false');
+      localStorage.setItem('x4_show_needs_construction_budget', 'false');
       localStorage.setItem('x4_nc_modules_collapsed', 'true');
     } catch (e) {}
   }
 
   if (store && typeof store.setShowConstructionBudget === 'function') {
     store.state.showConstructionBudget = false;
+  }
+  if (store && typeof store.setShowNeedsConstructionBudget === 'function') {
+    store.state.showNeedsConstructionBudget = false;
   }
 }
 
@@ -378,14 +489,13 @@ export function saveActiveBlueprintToStorage() {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return;
 
-    const bpToSave = state.activeBlueprint || state.previousBlueprint;
+    const bpToSave = state.activeBlueprint;
     if (bpToSave) {
-      if (state.activeBlueprint) {
-        state.activeBlueprint.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
-      }
+      bpToSave.workforceBonus = (typeof state.workforceBonus === 'number') ? state.workforceBonus : 0;
+      bpToSave.customOutputs = state.customOutputs ? { ...state.customOutputs } : {};
       localStorage.setItem('x4_active_blueprint', JSON.stringify(bpToSave));
       localStorage.setItem('x4_current_preset', state.currentPreset);
-      const origToSave = state.originalBlueprint || (state.previousBlueprint ? { name: state.previousBlueprint.name, rawMacros: state.previousBlueprint.rawMacros } : null);
+      const origToSave = state.originalBlueprint || { name: bpToSave.name, rawMacros: bpToSave.rawMacros };
       if (origToSave) {
         localStorage.setItem('x4_original_blueprint', JSON.stringify(origToSave));
       }
@@ -395,55 +505,38 @@ export function saveActiveBlueprintToStorage() {
       localStorage.setItem('x4_current_preset', state.currentPreset);
     }
 
-    const sectorToSave = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || (state.previousBlueprint && state.previousBlueprint.sector) || null;
+    const sectorToSave = state.selectedSector || (state.activeBlueprint && state.activeBlueprint.sector) || null;
     if (sectorToSave) {
       localStorage.setItem('x4_selected_sector', sectorToSave);
-    } else if (!state.previousBlueprint) {
+    } else {
       localStorage.removeItem('x4_selected_sector');
     }
 
-    const wfToSave = (typeof state.workforceBonus === 'number' && state.workforceBonus > 0)
-      ? state.workforceBonus
-      : (state.previousBlueprint && typeof state.previousBlueprint.workforceBonus === 'number' ? state.previousBlueprint.workforceBonus : 0);
+    const wfToSave = (typeof state.workforceBonus === 'number' && state.workforceBonus > 0) ? state.workforceBonus : 0;
     if (wfToSave > 0) {
       localStorage.setItem('x4_workforce_bonus', String(wfToSave));
-    } else if (!state.previousBlueprint) {
+    } else {
       localStorage.removeItem('x4_workforce_bonus');
     }
 
     if (hosted) {
       // In hosted mode, internal storage of multiple blueprints is not allowed.
       // Just one blueprint is active at a time.
-      const singleBp = state.activeBlueprint || state.previousBlueprint;
-      if (singleBp) {
+      if (state.activeBlueprint) {
         state.loadedBlueprints = [{
-          name: singleBp.name,
-          totalModules: singleBp.totalModules,
-          modules: { ...(singleBp.modules || {}) },
-          rawMacros: { ...(singleBp.rawMacros || {}) },
-          rootMacros: { ...(singleBp.rootMacros || {}) },
-          sector: singleBp.sector || sectorToSave || null,
-          workforceBonus: (typeof singleBp.workforceBonus === 'number') ? singleBp.workforceBonus : wfToSave,
-          ppStates: { ...(singleBp.ppStates || {}) }
+          name: state.activeBlueprint.name,
+          totalModules: state.activeBlueprint.totalModules,
+          modules: { ...(state.activeBlueprint.modules || {}) },
+          rawMacros: { ...(state.activeBlueprint.rawMacros || {}) },
+          rootMacros: { ...(state.activeBlueprint.rootMacros || {}) },
+          sector: state.activeBlueprint.sector || sectorToSave || null,
+          workforceBonus: (typeof state.activeBlueprint.workforceBonus === 'number') ? state.activeBlueprint.workforceBonus : wfToSave,
+          ppStates: { ...(state.activeBlueprint.ppStates || {}) }
         }];
         localStorage.setItem('x4_loaded_blueprints', JSON.stringify(state.loadedBlueprints));
       } else {
         state.loadedBlueprints = [];
         localStorage.removeItem('x4_loaded_blueprints');
-      }
-
-      if (window.sessionStorage) {
-        if (state.previousBlueprint) {
-          sessionStorage.setItem('x4_previous_blueprint', JSON.stringify(state.previousBlueprint));
-          if (state.previousPreset) {
-            sessionStorage.setItem('x4_previous_preset', state.previousPreset);
-          } else {
-            sessionStorage.removeItem('x4_previous_preset');
-          }
-        } else {
-          sessionStorage.removeItem('x4_previous_blueprint');
-          sessionStorage.removeItem('x4_previous_preset');
-        }
       }
     } else {
       if (state.loadedBlueprints && state.loadedBlueprints.length > 0) {
@@ -463,19 +556,9 @@ export function saveActiveBlueprintToStorage() {
       } else {
         localStorage.removeItem('x4_loaded_blueprints');
       }
-      if (window.sessionStorage) {
-        if (state.previousBlueprint) {
-          sessionStorage.setItem('x4_previous_blueprint', JSON.stringify(state.previousBlueprint));
-          if (state.previousPreset) {
-            sessionStorage.setItem('x4_previous_preset', state.previousPreset);
-          } else {
-            sessionStorage.removeItem('x4_previous_preset');
-          }
-        } else {
-          sessionStorage.removeItem('x4_previous_blueprint');
-          sessionStorage.removeItem('x4_previous_preset');
-        }
-      }
+    }
+    if (typeof state.subdueLevel4 === 'boolean') {
+      localStorage.setItem('x4_subdue_level4', String(state.subdueLevel4));
     }
     if (window.sessionStorage) {
       if (state.lastFocusedWareId) {
@@ -622,6 +705,135 @@ export class StationStore extends EventTarget {
       } catch (e) {}
     }
     this._saveState();
+  }
+
+  setShowNeedsConstructionBudget(show) {
+    const bool = Boolean(show);
+    this.state.showNeedsConstructionBudget = bool;
+    state.showNeedsConstructionBudget = bool;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('x4_show_needs_construction_budget', String(bool));
+      } catch (e) {}
+    }
+    this._saveState();
+  }
+
+  setFocusedBiPanel(panelId) {
+    this.state.focusedBiPanel = panelId;
+    state.focusedBiPanel = panelId;
+  }
+
+  setNeedsBudgetMode(mode) {
+    const validMode = mode === 'total' ? 'total' : 'deficit';
+    this.state.needsBudgetMode = validMode;
+    state.needsBudgetMode = validMode;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('x4_needs_budget_mode', validMode);
+      } catch (e) {}
+    }
+    this._saveState();
+  }
+
+  setSubdueLevel4(subdue) {
+    const bool = Boolean(subdue);
+    this.state.subdueLevel4 = bool;
+    state.subdueLevel4 = bool;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('x4_subdue_level4', String(bool));
+      } catch (e) {}
+    }
+    this._saveState();
+  }
+
+  setCustomOutput(wareId, value) {
+    if (!hasLoadedBlueprint()) {
+      if (typeof window !== 'undefined' && typeof window.showNoBlueprintPopup === 'function') {
+        window.showNoBlueprintPopup();
+      }
+      return;
+    }
+    if (!this.state.customOutputs) {
+      this.state.customOutputs = {};
+    }
+    if (!state.customOutputs) {
+      state.customOutputs = {};
+    }
+    if (value === null || value === undefined || value === '' || isNaN(value)) {
+      delete this.state.customOutputs[wareId];
+      delete state.customOutputs[wareId];
+      if (this.state.activeBlueprint && this.state.activeBlueprint.customOutputs) {
+        delete this.state.activeBlueprint.customOutputs[wareId];
+      }
+      if (state.activeBlueprint && state.activeBlueprint.customOutputs) {
+        delete state.activeBlueprint.customOutputs[wareId];
+      }
+    } else {
+      const intVal = Math.max(0, Math.round(Number(value)));
+      this.state.customOutputs[wareId] = intVal;
+      state.customOutputs[wareId] = intVal;
+      if (this.state.activeBlueprint) {
+        if (!this.state.activeBlueprint.customOutputs) {
+          this.state.activeBlueprint.customOutputs = {};
+        }
+        this.state.activeBlueprint.customOutputs[wareId] = intVal;
+      }
+      if (state.activeBlueprint) {
+        if (!state.activeBlueprint.customOutputs) {
+          state.activeBlueprint.customOutputs = {};
+        }
+        state.activeBlueprint.customOutputs[wareId] = intVal;
+      }
+    }
+    this._saveState();
+  }
+
+  clearCustomOutputs() {
+    this.state.customOutputs = {};
+    state.customOutputs = {};
+    if (this.state.activeBlueprint) {
+      this.state.activeBlueprint.customOutputs = {};
+    }
+    if (state.activeBlueprint) {
+      state.activeBlueprint.customOutputs = {};
+    }
+    this._saveState();
+  }
+
+  setServerModules(modules) {
+    if (!Array.isArray(modules)) return;
+    this.state.serverModules = modules;
+    state.serverModules = modules;
+    this.state.serverModulesTotalCount = modules.length;
+    state.serverModulesTotalCount = modules.length;
+    const owned = modules.filter(m => Boolean(m.unlocked)).length;
+    this.state.serverModulesOwnedCount = owned;
+    state.serverModulesOwnedCount = owned;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('x4_server_modules', JSON.stringify(modules));
+      }
+    } catch (e) {}
+    this.notify('SERVER_MODULES_UPDATED', modules);
+  }
+
+  updateModuleOwnership(idOrMacro, unlocked) {
+    if (!Array.isArray(this.state.serverModules)) return;
+    const target = this.state.serverModules.find(m => m.id === idOrMacro || m.macro === idOrMacro);
+    if (target) {
+      target.unlocked = Boolean(unlocked);
+      const owned = this.state.serverModules.filter(m => Boolean(m.unlocked)).length;
+      this.state.serverModulesOwnedCount = owned;
+      state.serverModulesOwnedCount = owned;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem('x4_server_modules', JSON.stringify(this.state.serverModules));
+        }
+      } catch (e) {}
+      this.notify('MODULE_OWNERSHIP_UPDATED', { id: idOrMacro, unlocked: target.unlocked });
+    }
   }
 
   /* --- Subscription System --- */

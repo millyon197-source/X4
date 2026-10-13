@@ -63,7 +63,7 @@ npm -v
 ### Step 2.2: Navigate to the Project Folder
 
 ```powershell
-cd C:\Users\Zeus\projects\x4-vite-explorer
+cd $HOME\projects\x4-supply-matrix
 ```
 
 ---
@@ -116,18 +116,31 @@ npm run preview
 
 ## 3. Quick Reference Commands
 
+### One-Click Startup (Recommended for all deployments)
+Double-click `Start.bat` or run:
 ```powershell
-# Install packages
-npm install
+.\setup_x4_supply_matrix.ps1
+```
+* Automatically verifies Node.js and installs missing dependencies.
+* Synchronizes `extensions/x4_companion_bridge` into your local X4 game directories (Steam and Egosoft Documents).
+* Cleans up stale port listeners.
+* Starts the Companion backend server (`http://localhost:3000`) and the web application (`http://localhost:5173/X4/`).
+* Automatically launches the web interface in your default browser.
+* Cleanly shuts down both server and frontend when you press `Ctrl + C`.
 
-# Start development server
-npm run dev
+### Advanced CLI Commands
+```powershell
+# Run setup script with specific options
+.\setup_x4_supply_matrix.ps1 -Mode dev -NoBrowser       # Start without opening browser
+.\setup_x4_supply_matrix.ps1 -ServerOnly                # Start backend companion server only
+.\setup_x4_supply_matrix.ps1 -Clean                     # Full clean reinstall of modules
 
-# Compile production bundle
-npm run build
-
-# Preview production build locally
-npm run preview
+# Manual CLI commands
+npm install         # Install packages
+npm run dev         # Start Vite development server
+npm run server      # Start companion backend server
+npm run build       # Compile production bundle
+npm run preview     # Preview production build locally
 ```
 
 ---

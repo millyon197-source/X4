@@ -1816,5 +1816,10 @@
     "energycells": 1575,
     "ore": 3700,
     "silicon": 2100
+  },
+  "struct_arg_cross_03_macro": {
+    "claytronics": 15,
+    "energycells": 30,
+    "hullparts": 55
   }
 }

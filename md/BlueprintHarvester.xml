@@ -6,12 +6,13 @@
       <delay exact="2s" />
       <actions>
         <raise_lua_event name="'X4_Check_Commands'" />
+        <signal_cue cue="HarvestPlayerStats" />
         <reset_cue cue="this" />
       </actions>
     </cue>
 
     <!-- Initialization on game load / start with version upgrade -->
-    <cue name="CompanionHarvesterInit" version="10" instantiate="true">
+    <cue name="CompanionHarvesterInit" version="12" instantiate="true">
       <conditions>
         <check_any>
           <event_cue_signalled cue="md.Setup.GameStart" />
@@ -20,15 +21,45 @@
         </check_any>
       </conditions>
       <actions>
-        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v10 triggered on game load!'" />
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v12 triggered on game load!'" />
+        <raise_lua_event name="'X4_Game_Loaded'" />
+        <raise_lua_event name="'X4_Reload_UI'" />
         <reset_cue cue="CompanionHeartbeat" />
         <signal_cue cue="HarvestPlayerStats" />
         <signal_cue cue="HarvestBlueprints" />
       </actions>
     </cue>
 
+    <!-- Dedicated Game Loaded Detection Cue: triggers on <event_game_loaded/> to reload the app UI -->
+    <cue name="CompanionOnGameLoaded" instantiate="true">
+      <conditions>
+        <event_game_loaded />
+      </conditions>
+      <actions>
+        <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] event_game_loaded detected! Reloading app UI...'" />
+        <raise_lua_event name="'X4_Game_Loaded'" />
+        <raise_lua_event name="'X4_Reload_UI'" />
+        <reset_cue cue="CompanionHeartbeat" />
+        <signal_cue cue="HarvestPlayerStats" />
+        <signal_cue cue="HarvestBlueprints" />
+      </actions>
+      <cues>
+        <!-- Delayed post-load refresh to re-harvest complete universe encyclopedia & stats -->
+        <cue name="CompanionPostLoadSync">
+          <delay exact="2s" />
+          <actions>
+            <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] Post-load sync: refreshing player stats and full encyclopedia...'" />
+            <signal_cue cue="HarvestPlayerStats" />
+            <signal_cue cue="HarvestBlueprints" />
+            <signal_cue cue="HarvestShips" />
+            <signal_cue cue="HarvestEquipment" />
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
     <!-- Triggered when Companion UI requests an on-demand update -->
-    <cue name="CompanionOnUpdateRequest" version="10" instantiate="true">
+    <cue name="CompanionOnUpdateRequest" version="11" instantiate="true">
       <conditions>
         <check_any>
           <event_ui_triggered screen="'X4_Request_Update'" />
@@ -163,7 +194,7 @@
         <append_list_elements name="$WaresList" other="[ware.module_ter_hab_s_01, ware.module_ter_pier_01, ware.module_ter_pier_02, ware.module_ter_pier_03, ware.module_ter_pier_04, ware.module_ter_pier_tradestation_01, ware.module_ter_prod_energycells_01, ware.module_ter_prod_medicalsupplies_01, ware.module_ter_prod_scrap_recycler, ware.module_ter_prod_terranmre_01, ware.module_ter_stor_container_l_01, ware.module_ter_stor_container_m_01, ware.module_ter_stor_container_m_tradestation, ware.module_ter_stor_container_s_01, ware.module_ter_stor_liquid_l_01]" />
         <append_list_elements name="$WaresList" other="[ware.module_ter_stor_liquid_m_01, ware.module_ter_stor_liquid_s_01, ware.module_ter_stor_liquid_s_tradestation, ware.module_ter_stor_solid_l_01, ware.module_ter_stor_solid_m_01, ware.module_ter_stor_solid_s_01]" />
 
-        <set_value name="$ExportTable" exact="table[]" />
+        <set_value name="$ExportList" exact="[]" />
 
         <do_for_each in="$WaresList" name="$Ware">
           <do_if value="@$Ware">
@@ -184,7 +215,7 @@
               <set_value name="$MacroId" exact="$Ware.macro.id" />
             </do_if>
 
-            <set_value name="$ExportTable.{$WareID}" exact="table[
+            <append_to_list name="$ExportList" exact="table[
               $id = $WareID,
               $name = $Name,
               $description = $Desc,
@@ -198,7 +229,7 @@
           </do_if>
         </do_for_each>
 
-        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'modules', $items = $ExportTable]" />
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'modules', $items = $ExportList]" />
       </actions>
     </cue>
 
@@ -214,7 +245,7 @@
         <append_list_elements name="$WaresList" other="[ware.ship_gen_s_transdrone_container_02_a, ware.ship_ter_l_destroyer_01_a, ware.ship_ter_l_miner_liquid_01_a, ware.ship_ter_l_miner_solid_01_a, ware.ship_ter_l_trans_container_01_a, ware.ship_ter_m_corvette_01_a, ware.ship_ter_m_frigate_01_a, ware.ship_ter_m_gunboat_01_a, ware.ship_ter_m_miner_liquid_01_a, ware.ship_ter_m_miner_solid_01_a, ware.ship_ter_m_trans_container_01_a, ware.ship_ter_s_fighter_01_a, ware.ship_ter_s_fighter_02_a, ware.ship_ter_s_fighter_03_a, ware.ship_ter_s_heavyfighter_01_a]" />
         <append_list_elements name="$WaresList" other="[ware.ship_ter_s_miner_solid_01_a, ware.ship_ter_s_scout_01_a, ware.ship_ter_s_scout_02_a, ware.ship_ter_s_trans_container_01_a, ware.ship_ter_xl_builder_01_a, ware.ship_ter_xl_carrier_01_a, ware.ship_ter_xl_resupplier_01_a, ware.ship_yak_m_corvette_01_a, ware.ship_yak_s_fighter_01_a]" />
 
-        <set_value name="$ExportTable" exact="table[]" />
+        <set_value name="$ExportList" exact="[]" />
 
         <do_for_each in="$WaresList" name="$Ware">
           <do_if value="@$Ware">
@@ -235,7 +266,7 @@
               <set_value name="$MacroId" exact="$Ware.macro.id" />
             </do_if>
 
-            <set_value name="$ExportTable.{$WareID}" exact="table[
+            <append_to_list name="$ExportList" exact="table[
               $id = $WareID,
               $name = $Name,
               $description = $Desc,
@@ -249,7 +280,7 @@
           </do_if>
         </do_for_each>
 
-        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'ships', $items = $ExportTable]" />
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'ships', $items = $ExportList]" />
       </actions>
     </cue>
 
@@ -273,7 +304,7 @@
         <append_list_elements name="$WaresList" other="[ware.turret_ter_l_guided_01_mk1, ware.turret_ter_l_laser_01_mk1, ware.turret_ter_l_mining_01_mk1, ware.turret_ter_m_beam_01_mk1, ware.turret_ter_m_beam_02_mk1, ware.turret_ter_m_dumbfire_02_mk1, ware.turret_ter_m_gatling_01_mk1, ware.turret_ter_m_gatling_02_mk1, ware.turret_ter_m_guided_02_mk1, ware.turret_ter_m_laser_01_mk1, ware.turret_ter_m_laser_02_mk1, ware.turret_ter_m_mining_01_mk1, ware.turret_ter_m_mining_02_mk1, ware.weapon_atf_xl_battleship_01_mk1, ware.weapon_clustermine_01]" />
         <append_list_elements name="$WaresList" other="[ware.weapon_ter_l_destroyer_01_mk1, ware.weapon_ter_m_beam_01_mk1, ware.weapon_ter_m_beam_01_mk2, ware.weapon_ter_m_gatling_01_mk1, ware.weapon_ter_m_gatling_01_mk2, ware.weapon_ter_m_laser_01_mk1, ware.weapon_ter_m_laser_01_mk2, ware.weapon_ter_s_beam_01_mk1, ware.weapon_ter_s_beam_01_mk2, ware.weapon_ter_s_gatling_01_mk1, ware.weapon_ter_s_gatling_01_mk2, ware.weapon_ter_s_laser_01_mk1, ware.weapon_ter_s_laser_01_mk2]" />
 
-        <set_value name="$ExportTable" exact="table[]" />
+        <set_value name="$ExportList" exact="[]" />
 
         <do_for_each in="$WaresList" name="$Ware">
           <do_if value="@$Ware">
@@ -294,7 +325,7 @@
               <set_value name="$MacroId" exact="$Ware.macro.id" />
             </do_if>
 
-            <set_value name="$ExportTable.{$WareID}" exact="table[
+            <append_to_list name="$ExportList" exact="table[
               $id = $WareID,
               $name = $Name,
               $description = $Desc,
@@ -308,7 +339,7 @@
           </do_if>
         </do_for_each>
 
-        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'equipment', $items = $ExportTable]" />
+        <raise_lua_event name="'X4_Export_Encyclopedia'" param="table[$table = 'equipment', $items = $ExportList]" />
       </actions>
     </cue>
   </cues>

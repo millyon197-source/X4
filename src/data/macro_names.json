@@ -211,6 +211,8 @@
   "hab_pir_m_01_macro": "Argon M Dormitory",
   "hab_pir_s_01_macro": "Argon S Dormitory",
   "storage_pir_l_condensate_01_macro": "Protectyon Shield Generator",
+  "struct_ava_protectyon_collector_macro": "Struct Ava Protectyon Collector",
+  "prod_ava_protectyon_macro": "Protectyon Production (Avarice)",
   "buildmodule_bor_ships_m_dockarea_01_macro": "Boron S/M Ship Fabrication Bay",
   "buildmodule_bor_ships_l_macro": "Boron L Ship Fabrication Bay",
   "buildmodule_bor_ships_xl_macro": "Boron XL Ship Fabrication Bay",
@@ -332,5 +334,10 @@
   "struct_xen_observationdeck_02_macro": "Pavilion Observation Deck (Xenon)",
   "struct_xen_observationdeck_03_macro": "Panoramic Spire Observation Deck (Xenon)",
   "struct_xen_observationdeck_04_macro": "Penthouse Observation Deck (Xenon)",
-  "radar_arg_dish_01_macro": "Wide Area Sensor Array"
+  "radar_arg_dish_01_macro": "Wide Area Sensor Array",
+  "struct_arg_arc_01_macro": "Argon Arc Connection Structure 01",
+  "struct_arg_cross_02_macro": "Argon Cross Connection Structure 02",
+  "struct_arg_cross_03_macro": "Argon Cross Connection Structure 03",
+  "struct_arg_cross_04_macro": "Argon Cross Connection Structure 04",
+  "struct_arg_cross_05_macro": "Argon Cross Connection Structure 05"
 }

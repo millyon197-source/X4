@@ -10,7 +10,7 @@ import { state } from '../state/store.js';
  * Evaluates Commonwealth (ScrapMetal) and Terran (TerScrapMetal) recycling requirements.
  *
  * @param {Object} [blueprint] - Station blueprint with rawMacros or modules
- * @param {string} [selectedWareId] - Active single target ware ID
+ * @param {string} [selectedWareId] - Selected ware ID
  * @param {Object} [calculatedDemand] - Map of calculated demands
  * @returns {Object} Detailed scrap raw demand breakdown
  */
@@ -59,30 +59,6 @@ export function calculateScrapMetalRawScrapDemand(
     genClayMods = (modules['ScrapClaytronics'] !== undefined) ? modules['ScrapClaytronics'] : genRecyclers;
     terCompMods = (modules['TerCompSubstrate'] !== undefined) ? modules['TerCompSubstrate'] : terRecyclers;
     terCarbMods = (modules['TerSilCarbide'] !== undefined) ? modules['TerSilCarbide'] : terRecyclers;
-  } else {
-    // Single Target Mode
-    const selId = selectedWareId;
-    if (selId === 'ScrapClaytronics') {
-      genClayMods = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-      genRecyclers = genClayMods;
-    } else if (selId === 'ScrapHullParts') {
-      genHullMods = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-      genRecyclers = genHullMods;
-    } else if (selId === 'TerCompSubstrate') {
-      terCompMods = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-      terRecyclers = terCompMods;
-    } else if (selId === 'TerSilCarbide') {
-      terCarbMods = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-      terRecyclers = terCarbMods;
-    } else if (selId === 'ScrapMetal') {
-      procModules = 1;
-    } else if (selId === 'TerScrapMetal') {
-      procModules = 1;
-    } else if (selId === 'ScrapProc') {
-      procModules = 1;
-    } else if (selId === 'RawScrap') {
-      procModules = 1;
-    }
   }
 
   // Scrap Metal demand of Raw Scrap:
@@ -133,7 +109,7 @@ export function calculateScrapMetalRawScrapDemand(
  * Calculates Energy Cell demand for scrap recycling and scrap processing modules.
  *
  * @param {Object} [blueprint] - Station blueprint
- * @param {string} [selectedWareId] - Active single target ware ID
+ * @param {string} [selectedWareId] - Selected ware ID
  * @param {Object} [calculatedDemand] - Map of calculated demands
  * @returns {Object} Energy Cell demand breakdown for scrap operations
  */
@@ -181,26 +157,6 @@ export function calculateScrapMetalEcDemand(
     }
     if (terRecyclers === 0 && modules['TerScrapMetal']) {
       terRecyclers = modules['TerScrapMetal'];
-    }
-  } else {
-    // Single Target Mode
-    const selId = selectedWareId;
-    if (selId === 'ScrapClaytronics' || selId === 'ScrapHullParts') {
-      genRecyclers = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-    } else if (selId === 'TerCompSubstrate' || selId === 'TerSilCarbide') {
-      terRecyclers = (calculatedDemand[selId] && calculatedDemand[selId].modulesNeeded) || 1;
-    } else if (selId === 'ScrapMetal') {
-      genRecyclers = 0;
-    } else if (selId === 'TerScrapMetal') {
-      terRecyclers = 0;
-    }
-
-    const smRate = ((calculatedDemand['ScrapMetal'] && calculatedDemand['ScrapMetal'].rateNeeded) || 0) +
-                   ((calculatedDemand['TerScrapMetal'] && calculatedDemand['TerScrapMetal'].rateNeeded) || 0);
-    if (smRate > 0) {
-      procModules = Math.ceil(smRate / 9000);
-    } else if (selId === 'RawScrap') {
-      procModules = 1;
     }
   }
 
@@ -271,27 +227,15 @@ export function accumulateRawMiningRates(
   };
 
   if (blueprint) {
-    // In Blueprint Mode: Calculate raw extraction from actual active blueprint modules
+    // In Blueprint Mode: Calculate raw extraction from active blueprint modules or needed modules to satisfy downstream demand
     const bpModules = blueprint.modules || {};
-    Object.entries(bpModules).forEach(([wareId, count]) => {
+    const waresToCheck = new Set([...Object.keys(bpModules), ...Object.keys(demand)]);
+    waresToCheck.forEach((wareId) => {
       const ware = WARES_DB[wareId];
-      if (!ware || !ware.recipe || count <= 0 || ware.level === 4) return;
-
-      Object.entries(ware.recipe).forEach(([inputId, inputQty]) => {
-        if (inputId === 'RawScrap' && (wareId === 'ScrapMetal' || wareId === 'TerScrapMetal' || wareId === 'ScrapProc')) {
-          return; // Dynamically handled below
-        }
-        if (rawTotals[inputId] !== undefined) {
-          rawTotals[inputId] += count * inputQty;
-        }
-      });
-    });
-  } else {
-    // Single Target Mode: Calculate from chain modulesNeeded
-    Object.entries(demand).forEach(([wareId, calc]) => {
-      const ware = WARES_DB[wareId];
-      if (!ware || !ware.recipe || !calc || ware.level === 4) return;
-      const count = calc.modulesNeeded || 0;
+      if (!ware || !ware.recipe || ware.level === 4) return;
+      const inPlan = bpModules[wareId] || 0;
+      const needed = (demand[wareId] && demand[wareId].modulesNeeded) || 0;
+      const count = Math.max(inPlan, needed);
       if (count <= 0) return;
 
       Object.entries(ware.recipe).forEach(([inputId, inputQty]) => {

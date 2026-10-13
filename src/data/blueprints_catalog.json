@@ -10764,6 +10764,92 @@
         "thrust": null,
         "travel": null
       }
+    },
+    {
+      "id": "struct_arg_arc_01_macro",
+      "name": "Argon Arc Connection Structure 01",
+      "macro": "struct_arg_arc_01_macro",
+      "group": "modules",
+      "subgroup": "Structural",
+      "moduleType": "Structural",
+      "category": "Structural",
+      "faction": "Argon",
+      "hull": 120000,
+      "unlocked": true,
+      "cost": {
+        "claytronics": 15,
+        "energycells": 30,
+        "hullparts": 55
+      }
+    },
+    {
+      "id": "struct_arg_cross_02_macro",
+      "name": "Argon Cross Connection Structure 02",
+      "macro": "struct_arg_cross_02_macro",
+      "group": "modules",
+      "subgroup": "Structural",
+      "moduleType": "Structural",
+      "category": "Structural",
+      "faction": "Argon",
+      "hull": 110000,
+      "unlocked": true,
+      "cost": {
+        "claytronics": 14,
+        "energycells": 28,
+        "hullparts": 52
+      }
+    },
+    {
+      "id": "struct_arg_cross_03_macro",
+      "name": "Argon Cross Connection Structure 03",
+      "macro": "struct_arg_cross_03_macro",
+      "group": "modules",
+      "subgroup": "Structural",
+      "moduleType": "Structural",
+      "category": "Structural",
+      "faction": "Argon",
+      "hull": 100000,
+      "unlocked": true,
+      "cost": {
+        "claytronics": 15,
+        "energycells": 30,
+        "hullparts": 55
+      }
+    },
+    {
+      "id": "struct_arg_cross_04_macro",
+      "name": "Argon Cross Connection Structure 04",
+      "macro": "struct_arg_cross_04_macro",
+      "group": "modules",
+      "subgroup": "Structural",
+      "moduleType": "Structural",
+      "category": "Structural",
+      "faction": "Argon",
+      "hull": 90000,
+      "unlocked": true,
+      "cost": {
+        "claytronics": 16,
+        "energycells": 32,
+        "hullparts": 58
+      }
+    },
+    {
+      "id": "struct_arg_cross_05_macro",
+      "name": "Argon Cross Connection Structure 05",
+      "macro": "struct_arg_cross_05_macro",
+      "group": "modules",
+      "subgroup": "Structural",
+      "moduleType": "Structural",
+      "category": "Structural",
+      "faction": "Argon",
+      "hull": 80000,
+      "unlocked": true,
+      "cost": {
+        "claytronics": 18,
+        "energycells": 36,
+        "hullparts": 64
+      }
     }
-  ]
+  ],
+  "totalCount": 343
 }

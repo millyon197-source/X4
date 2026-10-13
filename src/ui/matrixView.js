@@ -1,12 +1,15 @@
-import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareHourlyRatePerModule, getWareCycleTimeSec, getWareOutputPerCycle, MACRO_TO_WARE, FACTION_WARE_MAP, isTerranWare, isBlueprintTerran, NO_PP_WARES } from '../data/wares.js';
+import { WARES_DB, DEPENDENCIES, mapMacroToWare, getFriendlyModuleName, getWareHourlyRatePerModule, getWareCycleTimeSec, getWareOutputPerCycle, MACRO_TO_WARE, FACTION_WARE_MAP, isTerranWare, isBlueprintTerran, isTerranFaction, NO_PP_WARES } from '../data/wares.js';
 import { state, store, saveActiveBlueprintToStorage } from '../state/store.js';
 import { rebuildBlueprintFromMacros, reloadActiveBlueprint } from '../engine/xmlParser.js';
 import { calculateFactoryRequirements, calculateMatrix, calculateLiveOutputRate, calculateScrapMetalRawScrapDemand, getPPDownstreamWares, getPrimaryMacroForWare, getScrapRecyclerCycleYield, calculateBlueprintWorkforce } from '../engine/calculator.js';
 import { calculateBuildCosts } from '../engine/buildCost.js';
 import { getWareUnitPrice } from '../engine/prices.js';
 import { getMatchNeedsStatus, applyMatchNeeds } from '../engine/matchNeeds.js';
+import { applySupportWorkforce, isWorkforceFullySupported, getMostProminentFaction, FACTION_FOOD_MED } from '../engine/workforce.js';
 import { SECTORS_SUNLIGHT, getSectorInfo, getSectorSunlight, getSolarDynamicCycles, calculateSolarOutput } from '../data/sectors.js';
 import { escapeHtml } from '../html.js';
+import { isWareModuleOwned, isMacroBlueprintOwned } from '../engine/blueprintOwnership.js';
+import { renderNotOwnedModuleTag } from '../engine/cuckooDlcLookup.js';
 
 export { FACTION_WARE_MAP, NO_PP_WARES };
 
@@ -27,6 +30,69 @@ export function updateScrapWarningPill(activeWareId) {
   const hasYellowLink = Boolean(targetId) && SCRAP_WARE_IDS.has(targetId);
   pill.style.display = hasYellowLink ? 'flex' : 'none';
 }
+
+export function showNoBlueprintPopup() {
+  const message = 'Add in Planned Modules first. After which you can change the output. Click Match Needs to populate support requirements.';
+
+  if (typeof window !== 'undefined') {
+    window.__lastPopupMessage = message;
+    window.dispatchEvent(new CustomEvent('app-popup', { detail: { message } }));
+  }
+
+  if (typeof document === 'undefined') return;
+
+  const existing = document.getElementById('noBlueprintPopupOverlay');
+  if (existing) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'noBlueprintPopupOverlay';
+  overlay.className = 'no-bp-popup-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+
+  overlay.innerHTML = `
+    <div class="no-bp-popup-card" id="noBlueprintPopup">
+      <div style="font-size:1.8rem; margin-bottom:0.35rem; line-height:1;">⚠️</div>
+      <h3 style="margin:0 0 0.65rem 0; font-size:1.1rem; color:#38bdf8; font-weight:700;">Notice</h3>
+      <p class="no-bp-popup-message" style="margin:0 0 1.3rem 0; font-size:0.92rem; line-height:1.55; color:#cbd5e1;">
+        ${escapeHtml(message)}
+      </p>
+      <button type="button" id="btnNoBpPopupOk" class="btn-popup-ok" style="background:linear-gradient(135deg, #0284c7, #0369a1); border:1px solid #38bdf8; color:#fff; padding:0.45rem 1.6rem; border-radius:6px; font-weight:700; font-size:0.85rem; cursor:pointer; box-shadow:0 0 10px rgba(56,189,248,0.3); transition:all 0.15s ease;">
+        OK
+      </button>
+    </div>
+  `;
+
+  const closePopup = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', handleKey);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      e.preventDefault();
+      closePopup();
+    }
+  };
+
+  document.addEventListener('keydown', handleKey);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#btnNoBpPopupOk')) {
+      closePopup();
+    }
+  });
+
+  document.body.appendChild(overlay);
+
+  const okBtn = overlay.querySelector('#btnNoBpPopupOk');
+  if (okBtn) okBtn.focus();
+}
+
+if (typeof window !== 'undefined') {
+  window.showNoBlueprintPopup = showNoBlueprintPopup;
+}
+
 
 export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
   if (!FACTION_WARE_MAP[id]) return true;
@@ -56,13 +122,49 @@ export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
     return inPlanCount > 0 || hasDemand;
   }
 
-  // In Single Target Mode when a target is selected:
-  if (state.selectedWareId) {
-    return hasDemand;
+  return false;
+}
+
+/**
+ * Aligns the "Subdue Level 4" control horizontally with:
+ * - Level 4: Applications column (col-4) when L4 is displayed
+ * - Level 3: High-Tech column (col-3) when L4 is subdued (not displayed)
+ * Keeps it centered over the target column and aligned on the same row as WEB.
+ */
+export function alignSubdueLevel4() {
+  if (typeof document === 'undefined' || (state && state.activeTab !== 'matrix')) return;
+  const lbl = document.getElementById('lblSubdueLevel4');
+  if (!lbl) return;
+
+  const container = lbl.closest('.web-subdue-line') || lbl.parentElement;
+  if (!container) return;
+
+  const target = state.subdueLevel4
+    ? (document.querySelector('.col-3') || document.querySelector('.layer-totals-banner .layer-totals-card:nth-child(4)'))
+    : (document.querySelector('.col-4') || document.querySelector('.layer-totals-banner .layer-totals-card:nth-child(5)'));
+
+  if (!target) return;
+
+  const targetRect = target.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  if (targetRect.width === 0 || containerRect.width === 0) return;
+
+  const targetCenter = targetRect.left + (targetRect.width / 2);
+  const lblWidth = lbl.offsetWidth || 135;
+  let offsetLeft = Math.round(targetCenter - (lblWidth / 2) - containerRect.left);
+
+  // Safety check to ensure it doesn't overlap the slider group if space is narrow
+  const sliderGroup = container.querySelector('.slider-group');
+  if (sliderGroup) {
+    const sgRect = sliderGroup.getBoundingClientRect();
+    const minLeft = Math.round(sgRect.right - containerRect.left + 8);
+    offsetLeft = Math.max(minLeft, offsetLeft);
   }
 
-  // In Single Target Mode when no ware is selected yet:
-  return false;
+  state.subdueL4Left = offsetLeft;
+  state.subdueL4MarginLeft = offsetLeft;
+  lbl.style.left = `${offsetLeft}px`;
 }
 
 export function renderMatrixTabHTML() {
@@ -140,7 +242,7 @@ export function renderMatrixTabHTML() {
 
                 const ecFallback = (WARES_DB['EC'] && typeof WARES_DB['EC'].baseRate === 'number') ? WARES_DB['EC'].baseRate : 10500;
                 const terEcFallback = (WARES_DB['TerEC'] && typeof WARES_DB['TerEC'].baseRate === 'number') ? WARES_DB['TerEC'].baseRate : 3000;
-                const isTerran = state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || state.factionConstructionMethod === 'terran');
+                const isTerran = state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || isTerranFaction(state.factionConstructionMethod));
                 let reqHtml = '';
                 if (state.activeBlueprint && (terLoaded && !genLoaded || (!terLoaded && !genLoaded && isTerran))) {
                   reqHtml = `Requires <strong style="color:#38bdf8;">${lt.terSolarModulesNeeded}x TER</strong> <span style="font-size:0.68rem; color:#94a3b8;">(${Math.round(lt.terSolarOutputPerPanel || terEcFallback).toLocaleString()}/mod)</span>`;
@@ -397,16 +499,82 @@ export function renderMatrixTabHTML() {
                   }
                   const hasEcBadge = hasCalc && !isEC && !state.subdueEcCalc && ecConsRate > 0;
                   const hasSolarBadge = hasCalc && isEC;
-                  const isSingleTargetActive = Boolean(state.selectedWareId || !state.activeBlueprint);
-                  const prodMacro = isSingleTargetActive ? getProductionMacroForWare(id) : null;
+                  const prodMacro = getProductionMacroForWare(id);
                   const showBottomPanel = hasSolarBadge || hasEcBadge || isL1toL3 || Boolean(prodMacro);
 
                   const isScrapSubsetCard = id === 'ScrapMetal' || id === 'TerScrapMetal';
 
+                  const isL2orL3 = (ware.level === 2 || ware.level === 3);
+                  const customOutVal = (state.customOutputs && state.customOutputs[id] !== undefined && state.customOutputs[id] !== null && state.customOutputs[id] !== '')
+                    ? Number(state.customOutputs[id])
+                    : undefined;
+                  const hasCustomOut = customOutVal !== undefined;
+                  const displayOutRate = hasCustomOut ? customOutVal : Math.round(prodOutputRate);
+
+                  let moduleBadgeText = `${activeCount}x Modules`;
+                  let moduleBadgeStyle = '';
+                  let moduleBadgeTitle = '';
+
+                  if (ware.level === 4) {
+                    moduleBadgeText = ware.cat || 'Application';
+                    moduleBadgeStyle = 'background:rgba(167,139,250,0.15); color:#a78bfa; border-color:rgba(167,139,250,0.3);';
+                  } else if (ware.level > 0) {
+                    if (state.activeBlueprint) {
+                      const isDeficit = calcNeeded > inPlanCount;
+                      const isExceeded = inPlanCount > calcNeeded && calcNeeded > 0;
+                      if (isDeficit) {
+                        moduleBadgeText = `${inPlanCount}x Plan / ${calcNeeded}x Needs`;
+                        moduleBadgeStyle = 'background:rgba(239,68,68,0.2); color:#f87171; border-color:rgba(239,68,68,0.4); font-weight:700;';
+                        moduleBadgeTitle = `Deficit: ${inPlanCount}x in plan does not satisfy downstream demand. Needs ${calcNeeded}x modules.`;
+                      } else if (isExceeded) {
+                        moduleBadgeText = `${inPlanCount}x Plan / ${calcNeeded}x Needs*`;
+                        moduleBadgeStyle = 'background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);';
+                        moduleBadgeTitle = `Surplus: ${inPlanCount}x in plan exceeds needed ${calcNeeded}x modules.`;
+                      } else if (inPlanCount > 0 && calcNeeded === inPlanCount) {
+                        moduleBadgeText = `${inPlanCount}x Plan / ${calcNeeded}x Needs`;
+                        moduleBadgeStyle = 'background:rgba(52,211,153,0.15); color:#34d399; border-color:rgba(52,211,153,0.3);';
+                        moduleBadgeTitle = `Satisfied: ${inPlanCount}x in plan matches ${calcNeeded}x needs.`;
+                      } else if (inPlanCount > 0) {
+                        moduleBadgeText = `${inPlanCount}x Modules`;
+                      } else if (calcNeeded > 0) {
+                        moduleBadgeText = `${calcNeeded}x Needs`;
+                        moduleBadgeStyle = 'background:rgba(245,158,11,0.2); color:#fbbf24; border-color:rgba(245,158,11,0.4); font-weight:700;';
+                        moduleBadgeTitle = `0x in plan. Needs ${calcNeeded}x modules to satisfy demand.`;
+                      } else {
+                        moduleBadgeText = `0x Modules`;
+                      }
+                    } else {
+                      if (calcNeeded > 0) {
+                        moduleBadgeText = `${calcNeeded}x Needs`;
+                        moduleBadgeStyle = 'background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);';
+                      } else {
+                        moduleBadgeText = `${activeCount}x Modules`;
+                      }
+                    }
+                  } else {
+                    moduleBadgeText = (id === 'RawScrap' || id === 'RawKhaakScrap') ? 'Scrap' : 'Mining';
+                  }
+
+                  const plannedMacrosForWare = Object.entries(state.activeBlueprint?.rawMacros || {})
+                    .filter(([m, qty]) => qty > 0 && mapMacroToWare(m) === id);
+
+                  let isUnowned = false;
+                  if (plannedMacrosForWare.length > 0) {
+                    isUnowned = state.serverModules
+                      ? plannedMacrosForWare.some(([m]) => !isMacroBlueprintOwned(m, state.serverModules))
+                      : false;
+                  } else {
+                    const ownership = isWareModuleOwned(id, state.serverModules, {
+                      factionMethod: state.factionConstructionMethod
+                    });
+                    isUnowned = Boolean(ownership.hasModule && !ownership.isOwned);
+                  }
+
                   return `
                     <div class="ware-card ${initialGhost ? 'ghost-card' : ''} ${id === state.selectedWareId ? 'active-selected' : ''} ${isScrapSubsetCard ? 'scrap-subset-card' : ''}" id="ware-${id}" data-id="${id}" data-omitted="${isOmitted ? 'true' : 'false'}" style="${initialDisplay}">
                       <div class="ware-header">
-                        <div class="ware-name" title="${ware.name}">${ware.name}</div>
+                        <div class="ware-name ${isUnowned ? 'ware-name-unowned' : ''}" title="${ware.name}">${ware.name}</div>
+                        ${isUnowned ? renderNotOwnedModuleTag(plannedMacrosForWare[0]?.[0] || getPrimaryMacroForWare(id) || id) : ''}
                       </div>
                       ${hasCalc ? `
                         <div class="card-calc-info">
@@ -422,21 +590,32 @@ export function renderMatrixTabHTML() {
                               Output: ${Math.round(prodOutputRate).toLocaleString()} /hr
                             </span>
                           ` : `
-                            <span class="module-badge" style="${ware.level === 4 ? 'background:rgba(167,139,250,0.15); color:#a78bfa; border-color:rgba(167,139,250,0.3);' : ''}">
-                              ${ware.level === 4 ? (ware.cat || 'Application') : (ware.level > 0 ? `${activeCount}x Modules` : (id === 'RawScrap' || id === 'RawKhaakScrap' ? 'Scrap' : 'Mining'))}
+                            <span class="module-badge" style="${moduleBadgeStyle}" title="${moduleBadgeTitle}">
+                              ${moduleBadgeText}
                             </span>
                             ${ware.level === 4 ? `
                               <span class="rate-badge-prod" style="background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);" title="Total required component units">${Math.round(totalCompUnits).toLocaleString()} Components</span>
+                            ` : (isL2orL3 ? `
+                              <span class="rate-badge-prod ${hasCustomOut ? 'custom-output-active' : ''}" title="${hasCustomOut ? 'Custom output target override' : 'Hourly production output'}">
+                                Output: <input type="number" class="pill-output-input ${hasCustomOut ? 'has-override' : ''}" data-ware-id="${id}" value="${displayOutRate}" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr${hasCustomOut ? `<button type="button" class="btn-reset-output" data-ware-id="${id}" title="Reset to calculated output" onclick="event.stopPropagation();">&times;</button>` : ''}
+                              </span>
                             ` : (ware.level > 0 ? `
                               <span class="rate-badge-prod" title="Hourly production output">Output: ${Math.round(prodOutputRate).toLocaleString()} /hr</span>
                             ` : `
                               <span class="rate-badge-prod" title="Hourly required ${(id === 'RawScrap' || id === 'RawKhaakScrap') ? 'scrap collection' : 'raw extraction'} rate">${Math.round(rawRate).toLocaleString()} /hr</span>
-                            `)}
+                            `))}
                           `}
                         </div>
                       ` : `
                         <div class="card-calc-info">
-                          <span class="module-badge" style="opacity:0.4; background:none; border-color:rgba(255,255,255,0.1); color:#64748b;">${state.activeBlueprint ? 'Ghost Module' : 'Hover / Select'}</span>
+                          ${isL2orL3 ? `
+                            <span class="module-badge" style="opacity:0.4; background:none; border-color:rgba(255,255,255,0.1); color:#64748b;">0x Modules</span>
+                            <span class="rate-badge-prod" title="Enter required hourly output to re-evaluate upstream supply">
+                              Output: <input type="number" class="pill-output-input" data-ware-id="${id}" value="0" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                            </span>
+                          ` : `
+                            <span class="module-badge" style="opacity:0.4; background:none; border-color:rgba(255,255,255,0.1); color:#64748b;">Ghost Module</span>
+                          `}
                         </div>
                       `}
                       ${showBottomPanel ? `
@@ -476,9 +655,9 @@ export function renderMatrixTabHTML() {
 
       <aside class="inspector-panel" id="inspectorPanel">
         <div class="inspector-header">
-          <div class="inspector-title">
+          <div class="inspector-title" style="flex:1; min-width:0; margin-right:0.5rem;">
             <h2 id="insTitle">${state.activeBlueprint ? 'Blueprint Inspector' : 'Module Inspector'}</h2>
-            <span id="insSub">${state.activeBlueprint ? escapeHtml(state.activeBlueprint.name) : 'Single Target Mode'}</span>
+            <span id="insSub">${state.activeBlueprint ? escapeHtml(state.activeBlueprint.name) : 'Station Blueprint'}</span>
           </div>
           <button class="btn-close" id="btnCloseIns">&times;</button>
         </div>
@@ -610,6 +789,7 @@ export function drawLines() {
   }
 
   updateScrapWarningPill(state.selectedWareId);
+  alignSubdueLevel4();
 }
 
 export function highlightGraph(id) {
@@ -846,30 +1026,226 @@ export function centerOnWare(id, behavior = 'smooth') {
 }
 
 export function selectWare(id, onRender) {
-  if (id) {
-    state.lastFocusedWareId = id;
+  const isReclick = Boolean(id && state.selectedWareId === id);
+  const targetId = isReclick ? null : id;
+  if (targetId) {
+    state.lastFocusedWareId = targetId;
   }
-  state.selectedWareId = id;
-  const selectedWare = WARES_DB[id];
+  state.selectedWareId = targetId;
+
+  if (!targetId) {
+    document.querySelectorAll('.ware-card').forEach(card => {
+      card.classList.remove('active-selected');
+    });
+    if (typeof onRender === 'function') {
+      onRender();
+    } else {
+      updateInspector(null, onRender);
+    }
+    highlightGraph(null);
+    return;
+  }
+
+  const selectedWare = WARES_DB[targetId];
   const isLevel4 = selectedWare && selectedWare.level === 4;
 
   if (isLevel4) {
     // If "Subdue Level 4" is unchecked, do not recalculate any cards only highlight cards associated.
     document.querySelectorAll('.ware-card').forEach(card => {
-      card.classList.toggle('active-selected', card.dataset.id === id);
+      card.classList.toggle('active-selected', card.dataset.id === targetId);
     });
-    highlightGraph(id);
-    updateInspector(id, onRender);
-    if (id) {
-      setTimeout(() => centerOnWare(id), 60);
+    highlightGraph(targetId);
+    updateInspector(targetId, onRender);
+    if (targetId) {
+      setTimeout(() => centerOnWare(targetId), 60);
     }
     return;
   }
 
   if (typeof onRender === 'function') onRender();
-  highlightGraph(id);
-  if (id) {
-    setTimeout(() => centerOnWare(id), 60);
+  highlightGraph(targetId);
+  if (targetId) {
+    setTimeout(() => centerOnWare(targetId), 60);
+  }
+}
+
+/**
+ * Renders the Construction Resource Budget card for the Blueprint Inspector sidebar.
+ * @param {Object} [currentState=state] - Application state
+ * @returns {string} HTML markup
+ */
+export function formatWareName(ware) {
+  const wMap = {
+    hullparts: 'Hull Parts',
+    claytronics: 'Claytronics',
+    energycells: 'Energy Cells',
+    ec: 'Energy Cells',
+    computronicsubstrate: 'Computronic Substrate',
+    siliconcarbide: 'Silicon Carbide',
+    metallicmicrolattice: 'Metallic Microlattice',
+    water: 'Water',
+    protectyon: 'Protectyon',
+    advancedcomposites: 'Advanced Composites',
+    engineparts: 'Engine Parts',
+    ore: 'Ore',
+    silicon: 'Silicon'
+  };
+  return wMap[ware.toLowerCase()] || (ware.charAt(0).toUpperCase() + ware.slice(1));
+}
+
+/**
+ * Calculates modules required to satisfy station Needs.
+ * @param {Object} [currentState=state] - Application state
+ * @param {'deficit'|'total'} [mode='deficit'] - 'deficit' (+Δ additions) or 'total' (all needed modules)
+ * @returns {Object} Module map { [macroOrWare]: count }
+ */
+export function getBuildNeedsModules(currentState = state, mode = 'deficit') {
+  if (!currentState.activeBlueprint) return {};
+
+  const liveDemand = currentState.calculatedDemand || (currentState.activeBlueprint && currentState.activeBlueprint.baselineDemand) || {};
+  const liveLt = currentState.layerTotals || (currentState.activeBlueprint && currentState.activeBlueprint.baselineLayerTotals) || {};
+  const inPlanModules = (currentState.activeBlueprint && currentState.activeBlueprint.modules) || {};
+  const rawMacros = (currentState.activeBlueprint && currentState.activeBlueprint.rawMacros) || {};
+
+  const modulesToBuild = {};
+
+  // 1. Level 1 - 3 Production Wares
+  Object.keys(WARES_DB).forEach(wId => {
+    const ware = WARES_DB[wId];
+    if (!ware) return;
+    if (ware.level < 1 || ware.level > 3) return;
+    if (wId === 'ScrapMetal' || wId === 'TerScrapMetal' || wId === 'ScrapProc' || wId === 'AllographyneScrapProc') return;
+
+    const inPlan = inPlanModules[wId] || 0;
+    const optimum = liveDemand[wId] ? (liveDemand[wId].modulesNeeded || 0) : 0;
+
+    let targetCount = 0;
+    if (mode === 'deficit') {
+      targetCount = Math.max(0, optimum - inPlan);
+    } else {
+      targetCount = Math.max(inPlan, optimum);
+    }
+
+    if (targetCount > 0) {
+      const bpMacro = Object.keys(rawMacros).find(m => {
+        const lower = m.toLowerCase();
+        if (lower.includes('scraprecycler') || lower.includes('scrap_recycler')) return false;
+        return mapMacroToWare(m) === wId;
+      });
+      const macroKey = bpMacro || getPrimaryMacroForWare(wId) || wId;
+      modulesToBuild[macroKey] = (modulesToBuild[macroKey] || 0) + targetCount;
+    }
+  });
+
+  // 2. Solar Panels (EC and TerEC)
+  const terLoaded = (liveLt.inPlanTerSolarCount || 0) > 0;
+  const genLoaded = (liveLt.inPlanSolarCount || 0) > 0;
+  const isTerran = currentState.activeBlueprint && (isBlueprintTerran(currentState.activeBlueprint) || isTerranFaction(currentState.factionConstructionMethod));
+  const isPureTerranSolar = (terLoaded && !genLoaded) || (!terLoaded && !genLoaded && isTerran);
+
+  if (isPureTerranSolar) {
+    let terSolarCount = 0;
+    if (mode === 'deficit') {
+      terSolarCount = liveLt.terSolarModulesNeeded || 0;
+    } else {
+      terSolarCount = (liveLt.inPlanTerSolarCount || 0) + (liveLt.terSolarModulesNeeded || 0);
+    }
+    if (terSolarCount > 0) {
+      const terSolarMacro = Object.keys(rawMacros).find(m => m.toLowerCase().includes('solar') && m.toLowerCase().includes('ter')) || 'prod_ter_energycells_macro';
+      modulesToBuild[terSolarMacro] = (modulesToBuild[terSolarMacro] || 0) + terSolarCount;
+    }
+  } else {
+    let solarCount = 0;
+    if (mode === 'deficit') {
+      solarCount = liveLt.solarModulesNeeded || 0;
+    } else {
+      solarCount = (liveLt.inPlanSolarCount || 0) + (liveLt.solarModulesNeeded || 0);
+    }
+    if (solarCount > 0) {
+      const genSolarMacro = Object.keys(rawMacros).find(m => m.toLowerCase().includes('solar') && !m.toLowerCase().includes('ter')) || 'prod_gen_energycells_macro';
+      modulesToBuild[genSolarMacro] = (modulesToBuild[genSolarMacro] || 0) + solarCount;
+    }
+  }
+
+  // 3. Scrap Processors
+  const scrapProcCalc = liveDemand['ScrapProc'];
+  if (scrapProcCalc && scrapProcCalc.modulesNeeded > 0) {
+    const inPlan = inPlanModules['ScrapProc'] || 0;
+    const count = mode === 'deficit' ? Math.max(0, scrapProcCalc.modulesNeeded - inPlan) : Math.max(inPlan, scrapProcCalc.modulesNeeded);
+    if (count > 0) {
+      const procMacro = Object.keys(rawMacros).find(m => mapMacroToWare(m) === 'ScrapProc') || getPrimaryMacroForWare('ScrapProc') || 'ScrapProc';
+      modulesToBuild[procMacro] = (modulesToBuild[procMacro] || 0) + count;
+    }
+  }
+
+  const alloProcCalc = liveDemand['AllographyneScrapProc'];
+  if (alloProcCalc && alloProcCalc.modulesNeeded > 0) {
+    const inPlan = inPlanModules['AllographyneScrapProc'] || 0;
+    const count = mode === 'deficit' ? Math.max(0, alloProcCalc.modulesNeeded - inPlan) : Math.max(inPlan, alloProcCalc.modulesNeeded);
+    if (count > 0) {
+      modulesToBuild['AllographyneScrapProc'] = (modulesToBuild['AllographyneScrapProc'] || 0) + count;
+    }
+  }
+
+  // 4. Scrap Recyclers: ScrapClaytronics / ScrapHullParts
+  ['ScrapClaytronics', 'ScrapHullParts'].forEach(sId => {
+    const sCalc = liveDemand[sId];
+    if (sCalc && sCalc.modulesNeeded > 0) {
+      const inPlan = inPlanModules[sId] || 0;
+      const count = mode === 'deficit' ? Math.max(0, sCalc.modulesNeeded - inPlan) : Math.max(inPlan, sCalc.modulesNeeded);
+      if (count > 0) {
+        const macro = Object.keys(rawMacros).find(m => m.toLowerCase().includes('scraprecycler') || m.toLowerCase().includes('scrap_recycler')) || 'prod_gen_scraprecycler_macro';
+        modulesToBuild[macro] = (modulesToBuild[macro] || 0) + count;
+      }
+    }
+  });
+
+  return modulesToBuild;
+}
+
+/**
+ * Refreshes both CRB and Needs budget panels in-place without disturbing scroll position.
+ * @param {HTMLElement} container - Container element (#insBody)
+ */
+export function refreshBothBudgetPanels(container) {
+  if (!container) return;
+  const crbPanel = container.querySelector('.construction-budget-panel');
+  if (crbPanel) {
+    const tempCrb = document.createElement('div');
+    tempCrb.innerHTML = renderConstructionBudgetInspectorHTML(state);
+    const newCrb = tempCrb.firstElementChild;
+    if (crbPanel.parentNode) {
+      crbPanel.parentNode.replaceChild(newCrb, crbPanel);
+      bindCrbListeners(newCrb);
+    }
+  }
+  const nbPanel = container.querySelector('.needs-budget-panel');
+  const tempNb = document.createElement('div');
+  tempNb.innerHTML = renderBuildNeedsBudgetInspectorHTML(state);
+  const newNb = tempNb.firstElementChild;
+
+  if (nbPanel) {
+    if (newNb) {
+      if (nbPanel.parentNode) {
+        nbPanel.parentNode.replaceChild(newNb, nbPanel);
+        bindNeedsCrbListeners(newNb);
+      }
+    } else {
+      nbPanel.remove();
+    }
+  } else if (newNb) {
+    const crbPanel = container.querySelector('.construction-budget-panel');
+    if (crbPanel && crbPanel.parentNode) {
+      crbPanel.parentNode.insertBefore(newNb, crbPanel.nextSibling);
+    } else {
+      const ncBox = container.querySelector('.non-contributing-box');
+      if (ncBox && ncBox.parentNode) {
+        ncBox.parentNode.insertBefore(newNb, ncBox);
+      } else {
+        container.appendChild(newNb);
+      }
+    }
+    bindNeedsCrbListeners(newNb);
   }
 }
 
@@ -882,47 +1258,44 @@ export function renderConstructionBudgetInspectorHTML(currentState = state) {
   const isExpanded = Boolean(currentState.showConstructionBudget);
   const currentPriceType = currentState.priceType || 'avg';
   const method = currentState.constructionMethod || currentState.factionConstructionMethod || 'commonwealth';
-  const rawModules = (currentState.modules && Object.keys(currentState.modules).length > 0)
-    ? currentState.modules
-    : (currentState.activeBlueprint?.rawMacros && Object.keys(currentState.activeBlueprint.rawMacros).length > 0)
-      ? currentState.activeBlueprint.rawMacros
-      : ((currentState.activeBlueprint && (currentState.activeBlueprint.modules || currentState.activeBlueprint.rawMacros)) || {});
+  const rawModules = (currentState.activeBlueprint?.rawMacros && Object.keys(currentState.activeBlueprint.rawMacros).length > 0)
+    ? currentState.activeBlueprint.rawMacros
+    : (currentState.modules && Object.keys(currentState.modules).length > 0)
+      ? currentState.modules
+      : ((currentState.activeBlueprint && (currentState.activeBlueprint.rawMacros || currentState.activeBlueprint.modules)) || {});
+
+  let totalPlanModules = 0;
+  let nonContributingPlanModules = 0;
+  let contributingPlanModules = 0;
+
+  Object.entries(rawModules).forEach(([macro, count]) => {
+    const qty = typeof count === 'number' ? count : (parseInt(count, 10) || 0);
+    if (qty > 0) {
+      totalPlanModules += qty;
+      if (mapMacroToWare(macro)) {
+        contributingPlanModules += qty;
+      } else {
+        nonContributingPlanModules += qty;
+      }
+    }
+  });
 
   const buildResult = calculateBuildCosts(rawModules, method, currentPriceType);
   const resourceEntries = Object.entries(buildResult.resources);
 
-  const formatWareName = (ware) => {
-    const wMap = {
-      hullparts: 'Hull Parts',
-      claytronics: 'Claytronics',
-      energycells: 'Energy Cells',
-      ec: 'Energy Cells',
-      computronicsubstrate: 'Computronic Substrate',
-      siliconcarbide: 'Silicon Carbide',
-      metallicmicrolattice: 'Metallic Microlattice',
-      water: 'Water',
-      protectyon: 'Protectyon',
-      advancedcomposites: 'Advanced Composites',
-      engineparts: 'Engine Parts',
-      ore: 'Ore',
-      silicon: 'Silicon'
-    };
-    return wMap[ware.toLowerCase()] || (ware.charAt(0).toUpperCase() + ware.slice(1));
-  };
-
   if (resourceEntries.length === 0) {
     return `
-      <div class="bp-level-panel construction-budget-panel" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
-        <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget">
+      <div class="bp-level-panel construction-budget-panel bi-panel ${currentState.focusedBiPanel === 'construction-budget' ? 'bi-panel-focused' : ''}" data-bi-panel="construction-budget" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+        <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Plan Construction Budget">
           <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
             <span class="bp-level-arrow bp-cb-arrow">${isExpanded ? '▼' : '▶'}</span>
             <span style="font-size:0.9rem;">💰</span>
-            <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Construction Resource Budget</strong>
+            <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Plan Construction Budget</strong>
           </div>
-          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.25rem;">
-            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
-            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
-            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.2rem;">
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
           </div>
         </div>
         <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:${isExpanded ? 'block' : 'none'};">
@@ -933,32 +1306,39 @@ export function renderConstructionBudgetInspectorHTML(currentState = state) {
   }
 
   return `
-    <div class="bp-level-panel construction-budget-panel" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
-      <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget">
+    <div class="bp-level-panel construction-budget-panel bi-panel ${currentState.focusedBiPanel === 'construction-budget' ? 'bi-panel-focused' : ''}" data-bi-panel="construction-budget" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+      <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Plan Construction Budget">
         <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
           <span class="bp-level-arrow bp-cb-arrow">${isExpanded ? '▼' : '▶'}</span>
           <span style="font-size:0.9rem;">💰</span>
-          <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Construction Resource Budget</strong>
+          <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Plan Construction Budget</strong>
         </div>
-        <div style="display:flex; align-items:center; gap:0.4rem;">
-          <span class="bp-cb-collapsed-preview" style="font-size:0.72rem; color:#34d399; font-weight:700; font-family:monospace; background:rgba(52,211,153,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(52,211,153,0.25); display:${isExpanded ? 'none' : 'inline-block'};" title="Total station construction valuation">
+        <div style="display:flex; align-items:center; gap:0.35rem;">
+          <span class="bp-cb-collapsed-preview" style="font-size:0.72rem; color:#34d399; font-weight:700; font-family:monospace; background:rgba(52,211,153,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(52,211,153,0.25); display:${isExpanded ? 'none' : 'inline-block'};" title="Total plan construction valuation">
             ${buildResult.totals.totalCredits.toLocaleString()} Cr
           </span>
-          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.25rem;">
-            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
-            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
-            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.45rem; font-size:0.7rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.2rem;">
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
           </div>
         </div>
       </div>
       <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:${isExpanded ? 'block' : 'none'};">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
-          <span style="color:#94a3b8; font-size:0.72rem;">Total Station Valuation (${currentPriceType.toUpperCase()}):</span>
+          <span style="color:#94a3b8; font-size:0.72rem;">Total Plan Valuation (${currentPriceType.toUpperCase()}):</span>
           <strong style="color:#34d399; font-size:0.88rem; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()} Cr</strong>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.45rem; font-size:0.72rem;">
-          <span style="color:#94a3b8;">Total Construction Units:</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem; font-size:0.72rem;">
+          <span style="color:#94a3b8;">Total Plan Construction Units:</span>
           <strong style="color:#38bdf8;">${buildResult.totals.totalWareUnits.toLocaleString()} units</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.45rem; font-size:0.72rem;">
+          <span style="color:#94a3b8;">Budgeted Station Modules:</span>
+          <strong style="color:#e2e8f0;">
+            ${totalPlanModules.toLocaleString()} modules
+            ${nonContributingPlanModules > 0 ? `<span style="font-size:0.68rem; font-weight:normal; color:#94a3b8;"> (${contributingPlanModules} ware, ${nonContributingPlanModules} non-contributing)</span>` : ''}
+          </strong>
         </div>
         <table class="bp-calc-table" style="width:100%; border-collapse:collapse; font-size:0.72rem;">
           <thead>
@@ -1002,6 +1382,131 @@ export function renderConstructionBudgetInspectorHTML(currentState = state) {
 }
 
 /**
+ * Renders the Build Needs Construction Budget card for the Blueprint Inspector sidebar.
+ * Reflects budget and materials needed to build needs (deficit additions or total needs target).
+ * @param {Object} [currentState=state] - Application state
+ * @returns {string} HTML markup
+ */
+export function renderBuildNeedsBudgetInspectorHTML(currentState = state) {
+  const isExpanded = Boolean(currentState.showNeedsConstructionBudget);
+  const currentMode = currentState.needsBudgetMode || 'deficit'; // 'deficit' | 'total'
+  const currentPriceType = currentState.priceType || 'avg';
+  const method = currentState.constructionMethod || currentState.factionConstructionMethod || 'commonwealth';
+
+  const neededModules = getBuildNeedsModules(currentState, currentMode);
+  const buildResult = calculateBuildCosts(neededModules, method, currentPriceType);
+  const resourceEntries = Object.entries(buildResult.resources);
+
+  // Collect list of module names and counts to build
+  const moduleEntries = Object.entries(neededModules).filter(([, count]) => count > 0);
+  const totalNeededModulesCount = moduleEntries.reduce((sum, [, count]) => sum + count, 0);
+
+  const modulePills = moduleEntries.map(([macroOrWare, count]) => {
+    const wareId = mapMacroToWare(macroOrWare) || macroOrWare;
+    const name = (WARES_DB[wareId] && WARES_DB[wareId].name) || getFriendlyModuleName(macroOrWare);
+    const prefix = currentMode === 'deficit' ? '+' : '';
+    const color = currentMode === 'deficit' ? '#fbbf24' : '#38bdf8';
+    return `<span style="white-space:nowrap;"><strong style="color:${color};">${prefix}${count}x</strong> ${escapeHtml(name)}</span>`;
+  });
+
+  // If Build Needs Budget is 0, suppress display of panel
+  if (buildResult.totals.totalCredits === 0 || resourceEntries.length === 0 || totalNeededModulesCount === 0) {
+    if (currentState && currentState.focusedBiPanel === 'needs-budget') {
+      currentState.focusedBiPanel = null;
+    }
+    return '';
+  }
+
+  const previewText = `${buildResult.totals.totalCredits.toLocaleString()} Cr`;
+
+  return `
+    <div class="bp-level-panel needs-budget-panel bi-panel ${currentState.focusedBiPanel === 'needs-budget' ? 'bi-panel-focused' : ''}" data-bi-panel="needs-budget" style="border-color: rgba(251, 191, 36, 0.4); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+      <div class="bp-level-header bp-nb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.45rem 0.65rem; display:flex; flex-direction:column; gap:0.35rem; cursor:pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand'} Build Needs Budget">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-level-arrow bp-nb-arrow">${isExpanded ? '▼' : '▶'}</span>
+            <span style="font-size:0.9rem;">🏗️</span>
+            <strong style="color:#fbbf24; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Build Needs Budget</strong>
+          </div>
+          <span class="bp-nb-collapsed-preview" style="font-size:0.72rem; color:#fbbf24; font-weight:700; font-family:monospace; background:rgba(251,191,36,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(251,191,36,0.25); display:${isExpanded ? 'none' : 'inline-block'};" title="Budget to build needs">
+            ${previewText}
+          </span>
+        </div>
+        <div class="bp-nb-controls-row" style="display:${isExpanded ? 'flex' : 'none'}; justify-content:space-between; align-items:center; width:100%; gap:0.35rem; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.3rem;">
+          <div class="needs-mode-toggles" style="display:flex; align-items:center; gap:0.25rem;">
+            <button type="button" class="btn-needs-mode ${currentMode === 'deficit' ? 'active' : ''}" data-needs-mode="deficit" style="padding:0.15rem 0.45rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentMode === 'deficit' ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; background:${currentMode === 'deficit' ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentMode === 'deficit' ? '#fbbf24' : '#cbd5e1'}; cursor:pointer; font-weight:700;" title="Show additional materials needed to satisfy current shortages (+Δ)">Deficit (+Δ)</button>
+            <button type="button" class="btn-needs-mode ${currentMode === 'total' ? 'active' : ''}" data-needs-mode="total" style="padding:0.15rem 0.45rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentMode === 'total' ? '#fbbf24' : 'rgba(255,255,255,0.1)'}; background:${currentMode === 'total' ? 'rgba(251, 191, 36, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentMode === 'total' ? '#fbbf24' : '#cbd5e1'}; cursor:pointer; font-weight:700;" title="Show total materials to build all needed modules">Total Needs</button>
+          </div>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.2rem;">
+            <button type="button" class="btn-price-tier ${currentPriceType === 'min' ? 'active' : ''}" data-price-tier="min" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'min' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'min' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'min' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'avg' ? 'active' : ''}" data-price-tier="avg" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'avg' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'avg' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'avg' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier ${currentPriceType === 'max' ? 'active' : ''}" data-price-tier="max" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid ${currentPriceType === 'max' ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${currentPriceType === 'max' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.03)'}; color:${currentPriceType === 'max' ? '#38bdf8' : '#cbd5e1'}; cursor:pointer; font-weight:700;">Max</button>
+          </div>
+        </div>
+      </div>
+      <div class="bp-nb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:${isExpanded ? 'block' : 'none'};">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="color:#94a3b8; font-size:0.72rem;">${currentMode === 'deficit' ? 'Deficit Build Valuation' : 'Total Needs Valuation'} (${currentPriceType.toUpperCase()}):</span>
+          <strong style="color:#fbbf24; font-size:0.88rem; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()} Cr</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.45rem; font-size:0.72rem;">
+          <span style="color:#94a3b8;">${currentMode === 'deficit' ? 'Materials Needed to Build' : 'Total Needed Materials'}:</span>
+          <strong style="color:#38bdf8;">${buildResult.totals.totalWareUnits.toLocaleString()} units</strong>
+        </div>
+
+        ${modulePills.length > 0 ? `
+          <details style="margin-bottom:0.5rem; font-size:0.72rem; cursor:pointer;" ${modulePills.length <= 6 ? 'open' : ''}>
+            <summary style="color:#fbbf24; user-select:none; font-weight:600; outline:none; margin-bottom:0.25rem;">
+              🔍 ${currentMode === 'deficit' ? `Modules to Build (${totalNeededModulesCount} modules, ${modulePills.length} types)` : `Target Needed Modules (${totalNeededModulesCount} modules, ${modulePills.length} types)`}
+            </summary>
+            <div style="max-height:110px; overflow-y:auto; padding:0.3rem 0.45rem; background:rgba(0,0,0,0.25); border-radius:4px; line-height:1.5; border:1px solid rgba(255,255,255,0.04); color:#cbd5e1;">
+              ${modulePills.join(', ')}
+            </div>
+          </details>
+        ` : ''}
+
+        <table class="bp-calc-table" style="width:100%; border-collapse:collapse; font-size:0.72rem;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color:#94a3b8;">
+              <th style="text-align:left; padding:2px 0;">Material</th>
+              <th style="text-align:right; padding:2px 0;">Qty</th>
+              <th style="text-align:right; padding:2px 0;">Unit (Cr)</th>
+              <th style="text-align:right; padding:2px 0;">Total (Cr)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${resourceEntries.map(([ware, data]) => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <td style="text-align:left; padding:3px 0; color:#f8fafc; font-weight:600;">
+                  ${escapeHtml(formatWareName(ware))}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#38bdf8;">
+                  ${data.quantity.toLocaleString()}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#cbd5e1; font-family:monospace;">
+                  ${data.unitPrice.toLocaleString()}
+                </td>
+                <td style="text-align:right; padding:3px 0; color:#fbbf24; font-weight:700; font-family:monospace;">
+                  ${data.totalCredits.toLocaleString()}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top: 1px solid rgba(251,191,36,0.35); font-weight:700;">
+              <td style="text-align:left; padding:4px 0; color:#f8fafc;">Total</td>
+              <td style="text-align:right; padding:4px 0; color:#38bdf8;">${buildResult.totals.totalWareUnits.toLocaleString()}</td>
+              <td style="text-align:right; padding:4px 0; color:#94a3b8;">—</td>
+              <td style="text-align:right; padding:4px 0; color:#fbbf24; font-family:monospace;">${buildResult.totals.totalCredits.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Attaches in-place interactive listeners to the Construction Resource Budget panel,
  * ensuring price tier switches and collapse/expand do NOT cause a refresh of the BI panel.
  * @param {HTMLElement} panel - The .construction-budget-panel container
@@ -1026,7 +1531,7 @@ export function bindCrbListeners(panel) {
       if (arrow) arrow.textContent = isExpanded ? '▼' : '▶';
       if (body) body.style.display = isExpanded ? 'block' : 'none';
       if (preview) preview.style.display = isExpanded ? 'none' : 'inline-block';
-      header.title = `Click to ${isExpanded ? 'collapse' : 'expand'} Construction Resource Budget`;
+      header.title = `Click to ${isExpanded ? 'collapse' : 'expand'} Plan Construction Budget`;
     });
   }
 
@@ -1044,16 +1549,12 @@ export function bindCrbListeners(panel) {
             localStorage.setItem('x4_price_type', tier);
           } catch (err) {}
         }
-        // In-place refresh of ONLY the CRB panel without refreshing the BI panel
+        // In-place refresh of BOTH budget panels without refreshing the BI panel
         const insBody = panel.closest('#insBody');
         const curScroll = insBody ? insBody.scrollTop : null;
 
-        const temp = document.createElement('div');
-        temp.innerHTML = renderConstructionBudgetInspectorHTML(state);
-        const newPanel = temp.firstElementChild;
-        if (panel.parentNode) {
-          panel.parentNode.replaceChild(newPanel, panel);
-          bindCrbListeners(newPanel);
+        if (insBody) {
+          refreshBothBudgetPanels(insBody);
         }
 
         if (insBody && curScroll !== null) {
@@ -1064,10 +1565,266 @@ export function bindCrbListeners(panel) {
   });
 }
 
+/**
+ * Attaches in-place interactive listeners to the Build Needs Construction Budget panel,
+ * ensuring mode toggles, price tier switches, and collapse/expand do NOT cause a refresh of the BI panel.
+ * @param {HTMLElement} panel - The .needs-budget-panel container
+ */
+export function bindNeedsCrbListeners(panel) {
+  if (!panel) return;
+
+  const header = panel.querySelector('.bp-nb-header');
+  if (header) {
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-price-tier') || e.target.closest('.btn-needs-mode')) return;
+      state.showNeedsConstructionBudget = !state.showNeedsConstructionBudget;
+      if (store && typeof store.setShowNeedsConstructionBudget === 'function') {
+        store.setShowNeedsConstructionBudget(state.showNeedsConstructionBudget);
+      }
+
+      const arrow = header.querySelector('.bp-nb-arrow');
+      const body = panel.querySelector('.bp-nb-body');
+      const preview = header.querySelector('.bp-nb-collapsed-preview');
+      const controlsRow = header.querySelector('.bp-nb-controls-row');
+      const isExpanded = state.showNeedsConstructionBudget;
+
+      if (arrow) arrow.textContent = isExpanded ? '▼' : '▶';
+      if (body) body.style.display = isExpanded ? 'block' : 'none';
+      if (preview) preview.style.display = isExpanded ? 'none' : 'inline-block';
+      if (controlsRow) controlsRow.style.display = isExpanded ? 'flex' : 'none';
+      header.title = `Click to ${isExpanded ? 'collapse' : 'expand'} Build Needs Budget`;
+    });
+  }
+
+  panel.querySelectorAll('.btn-needs-mode').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const mode = btn.dataset.needsMode;
+      if (mode && ['deficit', 'total'].includes(mode)) {
+        state.needsBudgetMode = mode;
+        if (store && typeof store.setNeedsBudgetMode === 'function') {
+          store.setNeedsBudgetMode(mode);
+        } else {
+          try {
+            localStorage.setItem('x4_needs_budget_mode', mode);
+          } catch (err) {}
+        }
+        const insBody = panel.closest('#insBody');
+        const curScroll = insBody ? insBody.scrollTop : null;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = renderBuildNeedsBudgetInspectorHTML(state);
+        const newPanel = temp.firstElementChild;
+        if (panel.parentNode) {
+          panel.parentNode.replaceChild(newPanel, panel);
+          bindNeedsCrbListeners(newPanel);
+        }
+
+        if (insBody && curScroll !== null) {
+          insBody.scrollTop = curScroll;
+        }
+      }
+    });
+  });
+
+  panel.querySelectorAll('.btn-price-tier').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const tier = btn.dataset.priceTier;
+      if (tier && ['min', 'avg', 'max'].includes(tier)) {
+        state.priceType = tier;
+        if (store && typeof store.setPriceType === 'function') {
+          store.setPriceType(tier, true);
+        } else {
+          try {
+            localStorage.setItem('x4_price_type', tier);
+          } catch (err) {}
+        }
+        // In-place refresh of BOTH budget panels without refreshing the BI panel
+        const insBody = panel.closest('#insBody');
+        const curScroll = insBody ? insBody.scrollTop : null;
+
+        if (insBody) {
+          refreshBothBudgetPanels(insBody);
+        }
+
+        if (insBody && curScroll !== null) {
+          insBody.scrollTop = curScroll;
+        }
+      }
+    });
+  });
+}
+
+export function updateModuleCountFromDiff(wareId, action, delta, onRender) {
+  if (!state.activeBlueprint) {
+    state.activeBlueprint = {
+      name: 'Custom Planned Station Blueprint',
+      totalModules: 0,
+      modules: {},
+      rawMacros: {}
+    };
+  }
+  if (!state.activeBlueprint.modules) state.activeBlueprint.modules = {};
+  if (!state.activeBlueprint.rawMacros) state.activeBlueprint.rawMacros = {};
+
+  let currentPlan = 0;
+  if (wareId === 'EC' || wareId === 'TerEC') {
+    const liveLt = state.layerTotals || (state.activeBlueprint && state.activeBlueprint.baselineLayerTotals) || {};
+    currentPlan = wareId === 'TerEC' ? (liveLt.inPlanTerSolarCount || 0) : (liveLt.inPlanSolarCount || 0);
+  } else {
+    currentPlan = (state.activeBlueprint.modules && state.activeBlueprint.modules[wareId]) || 0;
+  }
+
+  let newQty = currentPlan;
+  if (action === 'plus') {
+    newQty = currentPlan + 1;
+  } else if (action === 'minus') {
+    newQty = Math.max(0, currentPlan - 1);
+  } else {
+    // action === 'match'
+    newQty = Math.max(0, currentPlan + delta);
+  }
+
+  if (wareId === 'EC' || wareId === 'TerEC') {
+    const isTerran = wareId === 'TerEC' || (state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || isTerranFaction(state.factionConstructionMethod)));
+    let macroKey = Object.keys(state.activeBlueprint.rawMacros).find(m => mapMacroToWare(m) === wareId);
+    if (!macroKey) {
+      macroKey = isTerran ? 'prod_ter_energycells_macro' : 'prod_gen_energycells_macro';
+    }
+    if (newQty <= 0) {
+      delete state.activeBlueprint.rawMacros[macroKey];
+      if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+      delete state.activeBlueprint.modules[wareId];
+    } else {
+      state.activeBlueprint.rawMacros[macroKey] = newQty;
+      if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = newQty;
+      state.activeBlueprint.modules[wareId] = newQty;
+    }
+  } else if (wareId === 'ScrapMetal' || wareId === 'ScrapHullParts' || wareId === 'ScrapClaytronics') {
+    let macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_gen_scraprecycler_macro'] !== undefined)
+      ? 'prod_gen_scraprecycler_macro'
+      : 'prod_gen_scrap_recycler_macro';
+    if (newQty <= 0) {
+      delete state.activeBlueprint.modules[wareId];
+      const otherId = wareId === 'ScrapHullParts' ? 'ScrapClaytronics' : 'ScrapHullParts';
+      const otherQty = state.activeBlueprint.modules[otherId] || 0;
+      if (otherQty <= 0) {
+        delete state.activeBlueprint.modules['ScrapMetal'];
+        delete state.activeBlueprint.rawMacros[macroKey];
+        if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+      } else {
+        state.activeBlueprint.modules['ScrapMetal'] = otherQty;
+        state.activeBlueprint.rawMacros[macroKey] = otherQty;
+        if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = otherQty;
+      }
+    } else {
+      state.activeBlueprint.modules[wareId] = newQty;
+      const otherId = wareId === 'ScrapHullParts' ? 'ScrapClaytronics' : 'ScrapHullParts';
+      const maxScrap = Math.max(newQty, state.activeBlueprint.modules[otherId] || 0);
+      state.activeBlueprint.modules['ScrapMetal'] = maxScrap;
+      state.activeBlueprint.rawMacros[macroKey] = maxScrap;
+      if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = maxScrap;
+    }
+  } else if (wareId === 'TerScrapMetal' || ((wareId === 'TerCompSubstrate' || wareId === 'TerSilCarbide') && !state.activeBlueprint.rawMacros['prod_ter_computronicsubstrate_macro'] && !state.activeBlueprint.rawMacros['prod_ter_siliconcarbide_macro'] && (state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] || state.activeBlueprint.rawMacros['prod_ter_scrap_recycler_macro']))) {
+    let macroKey = (state.activeBlueprint.rawMacros && state.activeBlueprint.rawMacros['prod_ter_scraprecycler_macro'] !== undefined)
+      ? 'prod_ter_scraprecycler_macro'
+      : 'prod_ter_scrap_recycler_macro';
+    if (newQty <= 0) {
+      delete state.activeBlueprint.modules[wareId];
+      const otherId = wareId === 'TerCompSubstrate' ? 'TerSilCarbide' : 'TerCompSubstrate';
+      const otherQty = state.activeBlueprint.modules[otherId] || 0;
+      if (otherQty <= 0) {
+        delete state.activeBlueprint.modules['TerScrapMetal'];
+        delete state.activeBlueprint.rawMacros[macroKey];
+        if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[macroKey];
+      } else {
+        state.activeBlueprint.modules['TerScrapMetal'] = otherQty;
+        state.activeBlueprint.rawMacros[macroKey] = otherQty;
+        if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = otherQty;
+      }
+    } else {
+      state.activeBlueprint.modules[wareId] = newQty;
+      const otherId = wareId === 'TerCompSubstrate' ? 'TerSilCarbide' : 'TerCompSubstrate';
+      const maxScrap = Math.max(newQty, state.activeBlueprint.modules[otherId] || 0);
+      state.activeBlueprint.modules['TerScrapMetal'] = maxScrap;
+      state.activeBlueprint.rawMacros[macroKey] = maxScrap;
+      if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[macroKey] = maxScrap;
+    }
+  } else {
+    const matchingMacros = Object.keys(state.activeBlueprint.rawMacros).filter(m => {
+      const lower = m.toLowerCase();
+      if (lower.includes('scraprecycler') || lower.includes('scrap_recycler')) return false;
+      return mapMacroToWare(m) === wareId;
+    });
+
+    let primaryMacro = matchingMacros[0];
+    if (wareId === 'ScrapProc') {
+      primaryMacro = getPrimaryMacroForWare('ScrapProc');
+    } else if (!primaryMacro) {
+      primaryMacro = Object.keys(MACRO_TO_WARE).find(m => MACRO_TO_WARE[m] === wareId);
+    }
+    if (!primaryMacro) {
+      primaryMacro = getPrimaryMacroForWare(wareId);
+    }
+    if (!primaryMacro) {
+      primaryMacro = `prod_gen_${wareId.toLowerCase()}_macro`;
+    }
+
+    matchingMacros.forEach(m => {
+      if (m !== primaryMacro) {
+        delete state.activeBlueprint.rawMacros[m];
+        if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[m];
+      }
+    });
+
+    if (newQty <= 0) {
+      delete state.activeBlueprint.rawMacros[primaryMacro];
+      if (state.activeBlueprint.rootMacros) delete state.activeBlueprint.rootMacros[primaryMacro];
+      delete state.activeBlueprint.modules[wareId];
+    } else {
+      state.activeBlueprint.rawMacros[primaryMacro] = newQty;
+      if (state.activeBlueprint.rootMacros) state.activeBlueprint.rootMacros[primaryMacro] = newQty;
+      state.activeBlueprint.modules[wareId] = newQty;
+    }
+  }
+
+  delete state.activeBlueprint.modules['RawScrap'];
+
+  rebuildBlueprintFromMacros();
+  saveActiveBlueprintToStorage();
+  calculateFactoryRequirements();
+  store.notify('BLUEPRINT_UPDATED');
+
+  const preservedFocus = state.focusedBiPanel || 'module-diff';
+  const prevIns = document.getElementById('insBody');
+  const curInsScroll = prevIns ? prevIns.scrollTop : 0;
+
+  if (typeof onRender === 'function') {
+    onRender();
+  } else if (typeof window.renderApp === 'function') {
+    window.renderApp();
+  } else {
+    updateInspector(null, onRender);
+  }
+
+  if (preservedFocus) {
+    state.focusedBiPanel = preservedFocus;
+  }
+  const newIns = document.getElementById('insBody');
+  if (newIns && curInsScroll > 0) {
+    newIns.scrollTop = curInsScroll;
+  }
+  bindBiPanelFocusListeners();
+}
+
 export function updateInspector(id, onRender) {
   const insTitle = document.getElementById('insTitle');
   const insSub = document.getElementById('insSub');
   const insBody = document.getElementById('insBody');
+
 
   if (!insTitle || !insSub || !insBody) return;
 
@@ -1086,6 +1843,18 @@ export function updateInspector(id, onRender) {
     let hasExceeded = false;
     let hasDeficit = false;
 
+    const renderDiffItem = (wareId, wareName, inPlan, optimum, diff, isSolar = false) => {
+      const diffSign = diff > 0 ? '+' : '';
+      const diffColor = diff > 0 ? '#f87171' : '#38bdf8';
+      const asterisk = inPlan > optimum ? '<span style="color:#fb923c; font-weight:bold; margin-left:1px;">*</span>' : '';
+      const actionText = diff > 0 ? `add ${diff}x` : `remove ${Math.abs(diff)}x`;
+      const matchTitle = isSolar
+        ? `Click to add ${diffSign}${diff}x ${escapeHtml(wareName)} to Plan (Plan: ${inPlan}x ➔ Needs: ${optimum}x)`
+        : `Click to ${actionText} ${escapeHtml(wareName)} (Plan: ${inPlan}x ➔ Needs: ${optimum}x)`;
+
+      return `<span class="bp-diff-item" data-ware="${wareId}" data-delta="${diff}" data-plan="${inPlan}" data-optimum="${optimum}" style="white-space:nowrap; cursor:pointer; padding:1px 5px; border-radius:3px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); user-select:none; display:inline-block; margin:1px 0; transition:all 0.15s ease;" title="${matchTitle}"><strong style="color:${diffColor}; font-weight:700;">${diffSign}${diff}x</strong> <span style="color:#cbd5e1;">${escapeHtml(wareName)}</span>${asterisk}</span>`;
+    };
+
     const smInPlan = (state.activeBlueprint && state.activeBlueprint.modules && ((state.activeBlueprint.modules['ScrapMetal'] || 0) + (state.activeBlueprint.modules['TerScrapMetal'] || 0) + (state.activeBlueprint.modules['ScrapProc'] || 0))) || 0;
     const smCalc = state.calculatedDemand && (state.calculatedDemand['ScrapMetal'] || state.calculatedDemand['TerScrapMetal'] || state.calculatedDemand['ScrapProc']);
     const smOutputNonZero = smInPlan > 0 || (smCalc && (smCalc.rateNeeded > 0 || smCalc.modulesNeeded > 0)) || (state.selectedWareId === 'ScrapMetal' || state.selectedWareId === 'TerScrapMetal' || state.selectedWareId === 'ScrapProc' || state.selectedWareId === 'RawScrap');
@@ -1099,20 +1868,20 @@ export function updateInspector(id, onRender) {
       if (wId === 'EC' || wId === 'TerEC') {
         const terLoaded = (liveLt.inPlanTerSolarCount || 0) > 0;
         const genLoaded = (liveLt.inPlanSolarCount || 0) > 0;
-        const isTerran = state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || state.factionConstructionMethod === 'terran');
+        const isTerran = state.activeBlueprint && (isBlueprintTerran(state.activeBlueprint) || isTerranFaction(state.factionConstructionMethod));
         const isPureTerranSolar = (terLoaded && !genLoaded) || (!terLoaded && !genLoaded && isTerran);
 
         if (wId === 'TerEC') {
           if (isPureTerranSolar && (liveLt.terSolarModulesNeeded || 0) > 0) {
             const needed = liveLt.terSolarModulesNeeded;
             const inPlan = liveLt.inPlanTerSolarCount || 0;
-            diffList.push(`<span style="white-space:nowrap;" title="Plan: ${inPlan}x • Needs: +${needed}x (Matches Solar Harvesting)"><strong style="color:#f87171;">+${needed}x</strong> ${ware.name}</span>`);
+            diffList.push(renderDiffItem('TerEC', ware.name, inPlan, inPlan + needed, needed, true));
           }
         } else if (wId === 'EC') {
           if (!isPureTerranSolar && (liveLt.solarModulesNeeded || 0) > 0) {
             const needed = liveLt.solarModulesNeeded;
             const inPlan = liveLt.inPlanSolarCount || 0;
-            diffList.push(`<span style="white-space:nowrap;" title="Plan: ${inPlan}x • Needs: +${needed}x (Matches Solar Harvesting)"><strong style="color:#f87171;">+${needed}x</strong> ${ware.name}</span>`);
+            diffList.push(renderDiffItem('EC', ware.name, inPlan, inPlan + needed, needed, true));
           }
         }
         return;
@@ -1129,10 +1898,7 @@ export function updateInspector(id, onRender) {
 
       if (inPlan !== optimum && (inPlan > 0 || optimum > 0)) {
         const diff = optimum - inPlan;
-        const diffSign = diff > 0 ? '+' : '';
-        const diffColor = diff > 0 ? '#f87171' : '#38bdf8';
-        const asterisk = inPlan > optimum ? '<span style="color:#fb923c; font-weight:bold; margin-left:1px;">*</span>' : '';
-        diffList.push(`<span style="white-space:nowrap;" title="Plan: ${inPlan}x • Needs: ${optimum}x • Delta: ${diffSign}${diff}x${inPlan > optimum ? ' (Plan exceeds Needs)' : ''}"><strong style="color:${diffColor};">${diffSign}${diff}x</strong> ${ware.name}${asterisk}</span>`);
+        diffList.push(renderDiffItem(wId, ware.name, inPlan, optimum, diff, false));
       }
     });
 
@@ -1141,12 +1907,18 @@ export function updateInspector(id, onRender) {
 
     insTitle.innerText = 'Blueprint Inspector';
     insSub.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-top:0.15rem;">
-        <span style="color:#94a3b8; font-size:0.75rem;">${escapeHtml(state.activeBlueprint.name)}</span>
-        <label style="font-size:0.72rem; color:#38bdf8; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.15); padding:0.15rem 0.5rem; border-radius:4px; border:1px solid rgba(56,189,248,0.35); user-select:none;" title="${matchNeedsTitle}">
-          <input type="checkbox" id="chkSyncOptimum" ${isAllSynced ? 'checked' : ''} style="cursor:pointer;" />
-          ${matchNeedsLabel}
-        </label>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:0.35rem; flex-wrap:wrap; margin-top:0.15rem; width:100%;">
+        <span style="color:#94a3b8; font-size:0.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(state.activeBlueprint.name)}">${escapeHtml(state.activeBlueprint.name)}</span>
+        <div style="display:inline-flex; align-items:center; gap:0.35rem; margin-left:auto; flex-shrink:0;">
+          <label id="lblMatchNeeds" style="font-size:0.72rem; color:#38bdf8; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.15); padding:0.15rem 0.45rem; border-radius:4px; border:1px solid rgba(56,189,248,0.35); user-select:none; white-space:nowrap;" title="${matchNeedsTitle}">
+            <input type="checkbox" id="chkSyncOptimum" ${isAllSynced ? 'checked' : ''} style="cursor:pointer;" />
+            ${matchNeedsLabel}
+          </label>
+          <label id="lblSubdueEcCalc" style="font-size:0.72rem; color:#fbbf24; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); padding:0.15rem 0.45rem; border-radius:4px; border:1px solid rgba(245,158,11,0.35); user-select:none; white-space:nowrap;" title="When checked, hides the EC consumption badges on all ware cards">
+            <input type="checkbox" id="chkSubdueEcCalc" ${state.subdueEcCalc ? 'checked' : ''} style="cursor:pointer;" />
+            Subdue EC Calc
+          </label>
+        </div>
       </div>
     `;
 
@@ -1231,13 +2003,13 @@ export function updateInspector(id, onRender) {
       const n = (name || '').toLowerCase();
 
       // 1. Habitation / Workforce
-      if (m.startsWith('hab_') || n.includes('habitat') || n.includes('dome') || n.includes('biome') || n.includes('living')) return 1;
+      if (m.startsWith('hab_') || m.startsWith('landmarks_') || n.includes('habitat') || n.includes('housing') || n.includes('spire') || n.includes('pillar') || n.includes('dome') || n.includes('biome') || n.includes('living') || n.includes('parlour') || n.includes('dormitory') || n.includes('oasis')) return 1;
       // 2. Storage Modules
       if (m.startsWith('storage_') || n.includes('storage')) return 2;
       // 3. Docks & Piers
       if (m.startsWith('dockarea_') || m.startsWith('pier_') || n.includes('dock') || n.includes('pier') || n.includes('landing')) return 3;
-      // 4. Defence Platforms
-      if (m.startsWith('defence_') || m.startsWith('defense_') || n.includes('defence') || n.includes('defense') || n.includes('turret')) return 4;
+      // 4. Defence Platforms & Turrets / Shields / Weapons
+      if (m.startsWith('defence_') || m.startsWith('defense_') || m.startsWith('turret_') || m.startsWith('shield_') || m.startsWith('weapon_') || n.includes('defence') || n.includes('defense') || n.includes('turret') || n.includes('shield')) return 4;
       // 5. Observation & Sensors / Radar
       if (m.includes('observationdeck') || m.startsWith('radar_') || n.includes('observation') || n.includes('radar') || n.includes('sensor')) return 5;
       // 6. Connection Structures & Trusses
@@ -1245,6 +2017,83 @@ export function updateInspector(id, onRender) {
 
       return 7;
     };
+
+    const getModuleCategoryLabel = (macro, name) => {
+      const m = (macro || '').toLowerCase();
+      const n = (name || '').toLowerCase();
+      if (m.startsWith('hab_') || m.startsWith('landmarks_') || n.includes('habitat') || n.includes('housing') || n.includes('spire') || n.includes('pillar') || n.includes('dome') || n.includes('living')) return 'Habitation';
+      if (m.startsWith('storage_') || n.includes('storage')) return 'Storage';
+      if (m.startsWith('dockarea_') || m.startsWith('pier_') || n.includes('dock') || n.includes('pier')) return 'Dock / Pier';
+      if (m.startsWith('shield_') || n.includes('shield')) return 'Shield Generator';
+      if (m.startsWith('turret_') || n.includes('turret') || m.startsWith('weapon_')) return 'Turret / Weapon';
+      if (m.startsWith('defence_') || m.startsWith('defense_') || n.includes('defence') || n.includes('defense')) return 'Defense Platform';
+      if (m.includes('observationdeck') || m.startsWith('radar_') || n.includes('observation') || n.includes('radar')) return 'Radar / Observation';
+      if (m.startsWith('struct_') || n.includes('connection') || n.includes('structure') || n.includes('cross') || n.includes('vertical') || n.includes('base') || n.includes('truss')) return 'Structure';
+      return 'Station Module';
+    };
+
+    // Gather all unowned modules in current blueprint
+    const unownedModules = [];
+    let totalUnownedCount = 0;
+
+    if (state.activeBlueprint && state.serverModules) {
+      const rawMacros = state.activeBlueprint.rawMacros || {};
+      const handledWares = new Set();
+
+      Object.entries(rawMacros).forEach(([macro, count]) => {
+        if (count > 0 && !isMacroBlueprintOwned(macro, state.serverModules)) {
+          const friendly = getFriendlyModuleName(macro, state.factionConstructionMethod);
+          const wareId = mapMacroToWare(macro);
+          const ware = wareId ? WARES_DB[wareId] : null;
+          if (wareId) handledWares.add(wareId);
+          unownedModules.push({
+            macro,
+            count,
+            friendly,
+            wareId,
+            ware,
+            category: ware ? `Level ${ware.level} ${ware.cat}` : getModuleCategoryLabel(macro, friendly),
+            catOrder: getModuleCategoryOrder(macro, friendly)
+          });
+          totalUnownedCount += count;
+        }
+      });
+
+      if (state.activeBlueprint.modules) {
+        Object.entries(state.activeBlueprint.modules).forEach(([wId, count]) => {
+          if (count > 0 && !handledWares.has(wId) && WARES_DB[wId]) {
+            const ownership = isWareModuleOwned(wId, state.serverModules, { factionMethod: state.factionConstructionMethod });
+            if (ownership.hasModule && !ownership.isOwned) {
+              const ware = WARES_DB[wId];
+              const primaryMacro = getPrimaryMacroForWare(wId) || wId;
+              const friendly = ware.name;
+              unownedModules.push({
+                macro: primaryMacro,
+                count,
+                friendly,
+                wareId: wId,
+                ware,
+                category: `Level ${ware.level} ${ware.cat}`,
+                catOrder: 0
+              });
+              totalUnownedCount += count;
+            }
+          }
+        });
+      }
+    }
+
+    unownedModules.sort((a, b) => {
+      if (a.catOrder !== b.catOrder) return a.catOrder - b.catOrder;
+      return a.friendly.localeCompare(b.friendly);
+    });
+
+    const unownedListHtml = unownedModules.map(item => `
+      <span class="bp-diff-item bp-diff-unowned-item" ${item.wareId ? `data-ware="${escapeHtml(item.wareId)}" style="cursor:pointer;" title="Click to inspect ${escapeHtml(item.friendly)} in Supply Matrix"` : `title="${escapeHtml(item.friendly)} (${escapeHtml(item.macro)}) - Blueprint Not Owned"`} style="white-space:nowrap; display:inline-flex; align-items:center; gap:5px; padding:1px 6px; border-radius:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); margin:1px 0; color:#cbd5e1;">
+        <strong style="color:#ef4444; font-weight:700;">${item.count}x</strong> <span style="color:#fca5a5;">${escapeHtml(item.friendly)}</span>
+        ${renderNotOwnedModuleTag(item.macro || item.wareId, { mini: true })}
+      </span>
+    `).join(' ');
 
     // Gather all non-contributing ware modules
     const nonContributingMap = {};
@@ -1256,7 +2105,7 @@ export function updateInspector(id, onRender) {
           const friendly = getFriendlyModuleName(macro);
           const catOrder = getModuleCategoryOrder(macro, friendly);
           if (!nonContributingMap[friendly]) {
-            nonContributingMap[friendly] = { count: 0, catOrder, name: friendly };
+            nonContributingMap[friendly] = { count: 0, catOrder, name: friendly, macro };
           }
           nonContributingMap[friendly].count += count;
           totalNonContributingCount += count;
@@ -1269,7 +2118,10 @@ export function updateInspector(id, onRender) {
         if (a.catOrder !== b.catOrder) return a.catOrder - b.catOrder;
         return a.name.localeCompare(b.name);
       })
-      .map(item => `<span style="white-space:nowrap;"><strong style="color:#38bdf8;">${item.count}x</strong> ${escapeHtml(item.name)}</span>`);
+      .map(item => {
+        const isUnowned = item.macro && !isMacroBlueprintOwned(item.macro, state.serverModules);
+        return `<span style="white-space:nowrap; display:inline-flex; align-items:center; gap:4px;"><strong style="color:#38bdf8;">${item.count}x</strong> ${escapeHtml(item.name)}${isUnowned ? ` ${renderNotOwnedModuleTag(item.macro, { mini: true })}` : ''}</span>`;
+      });
 
     const lt = state.layerTotals || { totalECNeeded: 0, solarModulesNeeded: 0 };
     const productionEntries = sortedEntries.filter(([wId]) => WARES_DB[wId] && WARES_DB[wId].level < 4);
@@ -1370,7 +2222,7 @@ export function updateInspector(id, onRender) {
       const arrowChar = isCollapsed ? '▶' : '▼';
 
       return `
-        <div class="bp-level-panel" data-level="${lvl}">
+        <div class="bp-level-panel bi-panel ${state.focusedBiPanel === `level-${lvl}` ? 'bi-panel-focused' : ''}" data-level="${lvl}" data-bi-panel="level-${lvl}">
           <div class="bp-level-header" data-level="${lvl}" title="Click to ${isCollapsed ? 'expand' : 'collapse'} ${meta.title}">
             <div class="bp-level-title-group">
               <span class="bp-level-arrow">${arrowChar}</span>
@@ -1417,10 +2269,14 @@ export function updateInspector(id, onRender) {
 
     const wf = calculateBlueprintWorkforce(state.activeBlueprint);
     const hasWorkforce = wf.totalOptimalWorkforce > 0 || wf.totalHabitationCapacity > 0;
+    const prominentFaction = getMostProminentFaction(state.activeBlueprint);
+    const prominentFactionCfg = FACTION_FOOD_MED[prominentFaction] || FACTION_FOOD_MED.commonwealth;
+    const isWfSupportedChecked = Boolean(state.supportWorkforce || (state.activeBlueprint && state.activeBlueprint._autoWfAddedMacros));
     const isWfCollapsed = Boolean(state.workforceSummaryCollapsed);
     const isNcCollapsed = Boolean(state.nonContributingCollapsed);
     const isRawCollapsed = Boolean(state.rawMiningCollapsed);
     const isDiffCollapsed = Boolean(state.moduleDiffCollapsed);
+    const isUnownedCollapsed = Boolean(state.unownedCollapsed);
 
     const redShortages = [];
     const expandedDeficits = [];
@@ -1450,7 +2306,7 @@ export function updateInspector(id, onRender) {
     }
 
     insBody.innerHTML = `
-      <div class="workforce-box bp-raw-panel" style="border-color:#38bdf8; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
+      <div class="workforce-box bp-raw-panel bi-panel ${state.focusedBiPanel === 'raw-mining' ? 'bi-panel-focused' : ''}" data-bi-panel="raw-mining" style="border-color:#38bdf8; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
         <div class="bp-raw-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.5rem 0.65rem; background:rgba(56,189,248,0.08); user-select:none; gap:6px; flex-wrap:wrap;" title="Click to ${isRawCollapsed ? 'expand' : 'collapse'} Total Recalculated Raw Mining & Liquids">
           <div style="display:flex; align-items:center; gap:6px;">
             <span class="bp-raw-arrow" style="font-size:0.75rem; color:#38bdf8; width:12px; display:inline-block;">${isRawCollapsed ? '▶' : '▼'}</span>
@@ -1468,13 +2324,17 @@ export function updateInspector(id, onRender) {
       </div>
 
       ${hasWorkforce ? `
-        <div class="workforce-box bp-wf-panel" style="border-color:#10b981; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
+        <div class="workforce-box bp-wf-panel bi-panel ${state.focusedBiPanel === 'workforce-summary' ? 'bi-panel-focused' : ''}" data-bi-panel="workforce-summary" style="border-color:#10b981; margin-bottom:0.6rem; padding:0; overflow:hidden; flex-shrink:0; width:100%; box-sizing:border-box;">
           <div class="bp-wf-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.5rem 0.65rem; background:rgba(16,185,129,0.08); user-select:none; gap:6px; flex-wrap:wrap;" title="Click to ${isWfCollapsed ? 'expand' : 'collapse'} Station Workforce Summary">
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="bp-wf-arrow" style="font-size:0.75rem; color:#34d399; width:12px; display:inline-block;">${isWfCollapsed ? '▶' : '▼'}</span>
               <h4 style="margin:0; color:#34d399; font-size:0.8rem;">👥 Station Workforce Summary</h4>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
+              <label id="lblSupportWorkforce" style="font-size:0.72rem; color:#10b981; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); padding:0.15rem 0.45rem; border-radius:4px; border:1px solid rgba(16,185,129,0.35); user-select:none; white-space:nowrap;" title="Update SWS requirements to support needed Food/Medicine for the most prominent faction and add largest owned habitat modules (including _spire habs) for surplus workers" onclick="event.stopPropagation();">
+                <input type="checkbox" id="chkSupportWorkforce" ${isWfSupportedChecked ? 'checked' : ''} style="cursor:pointer;" onclick="event.stopPropagation();" />
+                Support Workforce
+              </label>
               <div class="bp-wf-collapsed-deficits" style="display:${isWfCollapsed ? 'inline-flex' : 'none'}; align-items:center; gap:4px; flex-wrap:wrap;">
                 ${redShortages.join('')}
               </div>
@@ -1484,6 +2344,10 @@ export function updateInspector(id, onRender) {
             </div>
           </div>
           <div class="bp-wf-body" style="padding:0.5rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); display:${isWfCollapsed ? 'none' : 'block'};">
+            <div style="font-size:0.72rem; color:#94a3b8; display:flex; justify-content:space-between; margin-bottom:0.4rem; padding-bottom:0.25rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span>Prominent Faction: <strong style="color:#38bdf8;">${prominentFactionCfg.name}</strong></span>
+              ${(state.supportWorkforce || (state.activeBlueprint && state.activeBlueprint._autoWfAddedMacros)) ? `<span style="color:#34d399; font-weight:600;">✨ Auto-Supported</span>` : ''}
+            </div>
             ${expandedDeficits.length > 0 ? `
               <div class="bp-wf-expanded-deficits" style="margin-bottom:0.45rem; padding:0.35rem 0.5rem; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:4px; font-size:0.72rem; display:flex; flex-direction:column; gap:0.25rem;">
                 <div style="font-weight:700; color:#ef4444; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em;">⚠️ Workforce Deficits:</div>
@@ -1507,23 +2371,23 @@ export function updateInspector(id, onRender) {
                 ${wf.surplusDeficit >= 0 ? `+${wf.surplusDeficit.toLocaleString()} surplus beds (${wf.habitatCount} habitats)` : `${wf.surplusDeficit.toLocaleString()} bed shortage`}
               </strong>
             </div>
-            ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+            ${wf.lifeSupport && (wf.lifeSupport.totalFoodProd > 0 || wf.lifeSupport.totalMedProd > 0 || wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
             <div style="margin-top:0.35rem; font-size:0.74rem; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.25rem;">
               <span style="color:#94a3b8;">Sustainable Workers:</span>
-              <strong style="color:${wf.lifeSupport.sustainableWorkers >= wf.totalOptimalWorkforce ? '#34d399' : '#fbbf24'};">
+              <strong style="color:${wf.lifeSupport.sustainableWorkers >= (wf.totalOptimalWorkforce > 0 ? wf.totalOptimalWorkforce : wf.totalHabitationCapacity) ? '#34d399' : '#fbbf24'};">
                 ${wf.lifeSupport.sustainableWorkers.toLocaleString()} (${wf.lifeSupport.sustainableCoveragePercent}% self-sufficient)
               </strong>
             </div>
             ` : ''}
-            ${wf.lifeSupport && (wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
+            ${wf.lifeSupport && (wf.lifeSupport.totalFoodProd > 0 || wf.lifeSupport.totalMedProd > 0 || wf.lifeSupport.totalFoodRationsProd > 0 || wf.lifeSupport.totalAllMedSuppliesProd > 0) ? `
             <div style="margin-top:0.35rem; font-size:0.72rem; background:rgba(0,0,0,0.2); padding:0.3rem 0.45rem; border-radius:4px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.2rem;">
               <div style="display:flex; justify-content:space-between;">
-                <span style="color:#94a3b8;">🍞 Food Rations:</span>
-                <span><strong>${Math.round(wf.lifeSupport.totalFoodRationsProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.foodRationsDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.foodBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.foodBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}</span>)</span>
+                <span style="color:#94a3b8;">🍞 ${wf.lifeSupport.foodName || 'Food Rations'}:</span>
+                <span><strong>${Math.round(wf.lifeSupport.totalFoodProd || wf.lifeSupport.totalFoodRationsProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.foodDemand || wf.lifeSupport.foodRationsDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.foodBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.foodBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.foodBalance).toLocaleString()}</span>)</span>
               </div>
               <div style="display:flex; justify-content:space-between;">
-                <span style="color:#94a3b8;">💊 Medical Supplies:</span>
-                <span><strong>${Math.round(wf.lifeSupport.totalArgMedSuppliesProd || wf.lifeSupport.totalAllMedSuppliesProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.medicalSuppliesDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.medBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.medBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.medBalance).toLocaleString()}</span>)</span>
+                <span style="color:#94a3b8;">💊 ${wf.lifeSupport.medName || 'Medical Supplies'}:</span>
+                <span><strong>${Math.round(wf.lifeSupport.totalMedProd || wf.lifeSupport.totalArgMedSuppliesProd || wf.lifeSupport.totalAllMedSuppliesProd).toLocaleString()}</strong> / hr vs <strong>${Math.round(wf.lifeSupport.medicalSuppliesDemand).toLocaleString()}</strong> needed (<span style="color:${wf.lifeSupport.medBalance >= 0 ? '#34d399' : '#ef4444'}; font-weight:700;">${wf.lifeSupport.medBalance >= 0 ? '+' : ''}${Math.round(wf.lifeSupport.medBalance).toLocaleString()}</span>)</span>
               </div>
             </div>
             ` : ''}
@@ -1559,22 +2423,45 @@ export function updateInspector(id, onRender) {
         ${[1, 2, 3].map(lvl => renderLevelPanel(lvl)).join('')}
       </div>
 
-      <div class="module-diff-box bp-diff-panel" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
-        <div class="bp-diff-header" style="font-weight:700; color:#94a3b8; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(255,255,255,0.02); user-select:none;" title="Click to ${isDiffCollapsed ? 'expand' : 'collapse'} Plan vs Needs Module Differences">
+      <div class="module-diff-box bp-diff-panel bi-panel ${state.focusedBiPanel === 'module-diff' ? 'bi-panel-focused' : ''}" data-bi-panel="module-diff" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
+        <div class="bp-diff-header" style="font-weight:700; color:#94a3b8; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(255,255,255,0.02); user-select:none;" title="Click to ${isDiffCollapsed ? 'expand' : 'collapse'} Planned vs Needed Module Differences">
           <div style="display:flex; align-items:center; gap:6px;">
             <span class="bp-diff-arrow" style="font-size:0.75rem; color:#fbbf24; width:12px; display:inline-block;">${isDiffCollapsed ? '▶' : '▼'}</span>
-            <span>⚖️ Plan vs Needs Module Differences</span>
+            <span>⚖️ Planned vs Needed Module Differences</span>
           </div>
-          <span style="color:#fbbf24; font-weight:700; background:rgba(251,191,36,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(251,191,36,0.25);">${diffList.length} Differences</span>
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:#fbbf24; font-weight:700; background:rgba(251,191,36,0.1); padding:1px 6px; border-radius:3px; border:1px solid rgba(251,191,36,0.25);">${diffList.length} Differences</span>
+          </div>
         </div>
-        <div class="bp-diff-body" style="padding:0.45rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); color:#cbd5e1; line-height:1.45; display:${isDiffCollapsed ? 'none' : 'block'};">
-          ${diffList.length > 0 ? diffList.join(', ') : '<span style="color:#34d399; font-style:italic;">All active modules match Needs count!</span>'}
+        <div class="bp-diff-body" style="padding:0.45rem 0.65rem; border-top:1px solid rgba(255,255,255,0.05); color:#cbd5e1; line-height:1.6; display:${isDiffCollapsed ? 'none' : 'block'};">
+          <div class="bp-diff-differences-list">
+            ${diffList.length > 0 ? diffList.join(', ') : '<span style="color:#34d399; font-style:italic;">All active modules match Needs count!</span>'}
+          </div>
         </div>
       </div>
 
+      ${unownedModules.length > 0 ? `
+        <div class="unowned-modules-box bp-unowned-panel bi-panel ${state.focusedBiPanel === 'not-owned' ? 'bi-panel-focused' : ''}" data-bi-panel="not-owned" style="margin-top:0.65rem; padding:0; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.3); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
+          <div class="bp-unowned-header" style="font-weight:700; color:#ef4444; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(239,68,68,0.08); user-select:none;" title="Click to ${isUnownedCollapsed ? 'expand' : 'collapse'} Not Owned Blueprints">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="bp-unowned-arrow" style="font-size:0.75rem; color:#ef4444; width:12px; display:inline-block;">${isUnownedCollapsed ? '▶' : '▼'}</span>
+              <span>🚫 Not Owned Blueprints</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;">${unownedModules.length} Modules (${totalUnownedCount}x Total)</span>
+            </div>
+          </div>
+          <div class="bp-unowned-body" style="padding:0.45rem 0.65rem; border-top:1px solid rgba(239,68,68,0.2); color:#cbd5e1; line-height:1.6; display:${isUnownedCollapsed ? 'none' : 'block'};">
+            ${unownedListHtml}
+          </div>
+        </div>
+      ` : ''}
+
       ${renderConstructionBudgetInspectorHTML(state)}
 
-      <div class="non-contributing-box bp-nc-panel" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
+      ${renderBuildNeedsBudgetInspectorHTML(state)}
+
+      <div class="non-contributing-box bp-nc-panel bi-panel ${state.focusedBiPanel === 'non-contributing' ? 'bi-panel-focused' : ''}" data-bi-panel="non-contributing" style="margin-top:0.65rem; padding:0; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:0.75rem; flex-shrink:0; width:100%; box-sizing:border-box; overflow:hidden;">
         <div class="bp-nc-header" style="font-weight:700; color:#94a3b8; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:0.45rem 0.65rem; background:rgba(255,255,255,0.02); user-select:none;" title="Click to ${isNcCollapsed ? 'expand' : 'collapse'} Non-Contributing Ware Modules">
           <div style="display:flex; align-items:center; gap:6px;">
             <span class="bp-nc-arrow" style="font-size:0.75rem; color:#38bdf8; width:12px; display:inline-block;">${isNcCollapsed ? '▶' : '▼'}</span>
@@ -1685,8 +2572,13 @@ export function updateInspector(id, onRender) {
       bindCrbListeners(panel);
     });
 
+    insBody.querySelectorAll('.needs-budget-panel').forEach(panel => {
+      bindNeedsCrbListeners(panel);
+    });
+
     insBody.querySelectorAll('.bp-wf-header').forEach(header => {
-      header.addEventListener('click', () => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('#lblSupportWorkforce') || e.target.closest('#chkSupportWorkforce')) return;
         state.workforceSummaryCollapsed = !state.workforceSummaryCollapsed;
         try {
           localStorage.setItem('x4_wf_summary_collapsed', String(state.workforceSummaryCollapsed));
@@ -1719,7 +2611,45 @@ export function updateInspector(id, onRender) {
 
         if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
         if (body) body.style.display = isCollapsed ? 'none' : 'block';
-        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Plan vs Needs Module Differences`;
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Planned vs Needed Module Differences`;
+      });
+    });
+
+    insBody.querySelectorAll('.bp-unowned-header').forEach(header => {
+      header.addEventListener('click', () => {
+        state.unownedCollapsed = !state.unownedCollapsed;
+        try {
+          localStorage.setItem('x4_unowned_collapsed', String(state.unownedCollapsed));
+        } catch (e) {}
+
+        const panel = header.closest('.bp-unowned-panel');
+        const arrow = header.querySelector('.bp-unowned-arrow');
+        const body = panel ? panel.querySelector('.bp-unowned-body') : null;
+        const isCollapsed = Boolean(state.unownedCollapsed);
+
+        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        if (body) body.style.display = isCollapsed ? 'none' : 'block';
+        header.title = `Click to ${isCollapsed ? 'expand' : 'collapse'} Not Owned Blueprints`;
+      });
+    });
+
+    insBody.querySelectorAll('.bp-diff-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wareId = item.dataset.ware;
+        const delta = parseInt(item.dataset.delta) || 0;
+        updateModuleCountFromDiff(wareId, 'match', delta, onRender);
+      });
+    });
+
+    insBody.querySelectorAll('.bp-diff-unowned-item[data-ware]').forEach(row => {
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wareId = row.dataset.ware;
+        if (wareId && typeof onRender === 'function') {
+          state.selectedWareId = wareId;
+          onRender();
+        }
       });
     });
 
@@ -1789,16 +2719,74 @@ export function updateInspector(id, onRender) {
     });
 
     const handleSyncOptimum = (e) => {
+      const preservedFocus = state.focusedBiPanel;
+      const prevIns = document.getElementById('insBody');
+      const curInsScroll = prevIns ? prevIns.scrollTop : 0;
+
       applyMatchNeeds(e.target.checked, onRender);
+
+      if (preservedFocus) {
+        state.focusedBiPanel = preservedFocus;
+      }
+      const newIns = document.getElementById('insBody');
+      if (newIns && curInsScroll > 0) {
+        newIns.scrollTop = curInsScroll;
+      }
+      bindBiPanelFocusListeners();
     };
 
     const chkSyncOptimum = document.getElementById('chkSyncOptimum');
     if (chkSyncOptimum) chkSyncOptimum.addEventListener('change', handleSyncOptimum);
 
+    const handleSubdueEcCalc = (e) => {
+      state.subdueEcCalc = e.target.checked;
+      const preservedFocus = state.focusedBiPanel;
+      const prevIns = document.getElementById('insBody');
+      const curInsScroll = prevIns ? prevIns.scrollTop : 0;
+
+      if (typeof onRender === 'function') {
+        onRender();
+      }
+
+      if (preservedFocus) {
+        state.focusedBiPanel = preservedFocus;
+      }
+      const newIns = document.getElementById('insBody');
+      if (newIns && curInsScroll > 0) {
+        newIns.scrollTop = curInsScroll;
+      }
+      bindBiPanelFocusListeners();
+    };
+
+    const chkSubdueEcCalc = document.getElementById('chkSubdueEcCalc');
+    if (chkSubdueEcCalc) chkSubdueEcCalc.addEventListener('change', handleSubdueEcCalc);
+
+    const handleSupportWorkforce = (e) => {
+      e.stopPropagation();
+      const preservedFocus = state.focusedBiPanel || 'workforce-summary';
+      const prevIns = document.getElementById('insBody');
+      const curInsScroll = prevIns ? prevIns.scrollTop : 0;
+
+      applySupportWorkforce(e.target.checked, onRender);
+
+      if (preservedFocus) {
+        state.focusedBiPanel = preservedFocus;
+      }
+      const newIns = document.getElementById('insBody');
+      if (newIns && curInsScroll > 0) {
+        newIns.scrollTop = curInsScroll;
+      }
+      bindBiPanelFocusListeners();
+    };
+
+    const chkSupportWorkforce = document.getElementById('chkSupportWorkforce');
+    if (chkSupportWorkforce) chkSupportWorkforce.addEventListener('change', handleSupportWorkforce);
+
     if (prevInsScrollTop > 0) {
       insBody.scrollTop = prevInsScrollTop;
     }
 
+    bindBiPanelFocusListeners();
     return;
   }
 
@@ -1822,6 +2810,7 @@ export function updateInspector(id, onRender) {
       insBody.scrollTop = prevInsScrollTop;
     }
 
+    bindBiPanelFocusListeners();
     return;
   }
 
@@ -2224,7 +3213,7 @@ export function updateInspector(id, onRender) {
   }
 
   const consumersHtml = `
-    <div class="consumers-box" style="background:rgba(15,23,42,0.75); padding:0.7rem 0.8rem; border-radius:8px; border:1px solid rgba(129,140,248,0.3); border-left:4px solid #818cf8;">
+    <div class="consumers-box bi-panel ${state.focusedBiPanel === 'output-consumers' ? 'bi-panel-focused' : ''}" data-bi-panel="output-consumers" style="background:rgba(15,23,42,0.75); padding:0.7rem 0.8rem; border-radius:8px; border:1px solid rgba(129,140,248,0.3); border-left:4px solid #818cf8;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
         <h4 style="font-size:0.78rem; color:#a5b4fc; text-transform:uppercase; font-family:var(--font-heading); letter-spacing:0.03em; margin:0; display:flex; align-items:center; gap:6px;">
           <span>🏭 Output Consumers ${rangeTag}</span>
@@ -2290,7 +3279,7 @@ export function updateInspector(id, onRender) {
   `;
 
   insBody.innerHTML = `
-    <div class="recipe-box" style="margin-top:0.6rem; background:rgba(30,41,59,0.6); padding:0.65rem 0.8rem; border-radius:8px; border:1px solid rgba(56,189,248,0.25);">
+    <div class="recipe-box bi-panel ${state.focusedBiPanel === 'recipe-inputs' ? 'bi-panel-focused' : ''}" data-bi-panel="recipe-inputs" style="margin-top:0.6rem; background:rgba(30,41,59,0.6); padding:0.65rem 0.8rem; border-radius:8px; border:1px solid rgba(56,189,248,0.25);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
         <h4 style="font-size:0.78rem; color:#38bdf8; text-transform:uppercase; font-family:var(--font-heading); letter-spacing:0.03em; margin:0;">
           📋 Direct Recipe Inputs ${state.inspectorSingle ? '(1x Single Module)' : `(${effectiveCount}x Modules Total)`}
@@ -2317,11 +3306,9 @@ export function updateInspector(id, onRender) {
         const telAdvCompPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['TelAdvComp']) || 0;
         const advCompPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules['AdvComp']) || 0;
 
-        const isSTM = Boolean(state.selectedWareId || !state.activeBlueprint);
-
         Object.entries(ware.recipe).forEach(([inpId, inpQty]) => {
           if (inpId === 'HullParts') {
-            if (!isSTM && state.activeBlueprint) {
+            if (state.activeBlueprint) {
               const hasAlt = telPartsPlan > 0 || scrapPartsPlan > 0;
               if (telPartsPlan > 0 && hullPartsPlan === 0 && scrapPartsPlan === 0) {
                 displayedInputs.push({ id: 'TelParts', qty: inpQty, tag: '[TEL Hull Parts]' });
@@ -2341,7 +3328,7 @@ export function updateInspector(id, onRender) {
             }
             return;
           } else if (inpId === 'EngParts') {
-            if (!isSTM && state.activeBlueprint) {
+            if (state.activeBlueprint) {
               if (telEngPartsPlan > 0 && engPartsPlan === 0) {
                 displayedInputs.push({ id: 'TelEngParts', qty: inpQty, tag: '[TEL Engine Parts]' });
               } else if (telEngPartsPlan > 0 && engPartsPlan > 0) {
@@ -2355,7 +3342,7 @@ export function updateInspector(id, onRender) {
             }
             return;
           } else if (inpId === 'AdvComp') {
-            if (!isSTM && state.activeBlueprint) {
+            if (state.activeBlueprint) {
               if (telAdvCompPlan > 0 && advCompPlan === 0) {
                 displayedInputs.push({ id: 'TelAdvComp', qty: inpQty, tag: '[TEL Adv Composites]' });
               } else if (telAdvCompPlan > 0 && advCompPlan > 0) {
@@ -2369,7 +3356,7 @@ export function updateInspector(id, onRender) {
             }
             return;
           } else if (inpId === 'ScanArray') {
-            if (!isSTM && state.activeBlueprint) {
+            if (state.activeBlueprint) {
               if (telArrayPlan > 0 && scanArrayPlan === 0) {
                 displayedInputs.push({ id: 'TelArray', qty: inpQty, tag: '[TEL Scanning Arrays]' });
               } else if (telArrayPlan > 0 && scanArrayPlan > 0) {
@@ -2383,7 +3370,7 @@ export function updateInspector(id, onRender) {
             }
             return;
           } else if (inpId === 'Claytronics') {
-            if (!isSTM && state.activeBlueprint) {
+            if (state.activeBlueprint) {
               const hasAlt = scrapClayPlan > 0;
               if (scrapClayPlan > 0 && claytronicsPlan === 0) {
                 displayedInputs.push({ id: 'ScrapClaytronics', qty: inpQty, tag: '[Scrap Claytronics]' });
@@ -2401,13 +3388,7 @@ export function updateInspector(id, onRender) {
           displayedInputs.push({ id: inpId, qty: inpQty, tag: '' });
         });
 
-        const inputsToRender = isSTM
-          ? displayedInputs.filter(item => {
-              const d = state.calculatedDemand && state.calculatedDemand[item.id];
-              const hasSupply = d ? ((d.rateNeeded && d.rateNeeded > 0) || (d.modulesNeeded && d.modulesNeeded > 0)) : (item.qty > 0);
-              return hasSupply;
-            })
-          : displayedInputs;
+        const inputsToRender = displayedInputs;
 
         return inputsToRender.map(({ id: inpId, qty: inpQty, tag }) => {
           const inpWare = WARES_DB[inpId];
@@ -2420,15 +3401,15 @@ export function updateInspector(id, onRender) {
       })()}
     </div>
 
-    <div class="workforce-box" style="border-color:#38bdf8; margin-top:0.6rem;">
+    <div class="workforce-box bi-panel ${state.focusedBiPanel === 'upstream-raw' ? 'bi-panel-focused' : ''}" data-bi-panel="upstream-raw" style="border-color:#38bdf8; margin-top:0.6rem;">
       <h4>⛏️ ${state.inspectorSingle ? 'Single Module' : 'Total'} Upstream Raw Mining & Liquids</h4>
       <p><strong style="color:#34d399;">Total Active Raw Extraction:</strong> ${Math.round(totalRaw).toLocaleString()} / hr</p>
       <p style="margin-top:0.3rem;"><strong style="color:#fbbf24;">⚡ Energy Cells Demand:</strong> ${Math.round(ecTotal).toLocaleString()} / hr</p>
     </div>
 
     ${upstreamRows.length > 0 ? `
-      <div style="margin-top:0.6rem;">
-        <div class="section-label">${state.inspectorSingle ? 'Single Module' : 'Total'} Upstream Requirements (${upstreamRows.length} Wares)</div>
+      <div class="bp-level-panel bi-panel ${state.focusedBiPanel === 'upstream-requirements' ? 'bi-panel-focused' : ''}" data-bi-panel="upstream-requirements" style="margin-top:0.6rem; overflow:hidden; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+        <div class="section-label" style="padding:0.4rem 0.6rem 0 0.6rem;">${state.inspectorSingle ? 'Single Module' : 'Total'} Upstream Requirements (${upstreamRows.length} Wares)</div>
         <table class="summary-table">
           <thead>
             ${isLevel4Target ? `
@@ -2498,6 +3479,115 @@ export function updateInspector(id, onRender) {
 
   if (prevInsScrollTop > 0) {
     insBody.scrollTop = prevInsScrollTop;
+  }
+
+  bindBiPanelFocusListeners();
+}
+
+/**
+ * Binds focus listeners to Blueprint Inspector (BI) panels.
+ * Any selection of any panel in BI maintains the focus on that panel.
+ * Any subsequent BI panel selection moves the focus to that panel.
+ * Scrolling allows change of focus if outside the panel.
+ */
+export function bindBiPanelFocusListeners() {
+  const insBody = document.getElementById('insBody');
+  if (!insBody) return;
+
+  if (!insBody._biFocusBound) {
+    insBody._biFocusBound = true;
+
+    // 1. Capture click on any BI panel (or inside it) to maintain or shift focus
+    insBody.addEventListener('click', (e) => {
+      const panel = e.target.closest('.bi-panel');
+      if (!panel || !insBody.contains(panel)) return;
+      const panelId = panel.dataset.biPanel;
+      if (!panelId) return;
+
+      if (state.focusedBiPanel !== panelId) {
+        state.focusedBiPanel = panelId;
+        insBody.querySelectorAll('.bi-panel').forEach(p => {
+          p.classList.toggle('bi-panel-focused', p.dataset.biPanel === panelId);
+        });
+      }
+    }, true);
+
+    // 2. Wheel event: scrolling outside the focused panel allows change of focus
+    insBody.addEventListener('wheel', (e) => {
+      if (!state.focusedBiPanel) return;
+      const curFocusedEl = insBody.querySelector(`.bi-panel[data-bi-panel="${state.focusedBiPanel}"]`);
+      if (!curFocusedEl) return;
+
+      const isInsideFocused = curFocusedEl.contains(e.target);
+      if (!isInsideFocused) {
+        const hoveredPanel = e.target.closest('.bi-panel');
+        if (hoveredPanel && hoveredPanel.dataset.biPanel && hoveredPanel.dataset.biPanel !== state.focusedBiPanel) {
+          state.focusedBiPanel = hoveredPanel.dataset.biPanel;
+          insBody.querySelectorAll('.bi-panel').forEach(p => {
+            p.classList.toggle('bi-panel-focused', p.dataset.biPanel === state.focusedBiPanel);
+          });
+        }
+      }
+    }, { passive: true });
+
+    // 3. Scroll event on insBody:
+    // If the focused panel scrolls outside the viewport, allow focus to change
+    let scrollTicking = false;
+    insBody.addEventListener('scroll', () => {
+      if (scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        scrollTicking = false;
+        const insRect = insBody.getBoundingClientRect();
+
+        // If a panel is currently focused, check if it's still in view
+        if (state.focusedBiPanel) {
+          const curFocusedEl = insBody.querySelector(`.bi-panel[data-bi-panel="${state.focusedBiPanel}"]`);
+          if (curFocusedEl) {
+            const curRect = curFocusedEl.getBoundingClientRect();
+            // Check if still visible within insBody viewport
+            const isStillInside = (curRect.bottom > insRect.top + 5 && curRect.top < insRect.bottom - 5);
+            if (isStillInside) {
+              return; // Maintain focus on that panel
+            }
+          }
+        }
+
+        // Focused panel has scrolled OUTSIDE the view (or none focused) -> change focus to panel now in view
+        const targetY = insRect.top + Math.min(100, insRect.height * 0.25);
+        const allPanels = Array.from(insBody.querySelectorAll('.bi-panel'));
+        let newPanel = null;
+
+        for (const p of allPanels) {
+          const r = p.getBoundingClientRect();
+          if (r.top <= targetY && r.bottom >= insRect.top + 15) {
+            newPanel = p;
+            break;
+          }
+        }
+
+        if (!newPanel && allPanels.length > 0) {
+          newPanel = allPanels.find(p => {
+            const r = p.getBoundingClientRect();
+            return r.bottom > insRect.top && r.top < insRect.bottom;
+          });
+        }
+
+        if (newPanel && newPanel.dataset.biPanel !== state.focusedBiPanel) {
+          state.focusedBiPanel = newPanel.dataset.biPanel;
+          allPanels.forEach(p => {
+            p.classList.toggle('bi-panel-focused', p === newPanel);
+          });
+        }
+      });
+    }, { passive: true });
+  }
+
+  // Ensure current focused panel has the class applied
+  if (state.focusedBiPanel) {
+    insBody.querySelectorAll('.bi-panel').forEach(p => {
+      p.classList.toggle('bi-panel-focused', p.dataset.biPanel === state.focusedBiPanel);
+    });
   }
 }
 

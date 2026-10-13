@@ -187,6 +187,7 @@ function JSON.decode(str)
     end
 
     return parse_val()
+end
 -- =========================================================================
 -- Direct C/FFI Engine Bindings & String Converters
 -- =========================================================================
@@ -195,15 +196,25 @@ pcall(function() ffi = require("ffi") end)
 
 local C = nil
 if ffi then
+    C = ffi.C
     pcall(function()
-        C = ffi.C
         ffi.cdef[[
             typedef struct {
                 const char* ware;
                 const char* productionmethodid;
             } UIBlueprint;
+        ]]
+    end)
+    pcall(function()
+        ffi.cdef[[
             uint32_t GetNumBlueprints(const char* set, const char* category, const char* macroname);
             uint32_t GetBlueprints(UIBlueprint* result, uint32_t resultlen, const char* set, const char* category, const char* macroname);
+        ]]
+    end)
+    pcall(function()
+        ffi.cdef[[
+            bool HasExtension(const char* extensionid);
+            bool IsExtensionEnabled(const char* extensionid);
         ]]
     end)
 end
@@ -310,7 +321,8 @@ local function RegisterEncyclopediaListener()
             blueprints = {}
         }
 
-        for wareId, metrics in pairs(itemsTable) do
+        for idxOrId, metrics in pairs(itemsTable) do
+            local wareId = metrics.id or metrics["$id"] or idxOrId
             local rawName = metrics.name or metrics["$name"]
             local cleanName = cdataOrStringToLua(rawName) or tostring(wareId)
             local rawDesc = metrics.description or metrics["$description"]
@@ -417,10 +429,13 @@ local function RegisterPlayerListener()
             cachedPlayerName = pName
         end
 
-        if (not pSector or pSector == "Deep Space" or pSector == "Unknown") and cachedPlayerSector then
-            pSector = cachedPlayerSector
-        elseif pSector and pSector ~= "Deep Space" and pSector ~= "Unknown" then
+        if pSector and pSector ~= "Deep Space" and pSector ~= "Unknown" and not pSector:find("^cdata:") then
+            if cachedPlayerSector ~= pSector then
+                logBridge("Pilot Sector updated (MD): " .. tostring(cachedPlayerSector) .. " -> " .. tostring(pSector))
+            end
             cachedPlayerSector = pSector
+        elseif (not pSector or pSector == "Deep Space" or pSector == "Unknown") and cachedPlayerSector then
+            pSector = cachedPlayerSector
         end
 
         local playerPayload = {
@@ -444,6 +459,38 @@ local function RegisterPlayerListener()
     end)
 end
 
+local function RegisterGameLoadedListener()
+    if not RegisterEvent then return end
+
+    local function handleGameLoaded(eventName)
+        logBridge("event_game_loaded caught from MD (" .. tostring(eventName) .. ")! Notifying companion server to reload app UI...")
+        local req = getRequest()
+        if not req then return end
+
+        local payload = {
+            event = "game_loaded",
+            action = "reload_ui",
+            timestamp = os.time(),
+            message = "event_game_loaded triggered from Mission Director"
+        }
+
+        req.new('POST')
+            :setUrl("http://127.0.0.1:3000/api/game-loaded")
+            :setBody(JSON.encode(payload))
+            :addHeader("Content-Type", "application/json")
+            :send(function(response, err)
+                if err and DebugError then
+                    DebugError("[X4 Companion Bridge] Game loaded notify error: " .. tostring(err))
+                else
+                    logBridge("Successfully notified companion server of game_loaded.")
+                end
+            end)
+    end
+
+    RegisterEvent("X4_Game_Loaded", handleGameLoaded)
+    RegisterEvent("X4_Reload_UI", handleGameLoaded)
+end
+
 local function GetEnginePlayerBlueprints(categoryFilter)
     local ffiObj = ffi
     local cObj = C or (ffiObj and ffiObj.C) or (_G and _G.C)
@@ -453,7 +500,13 @@ local function GetEnginePlayerBlueprints(categoryFilter)
         if not cObj.GetNumBlueprints or not cObj.GetBlueprints then return nil end
 
         local cat = categoryFilter
-        if cat == "all" or cat == "blueprints" then cat = nil end
+        if cat == "all" or cat == "blueprints" then
+            cat = nil
+        elseif cat == "modules" then
+            cat = "module"
+        elseif cat == "ships" then
+            cat = "ship"
+        end
 
         -- Try set = "player" first (standard in X4), then nil, then ""
         local num = cObj.GetNumBlueprints("player", cat, nil)
@@ -552,20 +605,26 @@ local function resolvePlayerTelemetry()
 
         local pid = nil
         pcall(function()
-            if GetPlayerID then pid = GetPlayerID() end
-            if not pid and C and pcall(function() return C.GetPlayerID end) then
-                pid = C.GetPlayerID()
-            end
+            if C and C.GetPlayerID then pid = C.GetPlayerID() end
+            if not pid and GetPlayerID then pid = GetPlayerID() end
         end)
 
         local shipId = nil
         pcall(function()
-            if GetPlayerOccupiedShipID then shipId = GetPlayerOccupiedShipID() end
+            if C and C.GetPlayerOccupiedShipID then shipId = C.GetPlayerOccupiedShipID() end
+            if not shipId and GetPlayerOccupiedShipID then shipId = GetPlayerOccupiedShipID() end
+        end)
+
+        local stationId = nil
+        pcall(function()
+            if C and C.GetPlayerOccupiedStationID then stationId = C.GetPlayerOccupiedStationID() end
+            if not stationId and GetPlayerOccupiedStationID then stationId = GetPlayerOccupiedStationID() end
         end)
 
         local zoneId = nil
         pcall(function()
-            if GetPlayerZone then zoneId = GetPlayerZone() end
+            if C and C.GetPlayerZone then zoneId = C.GetPlayerZone() end
+            if not zoneId and GetPlayerZone then zoneId = GetPlayerZone() end
         end)
 
         local candidates = {}
@@ -573,6 +632,11 @@ local function resolvePlayerTelemetry()
             table.insert(candidates, shipId)
             local s64 = to64(shipId)
             if s64 and s64 ~= shipId then table.insert(candidates, s64) end
+        end
+        if stationId and stationId ~= 0 then
+            table.insert(candidates, stationId)
+            local st64 = to64(stationId)
+            if st64 and st64 ~= stationId then table.insert(candidates, st64) end
         end
         if pid and pid ~= 0 then
             table.insert(candidates, pid)
@@ -586,22 +650,16 @@ local function resolvePlayerTelemetry()
         end
 
         local secId = nil
-        for _, cid in ipairs(candidates) do
-            -- 1. Global GetContextByClass
-            if not secId and GetContextByClass then
-                local ok, res = pcall(GetContextByClass, cid, "sector", false)
-                if ok and res and res ~= 0 then secId = res end
-                if not secId then
-                    local ok2, res2 = pcall(GetContextByClass, cid, "sector")
-                    if ok2 and res2 and res2 ~= 0 then secId = res2 end
-                end
+        local getCtx = (C and C.GetContextByClass) or GetContextByClass
+        if getCtx then
+            for _, cid in ipairs(candidates) do
+                local ok, res = pcall(getCtx, cid, "sector", false)
+                if ok and res and res ~= 0 then secId = res; break end
+                local ok2, res2 = pcall(getCtx, cid, "sector")
+                if ok2 and res2 and res2 ~= 0 then secId = res2; break end
+                local ok3, res3 = pcall(getCtx, cid, "cluster", false)
+                if ok3 and res3 and res3 ~= 0 then secId = res3; break end
             end
-            -- 2. Cluster fallback
-            if not secId and GetContextByClass then
-                local ok, res = pcall(GetContextByClass, cid, "cluster", false)
-                if ok and res and res ~= 0 then secId = res end
-            end
-            if secId then break end
         end
 
         if secId then
@@ -646,12 +704,12 @@ local function resolvePlayerTelemetry()
             if secName and secName ~= "" and not secName:find("^cdata:") and secName ~= "Unknown" and secName ~= "Deep Space" then
                 pSector = secName
                 cachedPlayerSector = secName
-                logBridge("Pilot Sector resolved: " .. tostring(secName) .. " (secId: " .. tostring(secId) .. ")")
+                if DebugError then DebugError("[X4 Companion Bridge] Pilot Sector resolved: " .. tostring(secName)) end
             else
-                logBridge("Pilot Sector name query returned empty/cdata for secId: " .. tostring(secId))
+                if DebugError then DebugError("[X4 Companion Bridge] Pilot Sector name query returned empty for secId: " .. tostring(secId)) end
             end
         else
-            logBridge("Pilot Sector resolution: no sector ID found for player/ship")
+            if DebugError then DebugError("[X4 Companion Bridge] Pilot Sector resolution: no sector ID found for player/ship") end
         end
     end)
 
@@ -663,12 +721,256 @@ local function resolvePlayerTelemetry()
 end
 
 -- =========================================================================
+-- DLC / Extension Inclusion Resolver via GetExtensions()
+-- =========================================================================
+local function resolveInstalledDLCs(requestContext)
+    local detected = {}
+    local calledMethod = "none"
+
+    local diag = "diag: getExtList=" .. tostring(type(GetExtensionList))
+        .. ", _G.getExtList=" .. tostring(type(_G and _G.GetExtensionList))
+        .. ", getExts=" .. tostring(type(GetExtensions))
+        .. ", ffi=" .. tostring(ffi ~= nil)
+        .. ", C=" .. tostring(C ~= nil)
+
+    -- 1. Native X4 UI API: GetExtensionList()
+    pcall(function()
+        local getExtList = GetExtensionList or (_G and _G.GetExtensionList) or (Helper and Helper.getExtensionList)
+        if getExtList then
+            local exts = getExtList()
+            if type(exts) == "table" then
+                calledMethod = "GetExtensionList"
+                for _, ext in ipairs(exts) do
+                    if ext and ext.id then
+                        local id = tostring(ext.id):lower()
+                        local isEnabled = (ext.enabled == true) or (ext.enabled == 1)
+                        detected[id] = { present = true, active = isEnabled }
+                    end
+                end
+            end
+        end
+    end)
+
+    -- 2. Fallback: GetExtensions()
+    if calledMethod == "none" then
+        pcall(function()
+            local getExts = GetExtensions or (_G and _G.GetExtensions) or (Helper and Helper.getExtensions)
+            if getExts then
+                local exts = getExts()
+                if type(exts) == "table" then
+                    calledMethod = "GetExtensions"
+                    for _, ext in ipairs(exts) do
+                        if ext and ext.id then
+                            local id = tostring(ext.id):lower()
+                            local isEnabled = (ext.active == true or ext.active == 1 or ext.enabled == true or ext.enabled == 1)
+                            detected[id] = { present = true, active = isEnabled }
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    -- 3. Direct C/FFI Engine Functions: C.HasExtension & C.IsExtensionEnabled
+    if calledMethod == "none" then
+        local okC, errC = pcall(function()
+            local cObj = C or (ffi and ffi.C)
+            if not cObj then
+                diag = diag .. ", cObj=nil"
+                return
+            end
+            local checkList = { "ego_dlc_split", "ego_dlc_cradle", "ego_dlc_terran", "ego_dlc_pirates", "ego_dlc_pirate", "ego_dlc_boron", "ego_dlc_timelines", "ego_dlc_par_update" }
+            for _, dlcId in ipairs(checkList) do
+                local hasExt = false
+                local isEnabled = false
+                local checkedAny = false
+                if cObj.HasExtension then
+                    local ok, val = pcall(cObj.HasExtension, dlcId)
+                    if ok then
+                        checkedAny = true
+                        hasExt = (val == true or val == 1)
+                    else
+                        diag = diag .. ", errHasExt=" .. tostring(val)
+                    end
+                end
+                if cObj.IsExtensionEnabled then
+                    local ok, val = pcall(cObj.IsExtensionEnabled, dlcId)
+                    if ok then
+                        checkedAny = true
+                        isEnabled = (val == true or val == 1)
+                    else
+                        diag = diag .. ", errIsEn=" .. tostring(val)
+                    end
+                end
+                if checkedAny and (hasExt or isEnabled) then
+                    detected[dlcId] = { present = hasExt or isEnabled, active = isEnabled }
+                    calledMethod = "C.HasExtension"
+                end
+            end
+        end)
+        if not okC then diag = diag .. ", errPcallC=" .. tostring(errC) end
+    end
+
+    -- 3. C-API / Engine Fallback: C.GetNumExtensions & C.GetExtensionInfo
+    pcall(function()
+        local getNum = (C and C.GetNumExtensions) or GetNumExtensions or (_G and _G.GetNumExtensions)
+        local getInfo = (C and C.GetExtensionInfo) or GetExtensionInfo or (_G and _G.GetExtensionInfo)
+        if getNum and getInfo then
+            local n = getNum()
+            for i = 1, n do
+                local info = getInfo(i)
+                if info and info.id then
+                    local id = tostring(info.id):lower()
+                    if detected[id] == nil then
+                        local isActive = false
+                        if info.active ~= nil then
+                            isActive = (info.active == true) or (info.active == 1)
+                        else
+                            local isActFn = IsExtensionActive or (C and C.IsExtensionActive)
+                            if isActFn then
+                                local ok, act = pcall(isActFn, info.id)
+                                isActive = (ok and (act == true or act == 1))
+                            else
+                                isActive = (info.enabled == true) or (info.enabled == 1)
+                            end
+                        end
+                        detected[id] = { present = true, active = isActive }
+                        if calledMethod == "none" then calledMethod = "C.GetExtensionInfo" end
+                    end
+                end
+            end
+        end
+    end)
+
+    -- 4. Supplementary check: IsExtensionEnabled / IsExtensionActive
+    pcall(function()
+        local checkList = { "ego_dlc_split", "ego_dlc_cradle", "ego_dlc_terran", "ego_dlc_pirates", "ego_dlc_pirate", "ego_dlc_boron", "ego_dlc_timelines", "ego_dlc_par_update" }
+        for _, dlcId in ipairs(checkList) do
+            if detected[dlcId] == nil then
+                local isEnFn = (C and C.IsExtensionEnabled) or IsExtensionEnabled
+                local isActFn = (C and C.IsExtensionActive) or IsExtensionActive
+                if isEnFn then
+                    local okEn, en = pcall(isEnFn, dlcId)
+                    if okEn and en then
+                        local okAct, act = pcall(isActFn or function() return true end, dlcId)
+                        detected[dlcId] = { present = true, active = (okAct and act) or false }
+                        if calledMethod == "none" then calledMethod = "IsExtensionEnabled" end
+                    end
+                end
+            end
+        end
+    end)
+
+    local function extractDlc(aliases)
+        local present = false
+        local active = false
+        for _, a in ipairs(aliases) do
+            local d = detected[a]
+            if d then
+                if d.present then present = true end
+                if d.active then active = true end
+            end
+        end
+        return { active = active, present = present }
+    end
+
+    local activeDLCs = {
+        ego_dlc_split = extractDlc({ "ego_dlc_split" }),
+        ego_dlc_cradle = extractDlc({ "ego_dlc_cradle", "ego_dlc_terran" }),
+        ego_dlc_pirates = extractDlc({ "ego_dlc_pirates", "ego_dlc_pirate" }),
+        ego_dlc_boron = extractDlc({ "ego_dlc_boron" }),
+        ego_dlc_timelines = extractDlc({ "ego_dlc_timelines" }),
+        ego_dlc_par_update = extractDlc({ "ego_dlc_par_update" })
+    }
+
+    local isValid = (calledMethod ~= "none")
+
+    if requestContext then
+        logBridge("Active DLCs resolved via " .. calledMethod .. "() [valid=" .. tostring(isValid) .. "] for request [" .. tostring(requestContext) .. "]: "
+            .. "Split(act=" .. tostring(activeDLCs.ego_dlc_split.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_split.present) .. "), "
+            .. "Cradle(act=" .. tostring(activeDLCs.ego_dlc_cradle.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_cradle.present) .. "), "
+            .. "Pirates(act=" .. tostring(activeDLCs.ego_dlc_pirates.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_pirates.present) .. "), "
+            .. "Boron(act=" .. tostring(activeDLCs.ego_dlc_boron.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_boron.present) .. "), "
+            .. "Timelines(act=" .. tostring(activeDLCs.ego_dlc_timelines.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_timelines.present) .. "), "
+            .. "Par(act=" .. tostring(activeDLCs.ego_dlc_par_update.active) .. ", pres=" .. tostring(activeDLCs.ego_dlc_par_update.present) .. ") | " .. tostring(diag))
+    end
+
+    return activeDLCs, isValid, calledMethod
+end
+
+-- =========================================================================
+-- Dedicated Isolated GetExtensions() API
+-- =========================================================================
+local function QueryExtensionsOnly(requestContext, commandId)
+    logBridge("Calling GetExtensions() API (isolated from global table retrieval)...")
+    local dlcs, isValid, calledMethod = resolveInstalledDLCs(requestContext or "isolated_dlcs_query")
+    local req = getRequest()
+    if req then
+        local payload = {
+            source = (isValid and "GetExtensions") or "unverified",
+            action = "GET_EXTENSIONS",
+            requestTable = "dlcs",
+            commandId = tostring(commandId or ""),
+            dlcs = dlcs,
+            valid = isValid,
+            method = calledMethod,
+            timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
+        }
+        req.new('POST')
+            :setUrl("http://127.0.0.1:3000/api/dlcs")
+            :setBody(JSON.encode(payload))
+            :addHeader("Content-Type", "application/json")
+            :addHeader("Connection", "close")
+            :send(function(r, err)
+                if err then
+                    logBridge("Error sending isolated GetExtensions() payload: " .. tostring(err))
+                else
+                    logBridge("Successfully transmitted isolated GetExtensions() DLC status to Companion server (valid=" .. tostring(isValid) .. ", method=" .. tostring(calledMethod) .. ")")
+                end
+            end)
+    end
+    return dlcs
+end
+
+-- =========================================================================
 -- Command Processing & Polling
 -- =========================================================================
 local function ProcessCommand(cmd)
     if not cmd or type(cmd) ~= "table" then return end
     local targetTable = tostring(cmd.table or "blueprints")
-    logBridge("Handling dashboard command for table: " .. targetTable)
+    local targetAction = tostring(cmd.action or "HARVEST_TABLE")
+    logBridge("Handling dashboard command [" .. targetAction .. "] for table: " .. targetTable)
+
+    -- Isolated GetExtensions() branch: fully separate from all global table retrieval
+    if targetAction == "GET_EXTENSIONS" or targetTable == "dlcs" or targetTable == "extensions" then
+        QueryExtensionsOnly("on_demand_dlcs_query", cmd.id)
+        return
+    end
+
+    -- Call GetExtensions() specifically to determine active DLCs for the current request
+    local currentDlcs = resolveInstalledDLCs(targetTable)
+
+    -- Dispatch active DLCs to Companion Server to update Companion UI for this request
+    pcall(function()
+        local req = getRequest()
+        if req then
+            local dlcPayload = {
+                dlcs = currentDlcs,
+                requestTable = targetTable,
+                commandId = tostring(cmd.id or ""),
+                timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
+            }
+            req.new('POST')
+                :setUrl("http://127.0.0.1:3000/api/dlcs")
+                :setBody(JSON.encode(dlcPayload))
+                :addHeader("Content-Type", "application/json")
+                :send(function(r, err)
+                    if err then
+                        logBridge("Error sending request DLCs to /api/dlcs: " .. tostring(err))
+                    end
+                end)
+        end
+    end)
 
     -- If player telemetry requested, export immediately via engine API
     if targetTable == "player" or targetTable == "all" then
@@ -677,7 +979,8 @@ local function ProcessCommand(cmd)
             local req = getRequest()
             if req then
                 local playerPayload = {
-                    player = { name = pName, credits = pCredits, sector = pSector }
+                    player = { name = pName, credits = pCredits, sector = pSector },
+                    dlcs = currentDlcs
                 }
                 req.new('POST')
                     :setUrl("http://127.0.0.1:3000/api/update")
@@ -701,7 +1004,8 @@ local function ProcessCommand(cmd)
                 local payload = {
                     dataType = "engine_blueprints",
                     table = targetTable,
-                    ownedWares = ownedList
+                    ownedWares = ownedList,
+                    dlcs = currentDlcs
                 }
                 req.new('POST')
                     :setUrl("http://127.0.0.1:3000/api/encyclopedia")
@@ -738,11 +1042,18 @@ local function ProcessCommand(cmd)
     logBridge("Dispatched AddUITriggeredEvent for table: " .. targetTable .. " (success: " .. tostring(triggered) .. ")")
 end
 
+local pollInFlightUntil = 0
+local telemetryInFlightUntil = 0
+local dlcUpdateInFlightUntil = 0
+
 local lastPollTime = 0
-local POLL_INTERVAL = 1.0
+local POLL_INTERVAL = 0.5
 
 local lastPlayerTelemetryTime = 0
-local PLAYER_TELEMETRY_INTERVAL = 5.0
+local PLAYER_TELEMETRY_INTERVAL = 3.0
+
+local lastDlcUpdateTime = 0
+local DLC_UPDATE_INTERVAL = 10.0
 
 local function PollBackendCommands()
     local now = (type(GetCurRealTime) == "function" and GetCurRealTime())
@@ -758,26 +1069,50 @@ local function PollBackendCommands()
     local req = getRequest()
     if not req then return end
 
-    -- Send live pilot profile telemetry to server every 5 seconds
-    if (now - lastPlayerTelemetryTime) >= PLAYER_TELEMETRY_INTERVAL then
+    -- Send live pilot profile telemetry to server every 3 seconds (self-healing 4s timeout)
+    if (now - lastPlayerTelemetryTime) >= PLAYER_TELEMETRY_INTERVAL and now >= telemetryInFlightUntil then
         lastPlayerTelemetryTime = now
+        telemetryInFlightUntil = now + 4.0
         pcall(function()
             local pName, pCredits, pSector = resolvePlayerTelemetry()
+            local payload = {
+                player = {
+                    name = pName,
+                    credits = pCredits,
+                    sector = pSector
+                }
+            }
             req.new('POST')
                 :setUrl("http://127.0.0.1:3000/api/update")
-                :setBody(JSON.encode({ player = { name = pName, credits = pCredits, sector = pSector } }))
+                :setBody(JSON.encode(payload))
                 :addHeader("Content-Type", "application/json")
-                :send(function() end)
+                :addHeader("Connection", "close")
+                :send(function()
+                    telemetryInFlightUntil = 0
+                end)
         end)
     end
 
-    -- Poll for pending commands dispatched from dashboard (every 2 seconds)
-    if (now - lastPollTime) >= POLL_INTERVAL then
+    -- Query & broadcast DLC content using GetExtensions() every 10 seconds (self-healing 8s timeout)
+    if (now - lastDlcUpdateTime) >= DLC_UPDATE_INTERVAL and now >= dlcUpdateInFlightUntil then
+        lastDlcUpdateTime = now
+        dlcUpdateInFlightUntil = now + 8.0
+        pcall(function()
+            QueryExtensionsOnly("periodic_10s_dlc_update")
+            dlcUpdateInFlightUntil = 0
+        end)
+    end
+
+    -- Poll for pending commands dispatched from dashboard (self-healing 2s timeout)
+    if (now - lastPollTime) >= POLL_INTERVAL and now >= pollInFlightUntil then
         lastPollTime = now
+        pollInFlightUntil = now + 2.0
         pcall(function()
             req.new('GET')
                 :setUrl("http://127.0.0.1:3000/api/commands")
+                :addHeader("Connection", "close")
                 :send(function(response, err)
+                    pollInFlightUntil = 0
                     if err or not response or not response.body then return end
                     local ok, data = pcall(JSON.decode, response.body)
                     if ok and data and type(data.commands) == "table" then
@@ -801,6 +1136,7 @@ end
 -- =========================================================================
 RegisterEncyclopediaListener()
 RegisterPlayerListener()
+RegisterGameLoadedListener()
 
 -- 1. Mission Director Heartbeat (CommandPollTimer every 2s)
 if RegisterEvent then
@@ -830,5 +1166,15 @@ if RegisterEvent then
 end
 
 -- 3. Initial trigger upon script load
+pcall(function()
+    local req = getRequest()
+    if req then
+        req.new('POST')
+            :setUrl("http://127.0.0.1:3000/api/debug-log")
+            :setBody(JSON.encode({ message = "X4 Companion Bridge Lua script loaded successfully!" }))
+            :addHeader("Content-Type", "application/json")
+            :send(function() end)
+    end
+end)
 pcall(PollBackendCommands)
 

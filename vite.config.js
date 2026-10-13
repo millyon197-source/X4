@@ -15,6 +15,18 @@ export default defineConfig(({ command, mode }) => {
     define: {
       __IS_HOSTED__: JSON.stringify(Boolean(hasHostFlag))
     },
-  base: '/X4/',
+    base: '/X4/',
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true
+        },
+        '/socket.io': {
+          target: 'http://localhost:3000',
+          ws: true
+        }
+      }
+    }
   }
 })

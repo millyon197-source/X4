@@ -1,8 +1,45 @@
 import MODULE_BUILD_COSTS from './crissian_build_costs.json' with { type: 'json' };
 import MODULE_NAMES from './macro_names.json' with { type: 'json' };
 import PROD_MAX_PRESET from './preset_prod_max.json' with { type: 'json' };
+import BLUEPRINTS_CATALOG from './blueprints_catalog.json' with { type: 'json' };
 
-export { MODULE_BUILD_COSTS, MODULE_NAMES };
+const CATALOG_NAMES = {};
+if (BLUEPRINTS_CATALOG && Array.isArray(BLUEPRINTS_CATALOG.blueprints)) {
+  BLUEPRINTS_CATALOG.blueprints.forEach(b => {
+    if (b.macro && b.name) {
+      CATALOG_NAMES[b.macro] = b.name;
+      CATALOG_NAMES[b.macro.toLowerCase()] = b.name;
+    }
+  });
+}
+
+export { MODULE_BUILD_COSTS, MODULE_NAMES, BLUEPRINTS_CATALOG };
+
+/**
+ * Resolves any faction identifier to its architectural construction method ('commonwealth' | 'terran' | 'boron').
+ * @param {string} faction - Faction ID or method string
+ * @returns {'commonwealth'|'terran'|'boron'}
+ */
+export function getConstructionMethodForFaction(faction) {
+  if (!faction) return 'commonwealth';
+  const f = String(faction).toLowerCase();
+  if (f === 'terran' || f === 'pioneers' || f === 'yaki') {
+    return 'terran';
+  }
+  if (f === 'boron') {
+    return 'boron';
+  }
+  return 'commonwealth';
+}
+
+/**
+ * Checks whether a given faction or method utilizes Terran construction rules.
+ * @param {string} faction - Faction ID or method string
+ * @returns {boolean}
+ */
+export function isTerranFaction(faction) {
+  return getConstructionMethodForFaction(faction) === 'terran';
+}
 
 export function getFriendlyModuleName(macro, factionConstructionMethod = 'commonwealth') {
   if (macro === 'prod_ter_scrap_recycler_macro' || macro === 'prod_ter_scraprecycler_macro') {
@@ -23,6 +60,8 @@ export function getFriendlyModuleName(macro, factionConstructionMethod = 'common
 
   if (MODULE_NAMES[macro]) return MODULE_NAMES[macro];
   if (MODULE_NAMES[macro.toLowerCase()]) return MODULE_NAMES[macro.toLowerCase()];
+  if (CATALOG_NAMES[macro]) return CATALOG_NAMES[macro];
+  if (CATALOG_NAMES[macro.toLowerCase()]) return CATALOG_NAMES[macro.toLowerCase()];
 
   let clean = macro.replace(/_macro$/i, '').replace(/_/g, ' ');
   return clean.replace(/\b\w/g, l => l.toUpperCase());
@@ -233,6 +272,8 @@ export const MACRO_TO_WARE = {
   'prod_gen_graphene_macro': 'Graph',
   'prod_gen_antimattercells_macro': 'AntiCell',
   'prod_gen_superfluidcoolant_macro': 'SupCool',
+  'prod_bor_superfluidcoolant_macro': 'SupCool',
+  'prod_ter_superfluidcoolant_macro': 'SupCool',
   'prod_gen_water_macro': 'Water',
   'prod_gen_energycells_macro': 'EC',
   'prod_ter_energycells_macro': 'TerEC',
@@ -733,6 +774,9 @@ export function mapMacroToWare(macro) {
   if (MACRO_TO_WARE[macro]) return MACRO_TO_WARE[macro];
   if (MACRO_TO_WARE[lowerMacro]) return MACRO_TO_WARE[lowerMacro];
 
+  const genVariant = lowerMacro.replace(/^prod_(bor|ter|par|tel|spl|split|arg)_/, 'prod_gen_');
+  if (MACRO_TO_WARE[genVariant]) return MACRO_TO_WARE[genVariant];
+
   if (lowerMacro.includes('bor_medical')) return 'BorMedicalSupplies';
   if (lowerMacro.includes('par_medical')) return 'ParMedicalSupplies';
   if (lowerMacro.includes('tel_medical')) return 'TelMedicalSupplies';
@@ -744,8 +788,8 @@ export function mapMacroToWare(macro) {
   if (lowerMacro.includes('claim') || lowerMacro.includes('admin')) return 'AdminClaim';
   if (lowerMacro.includes('gamblinghall') || lowerMacro.includes('welfare') || lowerMacro.includes('casino') || lowerMacro.includes('sanctuary')) return 'WelfareHub';
   if (lowerMacro.includes('artacademy')) return 'BoronArtAcademy';
-  if (lowerMacro.includes('scrapprocessor') || lowerMacro.includes('scrapworks')) {
-    if (lowerMacro.includes('khaak')) return 'AllographyneScrapProc';
+  if (lowerMacro.includes('scrapprocessor') || lowerMacro.includes('scrapworks') || lowerMacro.includes('scrapproc')) {
+    if (lowerMacro.includes('khaak') || lowerMacro.includes('allographyne')) return 'AllographyneScrapProc';
     return 'ScrapProc';
   }
   if (lowerMacro.includes('scraprecycler') || lowerMacro.includes('scrap_recycler')) {
@@ -828,30 +872,51 @@ export function isWareMacro(macro) {
   return ware.level >= 0 && ware.level <= 3;
 }
 
+export function isShipMacro(macro) {
+  if (!macro || typeof macro !== 'string') return false;
+  const lower = macro.toLowerCase().trim();
+  if (lower.startsWith('ship_') || lower.includes('_ship_')) return true;
+  if (BLUEPRINTS_CATALOG && Array.isArray(BLUEPRINTS_CATALOG.blueprints)) {
+    const entry = BLUEPRINTS_CATALOG.blueprints.find(b => b.macro === macro || b.macro?.toLowerCase() === lower || b.id === macro);
+    if (entry && (entry.group === 'ships' || entry.category === 'Ships' || entry.moduleType === 'Ship')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function isStructureMacro(macro) {
+  if (isShipMacro(macro)) return false;
   return !isWareMacro(macro);
 }
 
 export function getModuleBuildCost(macro, qty, factionConstructionMethod = 'commonwealth') {
   let cost = { claytronics: 0, hullparts: 0, ec: 0, compSubstrate: 0, silCarbide: 0, TerMetMicrolatt: 0, protectyon: 0, water: 0 };
 
+  const method = getConstructionMethodForFaction(factionConstructionMethod);
+
   let targetMacro = macro;
   if (macro.includes('_gen_')) {
-    if (factionConstructionMethod === 'terran') {
+    if (method === 'terran') {
       const ter = macro.replace('_gen_', '_ter_');
       if (MODULE_BUILD_COSTS[ter]) targetMacro = ter;
-    } else if (factionConstructionMethod === 'boron') {
+    } else if (method === 'boron') {
       const bor = macro.replace('_gen_', '_bor_');
       if (MODULE_BUILD_COSTS[bor]) targetMacro = bor;
     }
   } else if (macro.includes('_ter_')) {
-    if (factionConstructionMethod === 'commonwealth') {
+    if (method === 'commonwealth') {
       const gen = macro.replace('_ter_', '_gen_');
       if (MODULE_BUILD_COSTS[gen]) targetMacro = gen;
-    } else if (factionConstructionMethod === 'boron') {
+    } else if (method === 'boron') {
       const bor = macro.replace('_ter_', '_bor_');
       if (MODULE_BUILD_COSTS[bor]) targetMacro = bor;
     }
+  }
+
+  if (targetMacro.includes('casino')) {
+    const gh = targetMacro.replace('casino', 'gamblinghall');
+    if (MODULE_BUILD_COSTS[gh]) targetMacro = gh;
   }
 
   const exactCost = MODULE_BUILD_COSTS[targetMacro] || MODULE_BUILD_COSTS[targetMacro.toLowerCase()] || MODULE_BUILD_COSTS[macro] || MODULE_BUILD_COSTS[macro.toLowerCase()];
