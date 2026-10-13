@@ -274,13 +274,16 @@ function Refresh-EnvironmentPath {
     $userPath    = [System.Environment]::GetEnvironmentVariable("Path", "User")
     $env:Path    = "$machinePath;$userPath"
 
-    # Also prepend standard Node install paths if present
-    $standardNodeDirs = @(
+    # Prepend project-local and global Node/npm module binary paths if present
+    $localBin = Join-Path $PWD "node_modules\.bin"
+    $standardPaths = @(
+        $localBin,
         "$env:ProgramFiles\nodejs",
         "${env:ProgramFiles(x86)}\nodejs",
-        "$env:LOCALAPPDATA\Programs\node"
+        "$env:LOCALAPPDATA\Programs\node",
+        "$env:APPDATA\npm"
     )
-    foreach ($dir in $standardNodeDirs) {
+    foreach ($dir in $standardPaths) {
         if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
             $env:Path = "$dir;$env:Path"
         }
@@ -292,14 +295,15 @@ Refresh-EnvironmentPath
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
 
-if (-not $nodeCmd -or -not $npmCmd) {
-    Write-Warning "Node.js or npm was not detected on this system."
+# Case A: Neither Node nor npm found
+if (-not $nodeCmd) {
+    Write-Warning "Node.js was not detected on this system."
 
     $installedSuccessfully = $false
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
 
     if ($wingetCmd) {
-        $response = Read-Host "Would you like to install Node.js LTS via winget automatically? (Y/N)"
+        $response = Read-Host "Would you like to install Node.js LTS (includes npm) via winget automatically? (Y/N)"
         if ($response -match '^[Yy]') {
             Write-Host "Installing Node.js LTS via winget..." -ForegroundColor Green
             try {
@@ -316,8 +320,8 @@ if (-not $nodeCmd -or -not $npmCmd) {
         }
     }
 
-    # Fallback to direct MSI download if winget was unavailable, declined, or failed
-    if (-not $installedSuccessfully -and (-not $nodeCmd -or -not $npmCmd)) {
+    # Fallback to direct official Node LTS MSI download
+    if (-not $installedSuccessfully -and -not $nodeCmd) {
         $msiResponse = Read-Host "Download and install official Node.js LTS MSI package now? (Y/N)"
         if ($msiResponse -match '^[Yy]') {
             Write-Host "Fetching latest Node.js LTS installer..." -ForegroundColor Green
@@ -347,8 +351,75 @@ if (-not $nodeCmd -or -not $npmCmd) {
         }
     }
 
-    if (-not $nodeCmd -or -not $npmCmd) {
-        Write-Error "Node.js (v18+) and npm are required to run X4 Supply Matrix. Please download and install from https://nodejs.org/ and re-run this script."
+    if (-not $nodeCmd) {
+        Write-Error "Node.js (v18+) is required to run X4 Supply Matrix. Please install from https://nodejs.org/ and re-run this script."
+        exit 1
+    }
+}
+
+# Case B: Node.js is present, but npm is not found
+if (-not $npmCmd) {
+    Write-Warning "Node.js is present, but npm was not found in PATH."
+
+    # Sub-case B1: Check if npm-cli.js exists bundled inside Node's installation directory
+    $nodeExePath = if ($nodeCmd.Source) { $nodeCmd.Source } else { (Get-Command node).Source }
+    $nodeDir = Split-Path -Parent $nodeExePath
+    $bundledNpmCli = Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js"
+
+    if (Test-Path $bundledNpmCli) {
+        Write-Host "  -> Detected bundled npm at: $bundledNpmCli" -ForegroundColor Green
+        Write-Host "  Installing global npm via bundled CLI..." -ForegroundColor Yellow
+        try {
+            & node "$bundledNpmCli" install -g npm --silent
+            Refresh-EnvironmentPath
+            $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+        } catch {
+            Write-Warning "Could not restore npm using bundled CLI: $_"
+        }
+    }
+
+    # Sub-case B2: If still not found, offer official npm install script or Node repair
+    if (-not $npmCmd) {
+        $installNpmPrompt = Read-Host "Would you like to install npm now? (Y/N)"
+        if ($installNpmPrompt -match '^[Yy]') {
+            Write-Host "Attempting automated npm installation..." -ForegroundColor Green
+            try {
+                # Download npm tarball and unpack or run official npm install
+                $tempNpmDir = Join-Path $env:TEMP "npm-install-temp"
+                if (Test-Path $tempNpmDir) { Remove-Item -Recurse -Force $tempNpmDir }
+                New-Item -ItemType Directory -Path $tempNpmDir -Force | Out-Null
+                
+                $npmTgz = Join-Path $tempNpmDir "npm.tgz"
+                Invoke-WebRequest -Uri "https://registry.npmjs.org/npm/-/npm-11.2.0.tgz" -OutFile $npmTgz -UseBasicParsing
+                
+                # Extract and install using node
+                & tar -xzf "$npmTgz" -C "$tempNpmDir"
+                $extractedNpmCli = Join-Path $tempNpmDir "package\bin\npm-cli.js"
+                if (Test-Path $extractedNpmCli) {
+                    & node "$extractedNpmCli" install -g npm
+                    Refresh-EnvironmentPath
+                    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+                }
+                if (Test-Path $tempNpmDir) { Remove-Item -Recurse -Force $tempNpmDir }
+            } catch {
+                Write-Warning "Automated npm install failed: $_"
+            }
+
+            # If still not found, repair Node.js installation
+            if (-not $npmCmd) {
+                Write-Host "Repairing Node.js LTS via winget to restore npm..." -ForegroundColor Yellow
+                $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+                if ($wingetCmd) {
+                    & winget install OpenJS.NodeJS.LTS --force --accept-package-agreements --accept-source-agreements --silent
+                    Refresh-EnvironmentPath
+                    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+
+    if (-not $npmCmd) {
+        Write-Error "npm is required to install dependencies and run X4 Supply Matrix. Please reinstall Node.js (with npm checked) from https://nodejs.org/ and re-run this script."
         exit 1
     }
 }
@@ -418,6 +489,16 @@ if (-not (Test-Path "node_modules") -or $Clean) {
     Write-Host "  -> Dependencies successfully installed." -ForegroundColor Green
 } else {
     Write-Host "  -> node_modules already present. Skipping npm install (use -Clean to reinstall)." -ForegroundColor Green
+}
+
+# Ensure newly installed project binaries (e.g. vite, rolldown, luaparse) are actively exposed in $env:Path
+Refresh-EnvironmentPath
+$localModuleBin = Join-Path $PWD "node_modules\.bin"
+if (Test-Path $localModuleBin) {
+    if ($env:Path -notlike "*$localModuleBin*") {
+        $env:Path = "$localModuleBin;$env:Path"
+    }
+    Write-Host "  -> Project module binaries mapped to PATH ($localModuleBin)" -ForegroundColor DarkGray
 }
 
 # -------------------------------------------------------------
