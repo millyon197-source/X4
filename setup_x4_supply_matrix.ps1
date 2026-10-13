@@ -60,13 +60,35 @@ param (
 # -------------------------------------------------------------
 $ErrorActionPreference = 'Stop'
 
+# Check and configure ExecutionPolicy
 try {
-    $currentPolicy = Get-ExecutionPolicy -Scope Process
-    if ($currentPolicy -ne 'Bypass' -and $currentPolicy -ne 'RemoteSigned' -and $currentPolicy -ne 'Unrestricted') {
-        Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
+    # 1. Ensure current process can execute scripts
+    $procPolicy = Get-ExecutionPolicy -Scope Process
+    if ($procPolicy -ne 'Bypass' -and $procPolicy -ne 'RemoteSigned' -and $procPolicy -ne 'Unrestricted') {
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force -ErrorAction SilentlyContinue
+    }
+
+    # 2. Check persistent CurrentUser policy
+    $userPolicy = Get-ExecutionPolicy -Scope CurrentUser
+    $effectivePolicy = Get-ExecutionPolicy
+    $isPermitted = ($userPolicy -in @('RemoteSigned', 'Unrestricted', 'Bypass')) -or 
+                   ($effectivePolicy -in @('RemoteSigned', 'Unrestricted', 'Bypass'))
+
+    if (-not $isPermitted) {
+        Write-Host "`n[Security Notice] PowerShell script execution policy is currently '$effectivePolicy' (CurrentUser: '$userPolicy')." -ForegroundColor Yellow
+        Write-Host "To allow PowerShell to execute scripts without blocking, CurrentUser policy should be 'RemoteSigned'." -ForegroundColor Yellow
+        $response = Read-Host "Would you like to set 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser' now? (Y/N)"
+        if ($response -match '^[Yy]') {
+            Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+            Write-Host "  -> Successfully updated ExecutionPolicy to RemoteSigned for CurrentUser.`n" -ForegroundColor Green
+        } else {
+            Write-Warning "ExecutionPolicy change was declined. Script execution aborted."
+            exit 1
+        }
     }
 } catch {
-    Write-Warning "Could not update Process ExecutionPolicy: $_"
+    Write-Warning "Could not query or update ExecutionPolicy: $_"
+    exit 1
 }
 
 # Ensure working directory is the script's directory
