@@ -51,6 +51,7 @@ param (
     [switch]$NoBrowser,
     [switch]$NoExtensionSync,
     [switch]$ServerOnly,
+    [switch]$Force,
     [int]$Port = 5173,
     [int]$BackendPort = 3000
 )
@@ -59,6 +60,24 @@ param (
 # 0. Setup Execution Environment & Working Directory
 # -------------------------------------------------------------
 $ErrorActionPreference = 'Stop'
+
+function Ask-UserConfirmation {
+    param (
+        [string]$PromptMessage,
+        [bool]$Default = $true
+    )
+    if ($Force -or [Console]::IsInputRedirected) {
+        return $Default
+    }
+    try {
+        $ans = Read-Host "$PromptMessage (Y/N)"
+        if ($ans -match '^[Yy]') { return $true }
+        if ($ans -match '^[Nn]') { return $false }
+        return $Default
+    } catch {
+        return $Default
+    }
+}
 
 # Check and configure ExecutionPolicy
 try {
@@ -77,8 +96,7 @@ try {
     if (-not $isPermitted) {
         Write-Host "`n[Security Notice] PowerShell script execution policy is currently '$effectivePolicy' (CurrentUser: '$userPolicy')." -ForegroundColor Yellow
         Write-Host "To allow PowerShell to execute scripts without blocking, CurrentUser policy should be 'RemoteSigned'." -ForegroundColor Yellow
-        $response = Read-Host "Would you like to set 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser' now? (Y/N)"
-        if ($response -match '^[Yy]') {
+        if (Ask-UserConfirmation "Would you like to set 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser' now?" $true) {
             Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
             Write-Host "  -> Successfully updated ExecutionPolicy to RemoteSigned for CurrentUser.`n" -ForegroundColor Green
         } else {
@@ -92,8 +110,8 @@ try {
 }
 
 # Ensure working directory is the script's directory
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-if ($ScriptDir) {
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } elseif ($MyInvocation.MyCommand.Definition) { Split-Path -Parent $MyInvocation.MyCommand.Definition } else { $PWD.Path }
+if ($ScriptDir -and (Test-Path $ScriptDir)) {
     Set-Location -Path $ScriptDir
 }
 
@@ -136,7 +154,7 @@ function Stop-PortProcess {
         # 3. Terminate identified processes
         foreach ($procId in $pidsToKill) {
             $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-            if ($proc -and $proc.ProcessName -ne 'X4') {
+            if ($proc -and $proc.ProcessName -ne 'X4' -and $procId -ne $PID) {
                 Write-Host "  [Port Cleanup] Freeing port $TargetPort (Terminating PID $($procId): $($proc.ProcessName))..." -ForegroundColor Yellow
                 Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
             }
@@ -276,13 +294,24 @@ function Refresh-EnvironmentPath {
 
     # Prepend project-local and global Node/npm module binary paths if present
     $localBin = Join-Path $PWD "node_modules\.bin"
-    $standardPaths = @(
-        $localBin,
-        "$env:ProgramFiles\nodejs",
-        "${env:ProgramFiles(x86)}\nodejs",
-        "$env:LOCALAPPDATA\Programs\node",
-        "$env:APPDATA\npm"
-    )
+    $standardPaths = [System.Collections.Generic.List[string]]::new()
+    $standardPaths.Add($localBin)
+    $standardPaths.Add("$env:ProgramFiles\nodejs")
+    $standardPaths.Add("${env:ProgramFiles(x86)}\nodejs")
+    $standardPaths.Add("$env:LOCALAPPDATA\Programs\node")
+    $standardPaths.Add("$env:APPDATA\npm")
+    $standardPaths.Add("$env:LOCALAPPDATA\Microsoft\WinGet\Links")
+    $standardPaths.Add("$env:APPDATA\nvm")
+
+    # Locate WinGet portable Node package directories if installed
+    $wingetNodeDirs = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\OpenJS.NodeJS.LTS*" -Directory -ErrorAction SilentlyContinue |
+        Get-ChildItem -Directory -Filter "node-*" -ErrorAction SilentlyContinue
+    if ($wingetNodeDirs) {
+        foreach ($wnd in $wingetNodeDirs) {
+            $standardPaths.Add($wnd.FullName)
+        }
+    }
+
     foreach ($dir in $standardPaths) {
         if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
             $env:Path = "$dir;$env:Path"
@@ -303,13 +332,17 @@ if (-not $nodeCmd) {
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
 
     if ($wingetCmd) {
-        $response = Read-Host "Would you like to install Node.js LTS (includes npm) via winget automatically? (Y/N)"
-        if ($response -match '^[Yy]') {
+        if (Ask-UserConfirmation "Would you like to install Node.js LTS (includes npm) via winget automatically?" $true) {
             Write-Host "Installing Node.js LTS via winget..." -ForegroundColor Green
             try {
-                & winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
+                & winget install OpenJS.NodeJS.LTS --scope user --accept-package-agreements --accept-source-agreements --silent
             } catch {
-                Write-Warning "winget installation encountered an issue: $_"
+                Write-Warning "winget user-scope installation encountered an issue: $_"
+                try {
+                    & winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
+                } catch {
+                    Write-Warning "winget machine-scope installation also encountered an issue: $_"
+                }
             }
             Refresh-EnvironmentPath
             $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
@@ -320,29 +353,44 @@ if (-not $nodeCmd) {
         }
     }
 
-    # Fallback to direct official Node LTS MSI download
+    # Fallback to direct official Node LTS portable archive download
     if (-not $installedSuccessfully -and -not $nodeCmd) {
-        $msiResponse = Read-Host "Download and install official Node.js LTS MSI package now? (Y/N)"
-        if ($msiResponse -match '^[Yy]') {
-            Write-Host "Fetching latest Node.js LTS installer..." -ForegroundColor Green
+        if (Ask-UserConfirmation "Download and install official Node.js LTS portable package now?" $true) {
+            Write-Host "Fetching latest Node.js LTS portable package..." -ForegroundColor Green
             try {
-                $tempMsi = Join-Path $env:TEMP "node-lts-installer.msi"
-                $downloadUrl = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-x64.msi"
-                Write-Host "Downloading from $downloadUrl to $tempMsi..." -ForegroundColor DarkGray
-                
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
-                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempMsi -UseBasicParsing
-                
-                Write-Host "Running Node.js installer (msiexec)..." -ForegroundColor Green
-                $msiProcess = Start-Process msiexec.exe -ArgumentList "/i `"$tempMsi`" /passive /norestart" -PassThru -Wait
-                if ($msiProcess.ExitCode -eq 0) {
-                    Write-Host "  -> Node.js MSI installed successfully." -ForegroundColor Green
-                } else {
-                    Write-Warning "msiexec finished with exit code $($msiProcess.ExitCode)."
+                $targetNodeDir = "$env:LOCALAPPDATA\Programs\node"
+                if (-not (Test-Path $targetNodeDir)) {
+                    New-Item -ItemType Directory -Path $targetNodeDir -Force | Out-Null
                 }
-                if (Test-Path $tempMsi) { Remove-Item -Force $tempMsi }
+
+                $tempZip = Join-Path $env:TEMP "node-lts-portable.zip"
+                $downloadUrl = "https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip"
+                Write-Host "Downloading from $downloadUrl to $tempZip..." -ForegroundColor DarkGray
+                
+                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip -UseBasicParsing
+                
+                Write-Host "Extracting Node.js portable archive..." -ForegroundColor Green
+                $tempExtract = Join-Path $env:TEMP "node-extract-temp"
+                if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract }
+                Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+                $extractedInner = Get-ChildItem -Path $tempExtract -Directory -Filter "node-*" | Select-Object -First 1
+                if ($extractedInner) {
+                    Copy-Item -Path "$($extractedInner.FullName)\*" -Destination $targetNodeDir -Recurse -Force
+                    Write-Host "  -> Node.js installed to $targetNodeDir" -ForegroundColor Green
+                }
+
+                if (Test-Path $tempZip) { Remove-Item -Force $tempZip }
+                if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract }
+
+                # Persist to User Path in registry so future sessions also have it
+                $currentUserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+                if ($currentUserPath -notlike "*$targetNodeDir*") {
+                    [System.Environment]::SetEnvironmentVariable("Path", "$targetNodeDir;$currentUserPath", "User")
+                }
             } catch {
-                Write-Warning "Direct MSI download/install failed: $_"
+                Write-Warning "Direct portable download/install failed: $_"
             }
 
             Refresh-EnvironmentPath
@@ -361,27 +409,37 @@ if (-not $nodeCmd) {
 if (-not $npmCmd) {
     Write-Warning "Node.js is present, but npm was not found in PATH."
 
-    # Sub-case B1: Check if npm-cli.js exists bundled inside Node's installation directory
-    $nodeExePath = if ($nodeCmd.Source) { $nodeCmd.Source } else { (Get-Command node).Source }
+    $nodeExePath = if ($nodeCmd.Source) { $nodeCmd.Source } elseif ($nodeCmd.Path) { $nodeCmd.Path } else { (Get-Command node).Source }
     $nodeDir = Split-Path -Parent $nodeExePath
-    $bundledNpmCli = Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js"
 
-    if (Test-Path $bundledNpmCli) {
-        Write-Host "  -> Detected bundled npm at: $bundledNpmCli" -ForegroundColor Green
-        Write-Host "  Installing global npm via bundled CLI..." -ForegroundColor Yellow
-        try {
-            & node "$bundledNpmCli" install -g npm --silent
-            Refresh-EnvironmentPath
-            $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-        } catch {
-            Write-Warning "Could not restore npm using bundled CLI: $_"
+    # Check if npm.cmd or npm exists in the same directory as node.exe
+    if ((Test-Path (Join-Path $nodeDir "npm.cmd")) -or (Test-Path (Join-Path $nodeDir "npm"))) {
+        if ($env:Path -notlike "*$nodeDir*") {
+            $env:Path = "$nodeDir;$env:Path"
+        }
+        $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    }
+
+    # Sub-case B1: Check if npm-cli.js exists bundled inside Node's installation directory
+    if (-not $npmCmd) {
+        $bundledNpmCli = Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js"
+
+        if (Test-Path $bundledNpmCli) {
+            Write-Host "  -> Detected bundled npm at: $bundledNpmCli" -ForegroundColor Green
+            Write-Host "  Installing global npm via bundled CLI..." -ForegroundColor Yellow
+            try {
+                & node "$bundledNpmCli" install -g npm --silent
+                Refresh-EnvironmentPath
+                $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+            } catch {
+                Write-Warning "Could not restore npm using bundled CLI: $_"
+            }
         }
     }
 
-    # Sub-case B2: If still not found, offer official npm install script or Node repair
+    # Sub-case B2: If still not found, offer automated npm download or Node repair
     if (-not $npmCmd) {
-        $installNpmPrompt = Read-Host "Would you like to install npm now? (Y/N)"
-        if ($installNpmPrompt -match '^[Yy]') {
+        if (Ask-UserConfirmation "Would you like to install npm now?" $true) {
             Write-Host "Attempting automated npm installation..." -ForegroundColor Green
             try {
                 # Download npm tarball and unpack or run official npm install
@@ -410,7 +468,7 @@ if (-not $npmCmd) {
                 Write-Host "Repairing Node.js LTS via winget to restore npm..." -ForegroundColor Yellow
                 $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
                 if ($wingetCmd) {
-                    & winget install OpenJS.NodeJS.LTS --force --accept-package-agreements --accept-source-agreements --silent
+                    & winget install OpenJS.NodeJS.LTS --scope user --force --accept-package-agreements --accept-source-agreements --silent
                     Refresh-EnvironmentPath
                     $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
                 }
@@ -470,7 +528,6 @@ if ($Clean) {
     Write-Host "  Cleaning existing node_modules and dist folders..." -ForegroundColor DarkYellow
     if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
     if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
-    if (Test-Path "package-lock.json") { Remove-Item -Force "package-lock.json" }
 }
 
 if (-not (Test-Path "package.json")) {
@@ -549,8 +606,9 @@ try {
         Stop-PortProcess -TargetPort $BackendPort
     }
 
+    $nodeExe = if ($nodeCmd -and $nodeCmd.Source) { $nodeCmd.Source } elseif ($nodeCmd -and $nodeCmd.Path) { $nodeCmd.Path } else { 'node' }
     Write-Host "  [1/2] Starting backend companion server (Port $BackendPort)..." -ForegroundColor Green
-    $backendProcess = Start-Process node -ArgumentList "server.js" -WorkingDirectory $PWD -PassThru -NoNewWindow
+    $backendProcess = Start-Process $nodeExe -ArgumentList "server.js" -WorkingDirectory $PWD -PassThru -NoNewWindow
 
     # Poll port readiness
     $ready = $false
