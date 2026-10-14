@@ -79,36 +79,6 @@ function Ask-UserConfirmation {
     }
 }
 
-# Check and configure ExecutionPolicy
-try {
-    # 1. Ensure current process can execute scripts
-    $procPolicy = Get-ExecutionPolicy -Scope Process
-    if ($procPolicy -ne 'Bypass' -and $procPolicy -ne 'RemoteSigned' -and $procPolicy -ne 'Unrestricted') {
-        Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force -ErrorAction SilentlyContinue
-    }
-
-    # 2. Check persistent CurrentUser policy
-    $userPolicy = Get-ExecutionPolicy -Scope CurrentUser
-    $effectivePolicy = Get-ExecutionPolicy
-    $isPermitted = ($userPolicy -in @('RemoteSigned', 'Unrestricted', 'Bypass')) -or 
-                   ($effectivePolicy -in @('RemoteSigned', 'Unrestricted', 'Bypass'))
-
-    if (-not $isPermitted) {
-        Write-Host "`n[Security Notice] PowerShell script execution policy is currently '$effectivePolicy' (CurrentUser: '$userPolicy')." -ForegroundColor Yellow
-        Write-Host "To allow PowerShell to execute scripts without blocking, CurrentUser policy should be 'RemoteSigned'." -ForegroundColor Yellow
-        if (Ask-UserConfirmation "Would you like to set 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser' now?" $true) {
-            Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-            Write-Host "  -> Successfully updated ExecutionPolicy to RemoteSigned for CurrentUser.`n" -ForegroundColor Green
-        } else {
-            Write-Warning "ExecutionPolicy change was declined. Script execution aborted."
-            exit 1
-        }
-    }
-} catch {
-    Write-Warning "Could not query or update ExecutionPolicy: $_"
-    exit 1
-}
-
 # Ensure working directory is the script's directory
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } elseif ($MyInvocation.MyCommand.Definition) { Split-Path -Parent $MyInvocation.MyCommand.Definition } else { $PWD.Path }
 if ($ScriptDir -and (Test-Path $ScriptDir)) {
@@ -203,11 +173,7 @@ function Sync-X4CompanionExtension {
 
     # 1. Check known Steam paths & libraryfolders.vdf
     $steamKnownPaths = @(
-        "C:\SteamLibrary\steamapps\common\X4 Foundations\extensions",
-        "D:\Games\Steam\steamapps\common\X4 Foundations\extensions",
-        "D:\SteamLibrary\steamapps\common\X4 Foundations\extensions",
-        "E:\SteamLibrary\steamapps\common\X4 Foundations\extensions",
-        "G:\SteamLibrary\steamapps\common\X4 Foundations\extensions"
+        "C:\SteamLibrary\steamapps\common\X4 Foundations\extensions"   
     )
     foreach ($p in $steamKnownPaths) {
         $parent = Split-Path -Parent $p
