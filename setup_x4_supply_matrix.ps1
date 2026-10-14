@@ -367,12 +367,13 @@ if (-not $nodeCmd) {
     $installedSuccessfully = $false
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
 
+    # Automatically insure winget administrator setting BypassCertificatePinningForMicrosoftStore is enabled
+    Enable-WingetBypassCertificatePinning
+
     if ($wingetCmd) {
         if (Ask-UserConfirmation "Would you like to install Node.js LTS (includes npm) via winget automatically?" $true) {
-            # Enable bypass certificate pinning if flag was set or needed
-            if ($EnableBypassCertificatePinning) {
-                Enable-WingetBypassCertificatePinning -ForceEnable $true
-            }
+            # Insure bypass certificate pinning setting is enabled prior to installation
+            Enable-WingetBypassCertificatePinning
 
             Write-Host "Installing Node.js LTS via winget..." -ForegroundColor Green
             try {
@@ -511,6 +512,7 @@ if (-not $npmCmd) {
                 Write-Host "Repairing Node.js LTS via winget to restore npm..." -ForegroundColor Yellow
                 $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
                 if ($wingetCmd) {
+                    Enable-WingetBypassCertificatePinning
                     & winget install OpenJS.NodeJS.LTS --scope user --force --accept-package-agreements --accept-source-agreements --silent
                     Refresh-EnvironmentPath
                     $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
