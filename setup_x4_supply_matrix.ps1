@@ -30,6 +30,8 @@
     Optional custom port to bind Vite to (defaults to 5173).
 .PARAMETER BackendPort
     Optional custom port for the backend server (defaults to 3000).
+.PARAMETER EnableBypassCertificatePinning
+    If specified or needed, configures winget administrator settings to enable BypassCertificatePinningForMicrosoftStore.
 .EXAMPLE
     .\setup_x4_supply_matrix.ps1
 .EXAMPLE
@@ -38,6 +40,8 @@
     .\setup_x4_supply_matrix.ps1 -Clean -Mode dev
 .EXAMPLE
     .\setup_x4_supply_matrix.ps1 -ServerOnly
+.EXAMPLE
+    .\setup_x4_supply_matrix.ps1 -EnableBypassCertificatePinning
 #>
 
 [CmdletBinding()]
@@ -52,6 +56,7 @@ param (
     [switch]$NoExtensionSync,
     [switch]$ServerOnly,
     [switch]$Force,
+    [switch]$EnableBypassCertificatePinning,
     [int]$Port = 5173,
     [int]$BackendPort = 3000
 )
@@ -248,6 +253,66 @@ function Sync-X4CompanionExtension {
     }
 }
 
+function Enable-WingetBypassCertificatePinning {
+    param ([bool]$ForceEnable = $false)
+
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $wingetCmd) { return }
+
+    # Check current export state if available
+    try {
+        $exportJson = & winget settings export 2>$null | Out-String
+        if ($exportJson) {
+            $parsed = $exportJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($parsed -and $parsed.adminSettings -and $parsed.adminSettings.BypassCertificatePinningForMicrosoftStore -eq $true) {
+                # Already enabled
+                return
+            }
+        }
+    } catch {}
+
+    Write-Host "`n[winget Settings] Configuring administrator setting: --enable BypassCertificatePinningForMicrosoftStore..." -ForegroundColor DarkYellow
+
+    $isAdmin = $false
+    try {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = [Security.Principal.WindowsPrincipal]$identity
+        $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } catch {}
+
+    if ($isAdmin) {
+        try {
+            & winget settings --enable BypassCertificatePinningForMicrosoftStore
+            Write-Host "  -> Successfully enabled BypassCertificatePinningForMicrosoftStore." -ForegroundColor Green
+        } catch {
+            Write-Warning "Failed enabling winget setting directly: $_"
+        }
+    } else {
+        # Needs elevation: prompt user if not forced, then invoke elevated process
+        $shouldPrompt = -not $ForceEnable
+        $proceed = $true
+        if ($shouldPrompt) {
+            $proceed = Ask-UserConfirmation "Bypass certificate pinning for Microsoft Store in winget requires elevation. Run elevated prompt to enable?" $true
+        }
+
+        if ($proceed) {
+            try {
+                Write-Host "  Prompting for elevation to execute 'winget settings --enable BypassCertificatePinningForMicrosoftStore'..." -ForegroundColor DarkGray
+                $elevatedProc = Start-Process winget.exe -ArgumentList "settings", "--enable", "BypassCertificatePinningForMicrosoftStore" -Verb RunAs -PassThru -Wait -ErrorAction Stop
+                if ($elevatedProc.ExitCode -eq 0) {
+                    Write-Host "  -> Successfully enabled BypassCertificatePinningForMicrosoftStore via elevated process." -ForegroundColor Green
+                } else {
+                    Write-Warning "Elevated winget process returned exit code $($elevatedProc.ExitCode)."
+                }
+            } catch {
+                Write-Warning "Could not elevate to enable winget setting: $_"
+            }
+        } else {
+            Write-Host "  -> Skipped enabling winget certificate pinning bypass." -ForegroundColor DarkGray
+        }
+    }
+}
+
 # -------------------------------------------------------------
 # 1. Verify Node.js & npm Installation
 # -------------------------------------------------------------
@@ -285,6 +350,11 @@ function Refresh-EnvironmentPath {
     }
 }
 
+# If -EnableBypassCertificatePinning was explicitly passed, configure it now
+if ($EnableBypassCertificatePinning) {
+    Enable-WingetBypassCertificatePinning -ForceEnable $true
+}
+
 Refresh-EnvironmentPath
 
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
@@ -299,11 +369,18 @@ if (-not $nodeCmd) {
 
     if ($wingetCmd) {
         if (Ask-UserConfirmation "Would you like to install Node.js LTS (includes npm) via winget automatically?" $true) {
+            # Enable bypass certificate pinning if flag was set or needed
+            if ($EnableBypassCertificatePinning) {
+                Enable-WingetBypassCertificatePinning -ForceEnable $true
+            }
+
             Write-Host "Installing Node.js LTS via winget..." -ForegroundColor Green
             try {
                 & winget install OpenJS.NodeJS.LTS --scope user --accept-package-agreements --accept-source-agreements --silent
             } catch {
                 Write-Warning "winget user-scope installation encountered an issue: $_"
+                # If network or store cert issue might have occurred, try enabling bypass certificate pinning
+                Enable-WingetBypassCertificatePinning -ForceEnable $false
                 try {
                     & winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
                 } catch {
