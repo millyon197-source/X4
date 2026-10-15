@@ -95,7 +95,7 @@ Make sure **Node.js** (v18+) and **npm** are installed on your system.
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/millyon-source/x4-supply-matrix.git
+git clone https://github.com/millyon197-source/X4.git
 cd x4-supply-matrix
 npm install
 ```
