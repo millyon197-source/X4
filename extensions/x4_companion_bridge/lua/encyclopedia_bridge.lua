@@ -485,10 +485,22 @@ local function RegisterGameLoadedListener()
                     logBridge("Successfully notified companion server of game_loaded.")
                 end
             end)
+
+        logBridge("MD-SIGNAL: [Companion Bridge] Game reload detected: requesting All Tables global refresh...")
+        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "game_loaded" })
     end
 
     RegisterEvent("X4_Game_Loaded", handleGameLoaded)
     RegisterEvent("X4_Reload_UI", handleGameLoaded)
+end
+
+local function RegisterRequestAllTablesListener()
+    if not RegisterEvent then return end
+
+    RegisterEvent("X4_Request_All_Tables", function(eventName, text)
+        logBridge("MD-SIGNAL: [Companion Bridge] X4_Request_All_Tables event received: requesting All Tables global refresh...")
+        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "md_post_load" })
+    end)
 end
 
 local function GetEnginePlayerBlueprints(categoryFilter)
@@ -1139,6 +1151,7 @@ end
 RegisterEncyclopediaListener()
 RegisterPlayerListener()
 RegisterGameLoadedListener()
+RegisterRequestAllTablesListener()
 
 -- 1. Mission Director Heartbeat (CommandPollTimer every 2s)
 if RegisterEvent then

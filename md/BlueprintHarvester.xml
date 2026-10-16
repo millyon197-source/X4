@@ -12,20 +12,22 @@
     </cue>
 
     <!-- Initialization on game load / start with version upgrade -->
-    <cue name="CompanionHarvesterInit" version="12" instantiate="true">
+    <cue name="CompanionHarvesterInit" version="13" instantiate="true">
       <conditions>
         <check_any>
           <event_cue_signalled cue="md.Setup.GameStart" />
           <event_cue_signalled cue="md.Setup.Start" />
+          <event_game_loaded />
         </check_any>
       </conditions>
       <actions>
-        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v12 triggered on game start!'" />
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v13 triggered on game load/start!'" />
         <raise_lua_event name="'X4_Game_Loaded'" />
         <raise_lua_event name="'X4_Reload_UI'" />
+        <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
         <reset_cue cue="CompanionHeartbeat" />
         <signal_cue cue="HarvestPlayerStats" />
-        <signal_cue cue="HarvestBlueprints" />
+        <signal_cue cue="CompanionPostLoadSync" />
       </actions>
     </cue>
 
@@ -35,23 +37,27 @@
         <event_game_loaded />
       </conditions>
       <actions>
-        <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] event_game_loaded detected! Reloading app UI...'" />
+        <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] event_game_loaded detected! Reloading app UI and requesting All Tables...'" />
         <raise_lua_event name="'X4_Game_Loaded'" />
         <raise_lua_event name="'X4_Reload_UI'" />
+        <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
         <reset_cue cue="CompanionHeartbeat" />
         <signal_cue cue="HarvestPlayerStats" />
+        <signal_cue cue="CompanionPostLoadSync" />
       </actions>
-      <cues>
-        <!-- Delayed post-load refresh to re-harvest complete universe encyclopedia & stats for All Tables -->
-        <cue name="CompanionPostLoadSync">
-          <delay exact="2s" />
-          <actions>
-            <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] Post-load sync: refreshing player stats and full encyclopedia...'" />
-            <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
-            <signal_cue cue="CompanionOnUpdateRequest" param="'all'" />
-          </actions>
-        </cue>
-      </cues>
+    </cue>
+
+    <!-- Delayed post-load refresh to re-harvest complete universe encyclopedia & stats for All Tables -->
+    <cue name="CompanionPostLoadSync" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <delay exact="2s" />
+      <actions>
+        <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] Post-load sync: refreshing player stats and full encyclopedia...'" />
+        <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
+        <signal_cue cue="CompanionOnUpdateRequest" param="'all'" />
+      </actions>
     </cue>
 
     <!-- Triggered when Companion UI requests an on-demand update -->
