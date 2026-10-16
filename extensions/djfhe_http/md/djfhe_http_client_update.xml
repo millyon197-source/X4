@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="DjfheHttpClientUpdate" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="./../../../unpacked/md/md.xsd">
+  <cues>
+    <!-- Continuous 100ms update loop to service http connections -->
+    <cue name="DjfheHttpClientUpdateLoop">
+      <delay exact="100ms" />
+      <actions>
+        <raise_lua_event name="'djfhe.http.client.update'" />
+        <reset_cue cue="this" />
+      </actions>
+    </cue>
+
+    <!-- Fallback reset on game start or load -->
+    <cue name="DjfheHttpClientUpdateInit" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_cue_signalled cue="md.Setup.GameStart" />
+          <event_cue_signalled cue="md.Setup.Start" />
+          <event_game_loaded />
+        </check_any>
+      </conditions>
+      <actions>
+        <reset_cue cue="DjfheHttpClientUpdateLoop" />
+      </actions>
+    </cue>
+  </cues>
+</mdscript>

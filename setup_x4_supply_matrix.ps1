@@ -166,19 +166,29 @@ function Test-PortOpen {
 }
 
 function Sync-X4CompanionExtension {
-    $sourceExt = Join-Path $PWD "extensions\x4_companion_bridge"
-    if (-not (Test-Path $sourceExt)) {
-        Write-Warning "Source extension directory '$sourceExt' not found; skipping mod sync."
+    $extensionsToSync = @("djfhe_http", "x4_companion_bridge")
+    $validExtensions = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($extName in $extensionsToSync) {
+        $extSourcePath = Join-Path $PWD "extensions\$extName"
+        if (Test-Path $extSourcePath) {
+            $validExtensions.Add($extName)
+        } else {
+            Write-Warning "Source extension directory '$extSourcePath' not found; skipping '$extName'."
+        }
+    }
+
+    if ($validExtensions.Count -eq 0) {
         return
     }
 
-    Write-Host "[Mod Sync] Scanning X4 installation paths for companion bridge..." -ForegroundColor Yellow
+    Write-Host "[Mod Sync] Scanning X4 installation paths for companion extensions ($($validExtensions -join ', '))..." -ForegroundColor Yellow
 
     $candidatePaths = [System.Collections.Generic.List[string]]::new()
 
     # 1. Check known Steam paths & libraryfolders.vdf
     $steamKnownPaths = @(
-        "C:\SteamLibrary\steamapps\common\X4 Foundations\extensions"   
+        "C:\SteamLibrary\steamapps\common\X4 Foundations\extensions"
     )
     foreach ($p in $steamKnownPaths) {
         $parent = Split-Path -Parent $p
@@ -229,25 +239,48 @@ function Sync-X4CompanionExtension {
     # Execute synchronization to any detected valid extensions destinations
     $syncedCount = 0
     foreach ($destExtRoot in $candidatePaths) {
-        $destExtDir = Join-Path $destExtRoot "x4_companion_bridge"
         try {
             if (-not (Test-Path $destExtRoot)) {
                 New-Item -ItemType Directory -Path $destExtRoot -Force | Out-Null
             }
-            if (-not (Test-Path $destExtDir)) {
-                New-Item -ItemType Directory -Path $destExtDir -Force | Out-Null
-            }
 
-            Write-Host "  -> Copying companion extension to: $destExtDir" -ForegroundColor DarkGray
-            Copy-Item -Path "$sourceExt\*" -Destination $destExtDir -Recurse -Force
-            $syncedCount++
+            $dirSuccess = $false
+            foreach ($extName in $validExtensions) {
+                $sourceExt = Join-Path $PWD "extensions\$extName"
+                $destExtDir = Join-Path $destExtRoot $extName
+                if (-not (Test-Path $destExtDir)) {
+                    New-Item -ItemType Directory -Path $destExtDir -Force | Out-Null
+                }
+
+                # For djfhe_http, if core.dll and content.xml already exist at destination, skip overwriting locked native DLLs
+                if ($extName -eq "djfhe_http") {
+                    $existingCoreDll = Join-Path $destExtDir "lua\luasocket\core.dll"
+                    $existingContentXml = Join-Path $destExtDir "content.xml"
+                    if ((Test-Path $existingCoreDll) -and (Test-Path $existingContentXml)) {
+                        Write-Host "  -> '$extName' already present at: $destExtDir" -ForegroundColor DarkGray
+                        $dirSuccess = $true
+                        continue
+                    }
+                }
+
+                try {
+                    Write-Host "  -> Copying '$extName' to: $destExtDir" -ForegroundColor DarkGray
+                    Copy-Item -Path "$sourceExt\*" -Destination $destExtDir -Recurse -Force -ErrorAction Stop
+                    $dirSuccess = $true
+                } catch {
+                    Write-Warning "Failed syncing '$extName' to '$destExtDir': $_"
+                }
+            }
+            if ($dirSuccess) {
+                $syncedCount++
+            }
         } catch {
-            Write-Warning "Failed syncing to '$destExtDir': $_"
+            Write-Warning "Failed accessing extensions directory '$destExtRoot': $_"
         }
     }
 
     if ($syncedCount -gt 0) {
-        Write-Host "  -> Successfully synchronized companion mod to $syncedCount game directory/directories." -ForegroundColor Green
+        Write-Host "  -> Successfully synchronized $($validExtensions.Count) extension(s) to $syncedCount game directory/directories." -ForegroundColor Green
     } else {
         Write-Host "  -> No active X4 Foundations extensions folders detected; skipping auto-sync." -ForegroundColor DarkGray
     }
