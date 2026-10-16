@@ -23,6 +23,21 @@ export function getProductionMacroForWare(wareId) {
   return getPrimaryMacroForWare(wareId);
 }
 
+export function getDownstreamWares(startWareId) {
+  const downstream = new Set();
+  const queue = [startWareId];
+  while (queue.length > 0) {
+    const curr = queue.shift();
+    DEPENDENCIES.filter(d => d.from === curr).forEach(d => {
+      if (!downstream.has(d.to)) {
+        downstream.add(d.to);
+        queue.push(d.to);
+      }
+    });
+  }
+  return downstream;
+}
+
 export function updateScrapWarningPill(activeWareId) {
   const pill = document.getElementById('scrapWarningPill');
   if (!pill) return;
@@ -100,6 +115,12 @@ export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
   // Selected ware is always present
   if (state.selectedWareId === id) return true;
 
+  // Downstream associated wares of selected ware are always present
+  if (state.selectedWareId) {
+    const downstream = getDownstreamWares(state.selectedWareId);
+    if (downstream.has(id)) return true;
+  }
+
   // If active search query matches this ware or its faction, display it
   if (state.searchQuery && state.searchQuery.trim()) {
     const raw = state.searchQuery.trim().toLowerCase();
@@ -122,7 +143,7 @@ export function isFactionWarePresent(id, inPlanCount = 0, hasDemand = false) {
     return inPlanCount > 0 || hasDemand;
   }
 
-  return false;
+  return hasDemand;
 }
 
 /**
@@ -179,6 +200,7 @@ export function renderMatrixTabHTML() {
   const effMultiplier = 1 + (state.workforceBonus / 100);
   const ppDownstreamWares = getPPDownstreamWares();
   const hasYellowLinkInitial = Boolean(state.selectedWareId) && SCRAP_WARE_IDS.has(state.selectedWareId);
+  const selectedDownstreamWares = state.selectedWareId ? getDownstreamWares(state.selectedWareId) : null;
 
   const activeLevels = state.subdueLevel4 ? [0, 1, 2, 3] : [0, 1, 2, 3, 4];
   const colClass = state.subdueLevel4 ? 'cols-4' : 'cols-5';
@@ -373,6 +395,9 @@ export function renderMatrixTabHTML() {
                     (state.activeBlueprint.modules && state.activeBlueprint.modules['AllographyneFragments'] > 0) ||
                     (state.calculatedDemand && state.calculatedDemand['AllographyneFragments'] && state.calculatedDemand['AllographyneFragments'].modulesNeeded > 0)
                   ));
+                  const isL4Associated = ware.level === 4 && Boolean(
+                    state.selectedWareId && (id === state.selectedWareId || (selectedDownstreamWares && selectedDownstreamWares.has(id)))
+                  );
 
                   if (state.activeBlueprint) {
                     if (ware.level === 0) {
@@ -381,6 +406,12 @@ export function renderMatrixTabHTML() {
                       } else {
                         const rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
                         isZeroCountOrInput = (id === 'RawKhaakScrap' && hasAlloFrag) ? false : (rawRate <= 0);
+                      }
+                    } else if (ware.level === 4) {
+                      if (state.selectedWareId) {
+                        isZeroCountOrInput = !isL4Associated && (state.subdueZeroX ? inPlanCount <= 0 : false);
+                      } else {
+                        isZeroCountOrInput = state.subdueZeroX ? inPlanCount <= 0 : false;
                       }
                     } else {
                       if (id === 'AllographyneScrapProc' && hasAlloFrag) {
@@ -397,6 +428,8 @@ export function renderMatrixTabHTML() {
                         const rawRate = (calc && calc.rateNeeded > 0) ? calc.rateNeeded : 0;
                         isZeroCountOrInput = id === state.selectedWareId ? false : (rawRate <= 0);
                       }
+                    } else if (ware.level === 4) {
+                      isZeroCountOrInput = !isL4Associated;
                     } else {
                       const isTarget = id === state.selectedWareId;
                       const count = (calc && calc.modulesNeeded > 0) ? calc.modulesNeeded : (isTarget ? 1 : 0);
@@ -680,7 +713,6 @@ export function drawLines() {
   DEPENDENCIES.forEach(dep => {
     if (dep.from === 'EC' || dep.from === 'TerEC') return;
     const toWare = WARES_DB[dep.to];
-    if (toWare && toWare.level === 4) return;
 
     const fromEl = document.getElementById(`ware-${dep.from}`);
     const toEl = document.getElementById(`ware-${dep.to}`);
@@ -3088,8 +3120,11 @@ export function updateInspector(id, onRender) {
     const isTelArrayAlternative = (id === 'TelArray') && cWare.recipe && cWare.recipe['ScanArray'] !== undefined && cWare.recipe['ScanArray'] > 0;
     const isTelEngPartsAlternative = (id === 'TelEngParts') && cWare.recipe && cWare.recipe['EngParts'] !== undefined && cWare.recipe['EngParts'] > 0;
     const isTelAdvCompAlternative = (id === 'TelAdvComp') && cWare.recipe && cWare.recipe['AdvComp'] !== undefined && cWare.recipe['AdvComp'] > 0;
+    const isMedicalAlternative = id.endsWith('MedicalSupplies') && cWare.recipe && cWare.recipe['MedicalSupplies'] !== undefined && cWare.recipe['MedicalSupplies'] > 0;
+    const isSilCarbideAlternative = (id === 'SilCarbide') && cWare.recipe && cWare.recipe['TerSilCarbide'] !== undefined && cWare.recipe['TerSilCarbide'] > 0;
+    const isExplicitDep = DEPENDENCIES.some(d => d.from === id && d.to === cId);
 
-    if (cId !== id && cWare.level >= ((id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') ? 1 : minConsumerLevel) && cWare.level <= 3 && (isDirectRecipeInput || isTelPartsAlternative || isScrapPartsAlternative || isScrapClaytronicsAlternative || isTelArrayAlternative || isTelEngPartsAlternative || isTelAdvCompAlternative)) {
+    if (cId !== id && cWare.level >= ((id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') ? 1 : minConsumerLevel) && cWare.level <= 4 && (isDirectRecipeInput || isTelPartsAlternative || isScrapPartsAlternative || isScrapClaytronicsAlternative || isTelArrayAlternative || isTelEngPartsAlternative || isTelAdvCompAlternative || isMedicalAlternative || isSilCarbideAlternative || isExplicitDep)) {
       if ((id === 'EC' || id === 'TerEC') && NO_PP_WARES.has(cId)) {
         return;
       }
@@ -3097,9 +3132,29 @@ export function updateInspector(id, onRender) {
         return;
       }
 
-      const baseInputQty = isDirectRecipeInput 
-        ? (id === 'TerEC' ? cWare.recipe['EC'] : cWare.recipe[id])
-        : ((isTelPartsAlternative || isScrapPartsAlternative) ? cWare.recipe['HullParts'] : (isScrapClaytronicsAlternative ? cWare.recipe['Claytronics'] : (isTelArrayAlternative ? cWare.recipe['ScanArray'] : (isTelEngPartsAlternative ? cWare.recipe['EngParts'] : cWare.recipe['AdvComp']))));
+      let baseInputQty = 0;
+      if (isDirectRecipeInput) {
+        baseInputQty = (id === 'TerEC') ? cWare.recipe['EC'] : cWare.recipe[id];
+      } else if (isTelPartsAlternative || isScrapPartsAlternative) {
+        baseInputQty = cWare.recipe['HullParts'];
+      } else if (isScrapClaytronicsAlternative) {
+        baseInputQty = cWare.recipe['Claytronics'];
+      } else if (isTelArrayAlternative) {
+        baseInputQty = cWare.recipe['ScanArray'];
+      } else if (isTelEngPartsAlternative) {
+        baseInputQty = cWare.recipe['EngParts'];
+      } else if (isTelAdvCompAlternative) {
+        baseInputQty = cWare.recipe['AdvComp'];
+      } else if (isMedicalAlternative) {
+        baseInputQty = cWare.recipe['MedicalSupplies'];
+      } else if (isSilCarbideAlternative) {
+        baseInputQty = cWare.recipe['TerSilCarbide'];
+      } else if (cWare.recipe && cWare.recipe[id]) {
+        baseInputQty = cWare.recipe[id];
+      } else {
+        baseInputQty = 1;
+      }
+
       let inputPerMod = baseInputQty;
       let cInPlan = (state.activeBlueprint && state.activeBlueprint.modules && state.activeBlueprint.modules[cId]) || 0;
       let cCalc = state.calculatedDemand[cId] ? (state.calculatedDemand[cId].modulesNeeded || 0) : 0;
@@ -3112,47 +3167,50 @@ export function updateInspector(id, onRender) {
         cCalc = Math.max(cCalc, 1);
       }
 
-      let bpConsumption = cInPlan * inputPerMod;
-      let optConsumption = cCalc * inputPerMod;
+      const isL4Consumer = cWare.level === 4;
+      let bpConsumption = isL4Consumer ? 0 : cInPlan * inputPerMod;
+      let optConsumption = isL4Consumer ? 0 : cCalc * inputPerMod;
 
-      if ((id === 'EC' || id === 'TerEC') && (cId === 'ScrapMetal' || cId === 'TerScrapMetal') && state.scrapMetalEc && state.scrapMetalEc.totalDemand > 0) {
-        inputPerMod = state.scrapMetalEc.totalDemand;
-        bpConsumption = state.scrapMetalEc.totalDemand;
-        optConsumption = state.scrapMetalEc.totalDemand;
-      }
-
-      if (id === 'RawScrap' && cId === 'ScrapProc') {
-        inputPerMod = 9000;
-        bpConsumption = (cInPlan > 0 ? cInPlan : 1) * 9000;
-        optConsumption = 9000;
-      }
-
-      if (id === 'ScrapProc') {
-        if (cId === 'ScrapMetal' && state.scrapRawDemand) {
-          inputPerMod = state.scrapRawDemand.genRecyclers > 0 ? Math.round(state.scrapRawDemand.genRawScrapDemand / state.scrapRawDemand.genRecyclers) : 2250;
-          bpConsumption = state.scrapRawDemand.genRawScrapDemand;
-          optConsumption = state.scrapRawDemand.genRawScrapDemand;
-        } else if (cId === 'TerScrapMetal' && state.scrapRawDemand) {
-          inputPerMod = state.scrapRawDemand.terRecyclers > 0 ? Math.round(state.scrapRawDemand.terRawScrapDemand / state.scrapRawDemand.terRecyclers) : 7500;
-          bpConsumption = state.scrapRawDemand.terRawScrapDemand;
-          optConsumption = state.scrapRawDemand.terRawScrapDemand;
+      if (!isL4Consumer) {
+        if ((id === 'EC' || id === 'TerEC') && (cId === 'ScrapMetal' || cId === 'TerScrapMetal') && state.scrapMetalEc && state.scrapMetalEc.totalDemand > 0) {
+          inputPerMod = state.scrapMetalEc.totalDemand;
+          bpConsumption = state.scrapMetalEc.totalDemand;
+          optConsumption = state.scrapMetalEc.totalDemand;
         }
+
+        if (id === 'RawScrap' && cId === 'ScrapProc') {
+          inputPerMod = 9000;
+          bpConsumption = (cInPlan > 0 ? cInPlan : 1) * 9000;
+          optConsumption = 9000;
+        }
+
+        if (id === 'ScrapProc') {
+          if (cId === 'ScrapMetal' && state.scrapRawDemand) {
+            inputPerMod = state.scrapRawDemand.genRecyclers > 0 ? Math.round(state.scrapRawDemand.genRawScrapDemand / state.scrapRawDemand.genRecyclers) : 2250;
+            bpConsumption = state.scrapRawDemand.genRawScrapDemand;
+            optConsumption = state.scrapRawDemand.genRawScrapDemand;
+          } else if (cId === 'TerScrapMetal' && state.scrapRawDemand) {
+            inputPerMod = state.scrapRawDemand.terRecyclers > 0 ? Math.round(state.scrapRawDemand.terRawScrapDemand / state.scrapRawDemand.terRecyclers) : 7500;
+            bpConsumption = state.scrapRawDemand.terRawScrapDemand;
+            optConsumption = state.scrapRawDemand.terRawScrapDemand;
+          }
+        }
+
+        const isConsumerSuppressed = isInspectorOutputSuppressed || ppDownstreamWares.has(cId) || (
+          (cWare.level >= 1 && cWare.level <= 3 && !NO_PP_WARES.has(cId)) && Boolean(
+            (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[cId]) ||
+            (!state.activeBlueprint && state.ppStates && state.ppStates[cId])
+          )
+        );
+
+        if (isConsumerSuppressed) {
+          bpConsumption = 0;
+          optConsumption = 0;
+        }
+
+        totalBpConsumption += bpConsumption;
+        totalOptimumConsumption += optConsumption;
       }
-
-      const isConsumerSuppressed = isInspectorOutputSuppressed || ppDownstreamWares.has(cId) || (
-        (cWare.level >= 1 && cWare.level <= 3 && !NO_PP_WARES.has(cId)) && Boolean(
-          (state.activeBlueprint && state.activeBlueprint.ppStates && state.activeBlueprint.ppStates[cId]) ||
-          (!state.activeBlueprint && state.ppStates && state.ppStates[cId])
-        )
-      );
-
-      if (isConsumerSuppressed) {
-        bpConsumption = 0;
-        optConsumption = 0;
-      }
-
-      totalBpConsumption += bpConsumption;
-      totalOptimumConsumption += optConsumption;
 
       consumers.push({
         id: cId,
@@ -3201,15 +3259,17 @@ export function updateInspector(id, onRender) {
   const nextLvl = (ware.level !== undefined ? ware.level : 0) + 1;
   let rangeTag = '';
   if (id === 'ScrapMetal' || id === 'TerScrapMetal' || id === 'ScrapProc') {
-    rangeTag = '(L1–L3)';
-  } else if (ware.level >= 3) {
-    rangeTag = '(No output consumers)';
+    rangeTag = '(L1–L4)';
+  } else if (ware.level === 4) {
+    rangeTag = '(End Application)';
+  } else if (ware.level === 3) {
+    rangeTag = '(L4 Applications)';
   } else if (nextLvl === 1) {
-    rangeTag = '(L1–L3)';
+    rangeTag = '(L1–L4)';
   } else if (nextLvl === 2) {
-    rangeTag = '(L2–L3)';
+    rangeTag = '(L2–L4)';
   } else if (nextLvl === 3) {
-    rangeTag = '(L3)';
+    rangeTag = '(L3–L4)';
   }
 
   const consumersHtml = `
@@ -3224,24 +3284,34 @@ export function updateInspector(id, onRender) {
       ${consumers.length > 0 ? `
         <div style="max-height:190px; overflow-y:auto; padding-right:4px; margin-bottom:0.45rem;">
           ${consumers.map(c => {
+            const isL4 = c.ware.level === 4;
             const hasPlan = c.inPlan > 0;
             const rateVal = state.activeBlueprint ? c.bpConsumption : c.optConsumption;
             const planColor = (hasPlan && rateVal > 0) ? '#38bdf8' : '#64748b';
-            const rateColor = rateVal > 0 ? '#34d399' : '#64748b';
+            const rateColor = isL4 ? '#c084fc' : (rateVal > 0 ? '#34d399' : '#64748b');
             return `
-              <div style="font-size:0.8rem; padding:0.25rem 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center;">
+              <div class="consumer-row" data-ware-id="${c.id}" style="font-size:0.8rem; padding:0.3rem 0.25rem; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-radius:4px; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                 <div>
-                  <strong style="color:#f8fafc;">${c.ware.name}</strong> 
-                  <span style="font-size:0.68rem; color:#94a3b8;">(L${c.ware.level})</span>
-                  <div style="font-size:0.68rem; color:#94a3b8;">
-                    ${state.activeBlueprint 
-                      ? `<span style="color:${planColor}; font-weight:600;">${c.inPlan}x in Plan</span> • ${c.inputPerMod.toLocaleString()} / hr each` 
-                      : `<span style="color:#38bdf8; font-weight:600;">${c.calcNeeded > 0 ? `${c.calcNeeded}x Needs` : '0x'}</span> • ${c.inputPerMod.toLocaleString()} / hr each`}
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <strong style="color:#f8fafc;">${c.ware.name}</strong> 
+                    ${isL4 
+                      ? `<span style="background:rgba(167,139,250,0.18); color:#c084fc; border:1px solid rgba(167,139,250,0.35); padding:1px 5px; border-radius:4px; font-size:0.65rem; font-weight:700;">L4 Application</span>`
+                      : `<span style="font-size:0.68rem; color:#94a3b8;">(L${c.ware.level})</span>`
+                    }
+                  </div>
+                  <div style="font-size:0.68rem; color:#94a3b8; margin-top:2px;">
+                    ${isL4
+                      ? `End Application • Requires <strong style="color:#c084fc;">${c.inputPerMod.toLocaleString()} units</strong>`
+                      : (state.activeBlueprint 
+                          ? `<span style="color:${planColor}; font-weight:600;">${c.inPlan}x in Plan</span> • ${c.inputPerMod.toLocaleString()} / hr each` 
+                          : `<span style="color:#38bdf8; font-weight:600;">${c.calcNeeded > 0 ? `${c.calcNeeded}x Needs` : '0x'}</span> • ${c.inputPerMod.toLocaleString()} / hr each`
+                        )
+                    }
                   </div>
                 </div>
                 <div style="text-align:right;">
                   <strong style="color:${rateColor}; font-size:0.82rem;">
-                    ${Math.round(rateVal).toLocaleString()} / hr
+                    ${isL4 ? `${c.inputPerMod.toLocaleString()} units` : `${Math.round(rateVal).toLocaleString()} / hr`}
                   </strong>
                 </div>
               </div>
@@ -3476,6 +3546,17 @@ export function updateInspector(id, onRender) {
       updateInspector(id);
     });
   }
+
+  const consumerRows = insBody.querySelectorAll('.consumer-row');
+  consumerRows.forEach(row => {
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetWareId = row.dataset.wareId;
+      if (targetWareId) {
+        selectWare(targetWareId, typeof window !== 'undefined' ? window.renderApp : null);
+      }
+    });
+  });
 
   if (prevInsScrollTop > 0) {
     insBody.scrollTop = prevInsScrollTop;
