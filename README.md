@@ -83,15 +83,25 @@ x4-vite-explorer/
 
 ## 🛠️ Quick Start
 
-Create directory to house codebase and cd to it
-Run the powershell script: setup_x4_supply_matrix.ps1
+### Option A: Automated 1-Click Launch (Recommended)
+Double-click **`Start.bat`** or run the PowerShell orchestrator from the project directory:
+```powershell
+.\setup_x4_supply_matrix.ps1
+```
+This automatically:
+1. Verifies/installs **Node.js** and **npm** and maps module binaries to `$PATH`.
+2. Synchronizes the in-game extensions (`djfhe_http` and `x4_companion_bridge`) to your local X4 Foundations folder.
+3. Starts the **Companion Backend Server** (`node server.js` on port `3000`) and the **Vite Frontend Server** (`npm run dev` on port `5173`).
+4. Opens both the **Companion Dashboard** (**http://localhost:3000**) and the **Supply Matrix UI** (**http://localhost:5173/X4/**) in your browser.
 
-OR follow below
+---
 
-### Prerequisites
+### Option B: Manual CLI Setup
+
+#### Prerequisites
 Make sure **Node.js** (v18+) and **npm** are installed on your system.
 
-### 1. Installation
+#### 1. Installation
 Clone the repository and install dependencies:
 
 ```bash
@@ -100,18 +110,26 @@ cd x4-supply-matrix
 npm install
 ```
 
-### 2. Build for Production
+#### 2. Build for Production
 Compile the optimized production bundle to the `dist/` directory:
 ```bash
 npm run build
 ```
 
-### 3. Run Local Development Server
-Start the local Vite development server:
-```bash, cmd or powershell
+#### 3. Start Backend Companion Server
+Start the backend server for live X4 telemetry, savegame blueprint scanning, and DLC synchronization:
+```bash
+npm run server
+# or: node server.js
+```
+Open your browser to the Companion Dashboard at: **http://localhost:3000**
+
+#### 4. Run Local Development Server (Frontend UI)
+In a separate terminal, start the local Vite development server:
+```bash
 npm run dev
 ```
-Open your browser to: **http://localhost:5173/**
+Open your browser to the Supply Matrix UI at: **http://localhost:5173/X4/**
 
 ---
 
