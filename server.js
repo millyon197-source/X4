@@ -53,6 +53,11 @@ app.use((req, res, next) => {
     return res.status(403).send('Forbidden: Access limited to localhost only.');
   }
   res.setHeader('Connection', 'close');
+  if (req.path.startsWith('/api')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   next();
 });
 
@@ -449,6 +454,12 @@ async function syncSavegameBlueprints(explicitPath, explicitTable) {
           io.emit('game_state_changed', gameState);
         }
 
+        // When syncing a newly loaded savegame, reset existing blueprint ownership so blueprints
+        // from a previously loaded session do not incorrectly persist into this savegame.
+        for (const bp of gameEncyclopedia.blueprints) {
+          bp.unlocked = false;
+        }
+
         let newlyUnlocked = 0;
         for (const bp of gameEncyclopedia.blueprints) {
           for (const w of foundWares) {
@@ -482,55 +493,55 @@ async function syncSavegameBlueprints(explicitPath, explicitTable) {
         console.log(`💾 Scanned savegame [${path.basename(targetSave)}]: found ${foundWares.size} distinct wares, ${newlyUnlocked} newly unlocked. Total owned: ${gameEncyclopedia.summary.owned} (Modules: ${gameEncyclopedia.summary.modules.owned}, Ships: ${gameEncyclopedia.summary.ships.owned}, Equip: ${gameEncyclopedia.summary.equipment.owned}).`);
         io.emit('encyclopedia_updated', gameEncyclopedia);
 
-        // ONLY record Savegame Sync consideration for the specific table explicitly requested!
-        // No other tables or baseline catalogs are overwritten with savegame_sync!
         let activeEntry = null;
-        if (explicitTable) {
-          const t = explicitTable.toLowerCase();
-          if (t === 'player') {
-            activeEntry = recordRequest('player', gameState.player, 'savegame_sync');
-            io.emit('table_updated', {
-              table: 'player',
-              timestamp: gameState.lastUpdated,
-              summary: `${gameState.player.name} (${Number(gameState.player.credits || 0).toLocaleString()} Cr, Sector: ${gameState.player.sector})`,
-              entry: activeEntry
-            });
-            notifyUpdateResolved('player', activeEntry);
-          } else if (t === 'all') {
-            const allData = gameEncyclopedia.blueprints;
-            activeEntry = recordRequest('all', allData, 'savegame_sync');
-            const owned = gameEncyclopedia.summary.owned;
+        const targetSyncTable = (explicitTable || 'all').toLowerCase();
+        if (targetSyncTable === 'player') {
+          activeEntry = recordRequest('player', gameState.player, 'savegame_sync');
+          io.emit('table_updated', {
+            table: 'player',
+            timestamp: gameState.lastUpdated,
+            summary: `${gameState.player.name} (${Number(gameState.player.credits || 0).toLocaleString()} Cr, Sector: ${gameState.player.sector})`,
+            entry: activeEntry
+          });
+          notifyUpdateResolved('player', activeEntry);
+        } else if (targetSyncTable === 'all') {
+          const allData = gameEncyclopedia.blueprints;
+          activeEntry = recordRequest('all', allData, 'savegame_sync');
+          const owned = gameEncyclopedia.summary.owned;
 
-            // Also refresh individual tables in cache and audit trail
-            recordRequest('modules', gameEncyclopedia.modules, 'savegame_sync');
-            recordRequest('ships', gameEncyclopedia.ships, 'savegame_sync');
-            recordRequest('equipment', gameEncyclopedia.equipment, 'savegame_sync');
-            recordRequest('blueprints', gameEncyclopedia.blueprints, 'savegame_sync');
+          // Also refresh individual tables in cache and audit trail
+          recordRequest('modules', gameEncyclopedia.modules, 'savegame_sync');
+          recordRequest('ships', gameEncyclopedia.ships, 'savegame_sync');
+          recordRequest('equipment', gameEncyclopedia.equipment, 'savegame_sync');
+          recordRequest('blueprints', gameEncyclopedia.blueprints, 'savegame_sync');
 
-            io.emit('table_updated', {
-              table: 'all',
-              timestamp: gameEncyclopedia.lastSynced,
-              count: allData.length,
-              summary: `${allData.length} items synced across all tables (${owned} owned)`,
-              entry: activeEntry
-            });
-            notifyUpdateResolved('all', activeEntry);
-          } else {
-            const targetData = gameEncyclopedia[t] || gameEncyclopedia.blueprints;
-            activeEntry = recordRequest(t, targetData, 'savegame_sync');
-            const owned = (gameEncyclopedia.summary[t] && typeof gameEncyclopedia.summary[t].owned === 'number')
-              ? gameEncyclopedia.summary[t].owned
-              : gameEncyclopedia.summary.owned;
+          io.emit('table_updated', {
+            table: 'all',
+            timestamp: gameEncyclopedia.lastSynced,
+            count: allData.length,
+            summary: `${allData.length} items synced across all tables (${owned} owned)`,
+            entry: activeEntry
+          });
+          notifyUpdateResolved('all', activeEntry);
+          notifyUpdateResolved('blueprints', activeEntry);
+          notifyUpdateResolved('modules', activeEntry);
+          notifyUpdateResolved('ships', activeEntry);
+          notifyUpdateResolved('equipment', activeEntry);
+        } else {
+          const targetData = gameEncyclopedia[targetSyncTable] || gameEncyclopedia.blueprints;
+          activeEntry = recordRequest(targetSyncTable, targetData, 'savegame_sync');
+          const owned = (gameEncyclopedia.summary[targetSyncTable] && typeof gameEncyclopedia.summary[targetSyncTable].owned === 'number')
+            ? gameEncyclopedia.summary[targetSyncTable].owned
+            : gameEncyclopedia.summary.owned;
 
-            io.emit('table_updated', {
-              table: t,
-              timestamp: gameEncyclopedia.lastSynced,
-              count: targetData.length,
-              summary: `${targetData.length} ${t} synced (${owned} owned)`,
-              entry: activeEntry
-            });
-            notifyUpdateResolved(t, activeEntry);
-          }
+          io.emit('table_updated', {
+            table: targetSyncTable,
+            timestamp: gameEncyclopedia.lastSynced,
+            count: targetData.length,
+            summary: `${targetData.length} ${targetSyncTable} synced (${owned} owned)`,
+            entry: activeEntry
+          });
+          notifyUpdateResolved(targetSyncTable, activeEntry);
         }
 
         resolve({
@@ -609,6 +620,17 @@ app.post('/api/encyclopedia', (req, res) => {
 
   // Support direct owned wares list sent from in-game Lua via C.GetBlueprints
   if (Array.isArray(ownedWares)) {
+    const requestedTable = (table || 'all').toLowerCase();
+    if (requestedTable === 'all' || requestedTable === 'blueprints') {
+      for (const bp of gameEncyclopedia.blueprints) {
+        bp.unlocked = false;
+      }
+    } else if (gameEncyclopedia[requestedTable]) {
+      for (const bp of gameEncyclopedia[requestedTable]) {
+        bp.unlocked = false;
+      }
+    }
+
     ownedWares.forEach(w => {
       let existing = gameEncyclopedia.blueprints.find(b => b.id === w || b.macro === w);
       if (!existing && w) {
@@ -1202,10 +1224,15 @@ app.post('/api/game-loaded', async (req, res) => {
   console.log('🔄 [X4-MD] <event_game_loaded/> detected! Syncing savegame and notifying UI to reload...');
 
   try {
-    const syncResult = await syncSavegameBlueprints();
+    const syncResult = await syncSavegameBlueprints(null, 'all');
     console.log(`📦 Savegame re-synced on game_loaded: ${syncResult?.totalOwned || 0} owned blueprints.`);
   } catch (err) {
     console.warn('⚠️ Error re-syncing savegame on game_loaded:', err.message);
+  }
+
+  // If live engine Lua is active, also queue fresh harvest for all tables
+  if (isLuaActive()) {
+    queueCommand('HARVEST_TABLE', 'all');
   }
 
   const eventPayload = {
@@ -1214,6 +1241,7 @@ app.post('/api/game-loaded', async (req, res) => {
     message: 'Game load detected by Mission Director'
   };
 
+  io.emit('encyclopedia_updated', gameEncyclopedia);
   io.emit('game_loaded', eventPayload);
   io.emit('reload_ui', eventPayload);
 

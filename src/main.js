@@ -72,14 +72,22 @@ export async function fetchServerBlueprints(isUserTriggered = false) {
     }
 
     let res = null;
+    const cacheBuster = `?_t=${Date.now()}`;
+    const fetchOptions = {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    };
     try {
-      res = await fetch('/api/blueprints/all');
+      res = await fetch(`/api/blueprints/all${cacheBuster}`, fetchOptions);
       if (!res.ok) throw new Error('HTTP ' + res.status);
     } catch (e1) {
       try {
-        res = await fetch('http://localhost:3000/api/blueprints/all');
+        res = await fetch(`http://localhost:3000/api/blueprints/all${cacheBuster}`, fetchOptions);
       } catch (e2) {
-        res = await fetch('/api/blueprints/modules').catch(() => null);
+        res = await fetch(`/api/blueprints/modules${cacheBuster}`, fetchOptions).catch(() => null);
       }
     }
     if (res && res.ok) {
@@ -115,7 +123,7 @@ export function initSocketConnection() {
 
     socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
       timeout: 5000
     });
@@ -166,7 +174,7 @@ export function initSocketConnection() {
           if (changed) renderApp();
         }
       }
-      if (data && (data.table === 'modules' || data.table === 'all' || data.table === 'blueprints')) {
+      if (data && ['modules', 'all', 'blueprints', 'equipment', 'ships'].includes(data.table)) {
         fetchServerBlueprints(false);
       }
     });
@@ -215,10 +223,43 @@ export function reloadAppUI(data = {}) {
   }
 }
 
-// Continuously sync DLC status with companion server every 2 seconds
+let lastKnownServerEncSync = null;
+
+export async function checkServerPollStatus() {
+  try {
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const baseUrl = isLocal ? 'http://localhost:3000' : '';
+    const res = await fetch(`${baseUrl}/api/poll-status?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.lastEncyclopediaSync) {
+        if (lastKnownServerEncSync === null) {
+          lastKnownServerEncSync = data.lastEncyclopediaSync;
+        } else if (lastKnownServerEncSync !== data.lastEncyclopediaSync) {
+          console.log(`🔄 Encyclopedia update detected via poll status: ${lastKnownServerEncSync} -> ${data.lastEncyclopediaSync}`);
+          lastKnownServerEncSync = data.lastEncyclopediaSync;
+          await fetchServerBlueprints(false);
+          await fetchDlcStatus().catch(() => {});
+          if (typeof renderApp === 'function') {
+            renderApp();
+          }
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+// Continuously sync DLC status & encyclopedia status with companion server every 2 seconds
 if (typeof window !== 'undefined') {
   setInterval(async () => {
     try {
+      await checkServerPollStatus();
       const updated = await fetchDlcStatus();
       if (updated) {
         const changed = setDlcStatus(updated);
@@ -229,6 +270,24 @@ if (typeof window !== 'undefined') {
       }
     } catch (e) {}
   }, 2000);
+
+  // When user alt-tabs or switches back to this open browser tab, immediately reconnect and sync
+  const onTabActive = () => {
+    if (socket && !socket.connected) {
+      socket.connect();
+    }
+    checkServerPollStatus();
+    fetchDlcStatus().then(updated => {
+      if (updated && setDlcStatus(updated)) renderApp();
+    }).catch(() => {});
+  };
+
+  window.addEventListener('focus', onTabActive);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      onTabActive();
+    }
+  });
 }
 
 if (typeof window !== 'undefined') {

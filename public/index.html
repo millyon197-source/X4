@@ -1514,27 +1514,30 @@
             }
             const pendingTable = pendingCommandTable ? String(pendingCommandTable).toLowerCase() : null;
 
-            // STRICT ISOLATION: Only table requests are tied to Savegame Sync consideration and only for that particular request.
-            // No other LUA actions, MD processing, or background updates for other tables may affect this request or display.
-            if (pendingTable && pendingTable === updatedTable) {
-                if (commandTimeoutTimer) {
-                    clearTimeout(commandTimeoutTimer);
-                    commandTimeoutTimer = null;
-                }
+            if (commandTimeoutTimer && pendingTable && (pendingTable === updatedTable || updatedTable === 'all')) {
+                clearTimeout(commandTimeoutTimer);
+                commandTimeoutTimer = null;
                 pendingCommandTable = null;
-                const isGameEngine = data.entry ? (data.entry.source === 'game_engine') : (data.source === 'game_engine');
-                if (isGameEngine) {
-                    syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${data.table.toUpperCase()}</strong>]: ${data.summary || (data.count + ' records synced')}`;
-                } else {
-                    syncStatusText.innerHTML = `💾 Synced [<strong>${data.table.toUpperCase()}</strong>] from savegame: ${data.summary || (data.count + ' records synced')}`;
-                }
             }
 
-            // Only refresh the inspector if the user is currently inspecting THIS exact table
+            const isGameEngine = data.entry ? (data.entry.source === 'game_engine') : (data.source === 'game_engine');
+            if (isGameEngine) {
+                syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${data.table.toUpperCase()}</strong>]: ${data.summary || (data.count + ' records synced')}`;
+            } else {
+                syncStatusText.innerHTML = `💾 Synced [<strong>${data.table.toUpperCase()}</strong>] from savegame: ${data.summary || (data.count + ' records synced')}`;
+            }
+
+            if (data.entry && typeof recentRequestsList !== 'undefined') {
+                recentRequestsList = [data.entry, ...recentRequestsList.filter(r => r.id !== data.entry.id)];
+                latestByTableCache[updatedTable] = data.entry;
+                if (typeof updateHistorySelect === 'function') updateHistorySelect();
+            }
+
+            // Refresh the inspector if the user is inspecting this table or 'all'
             const dtChoice = document.getElementById('dt-table-choice');
             if (dtChoice) {
                 const currentView = dtChoice.value.toLowerCase();
-                if (currentView === updatedTable) {
+                if (currentView === updatedTable || updatedTable === 'all' || currentView === 'all') {
                     if (data.entry) {
                         currentEntry = data.entry;
                         renderRetrievedData(data.entry);
@@ -1542,6 +1545,46 @@
                 }
             }
         });
+
+        socket.on('game_loaded', (data) => {
+            syncStatusText.innerHTML = `🔄 Game load detected — Updating tables from savegame...`;
+            refreshDashboardData();
+        });
+
+        socket.on('reload_ui', (data) => {
+            syncStatusText.innerHTML = `🔄 UI reload requested — Updating tables...`;
+            refreshDashboardData();
+        });
+
+        async function refreshDashboardData() {
+            try {
+                const [stateRes, encRes] = await Promise.all([
+                    fetch('/api/state?_t=' + Date.now(), { cache: 'no-store' }),
+                    fetch('/api/encyclopedia?_t=' + Date.now(), { cache: 'no-store' })
+                ]);
+                if (stateRes.ok) {
+                    const state = await stateRes.json();
+                    if (state && state.dlcs) renderDlcPills(state.dlcs);
+                    if (state && state.player) {
+                        document.getElementById('pilot-name').textContent = state.player.name || 'Commander';
+                        document.getElementById('pilot-credits').textContent = Number(state.player.credits || 0).toLocaleString();
+                        document.getElementById('pilot-sector').textContent = state.player.sector || 'Deep Space';
+                    }
+                    if (state && state.lastUpdated) {
+                        document.getElementById('timestamp').textContent = new Date(state.lastUpdated).toLocaleTimeString();
+                    }
+                }
+                if (encRes.ok) {
+                    const data = await encRes.json();
+                    setEncyclopedia(data);
+                }
+                if (typeof loadRecentRequests === 'function') {
+                    await loadRecentRequests();
+                }
+            } catch (e) {
+                console.warn('Error refreshing dashboard data:', e);
+            }
+        }
 
         socket.on('blueprint_ownership_changed', (data) => {
             const idx = allBlueprints.findIndex(b => b.id === data.id || b.macro === data.id);
@@ -1826,14 +1869,46 @@
                     gameStatusEl.textContent = 'Game Client: Waiting...';
                     gameStatusEl.className = 'status-badge status-offline';
                 }
+
+                // Detect if server synchronized a newly loaded savegame or database update
+                if (data && data.lastEncyclopediaSync) {
+                    if (lastKnownDashboardEncSync === null) {
+                        lastKnownDashboardEncSync = data.lastEncyclopediaSync;
+                    } else if (lastKnownDashboardEncSync !== data.lastEncyclopediaSync) {
+                        console.log(`🔄 Companion Dashboard detected encyclopedia update via poll-status: ${lastKnownDashboardEncSync} -> ${data.lastEncyclopediaSync}`);
+                        lastKnownDashboardEncSync = data.lastEncyclopediaSync;
+                        refreshDashboardData();
+                    }
+                }
+                if (data && data.lastPlayerSync) {
+                    if (lastKnownDashboardPlayerSync === null) {
+                        lastKnownDashboardPlayerSync = data.lastPlayerSync;
+                    } else if (lastKnownDashboardPlayerSync !== data.lastPlayerSync) {
+                        lastKnownDashboardPlayerSync = data.lastPlayerSync;
+                        refreshDashboardData();
+                    }
+                }
             } catch {
                 isGameClientActive = false;
                 gameStatusEl.textContent = 'Game Client: Offline';
                 gameStatusEl.className = 'status-badge status-offline';
             }
         }
+        let lastKnownDashboardEncSync = null;
+        let lastKnownDashboardPlayerSync = null;
         setInterval(pollGameStatus, 2000);
         pollGameStatus();
+
+        window.addEventListener('focus', () => {
+            if (socket && !socket.connected) socket.connect();
+            pollGameStatus();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (socket && !socket.connected) socket.connect();
+                pollGameStatus();
+            }
+        });
 
         // =========================================================================
         // Retrieved Data Table Inspector Logic
