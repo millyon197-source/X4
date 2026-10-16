@@ -715,7 +715,12 @@ try {
         Write-Warning "Backend did not open port $BackendPort within $timeoutSeconds seconds. Continuing startup..."
     }
 
+    $backendUrl = "http://localhost:$BackendPort"
     if ($ServerOnly) {
+        if (-not $NoBrowser) {
+            Write-Host "  [Browser] Opening Companion Dashboard ($backendUrl)..." -ForegroundColor DarkGray
+            Start-Process $backendUrl
+        }
         Write-Host "`n==================================================================" -ForegroundColor Cyan
         Write-Host " Companion server is running in ServerOnly mode. Press Ctrl+C to stop." -ForegroundColor Cyan
         Write-Host "==================================================================" -ForegroundColor Cyan
@@ -723,10 +728,13 @@ try {
         return
     }
 
-    # 5.2 Auto-Launch Browser
+    # 5.2 Auto-Launch Browser (Companion Backend & Supply Matrix UI)
     $appUrl = "http://localhost:$Port/X4/"
     if (-not $NoBrowser) {
-        Write-Host "  [Browser] Opening $appUrl in default browser..." -ForegroundColor DarkGray
+        Write-Host "  [Browser] Opening Companion Dashboard ($backendUrl)..." -ForegroundColor DarkGray
+        Start-Process $backendUrl
+        Start-Sleep -Milliseconds 400
+        Write-Host "  [Browser] Opening Supply Matrix UI ($appUrl)..." -ForegroundColor DarkGray
         Start-Process $appUrl
     }
 
@@ -734,7 +742,7 @@ try {
     Write-Host "  [2/2] Launching frontend UI ($Mode server on Port $Port)..." -ForegroundColor Green
     Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
     Write-Host "  Access URL : $appUrl" -ForegroundColor Cyan
-    Write-Host "  Backend    : http://localhost:$BackendPort" -ForegroundColor Cyan
+    Write-Host "  Backend    : $backendUrl" -ForegroundColor Cyan
     Write-Host "  Press Ctrl+C to terminate both backend and frontend servers." -ForegroundColor DarkYellow
     Write-Host "  ----------------------------------------------------------------`n" -ForegroundColor DarkGray
 
