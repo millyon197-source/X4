@@ -1230,10 +1230,8 @@ app.post('/api/game-loaded', async (req, res) => {
     console.warn('⚠️ Error re-syncing savegame on game_loaded:', err.message);
   }
 
-  // If live engine Lua is active, also queue fresh harvest for all tables
-  if (isLuaActive()) {
-    queueCommand('HARVEST_TABLE', 'all');
-  }
+  // Queue fresh harvest command for all tables so Lua retrieves live engine tables
+  queueCommand('HARVEST_TABLE', 'all');
 
   const eventPayload = {
     timestamp: new Date().toISOString(),

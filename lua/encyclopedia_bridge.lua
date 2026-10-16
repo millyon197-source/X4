@@ -539,7 +539,7 @@ local function GetEnginePlayerBlueprints(categoryFilter)
         end
         return list
     end)
-    if ok and result and #result > 0 then return result end
+    if ok and result then return result end
     return nil
 end
 
@@ -997,7 +997,7 @@ local function ProcessCommand(cmd)
         if not ownedList or #ownedList == 0 then
             ownedList = GetEnginePlayerBlueprints(nil)
         end
-        if ownedList and #ownedList > 0 then
+        if type(ownedList) == "table" then
             logBridge("C.GetBlueprints retrieved " .. tostring(#ownedList) .. " blueprints for table: " .. targetTable)
             local req = getRequest()
             if req then
@@ -1016,30 +1016,32 @@ local function ProcessCommand(cmd)
                     end)
             end
         else
-            logBridge("Direct C.GetBlueprints returned empty or not accessible, using UI trigger fallback")
+            logBridge("Direct C.GetBlueprints returned nil or not accessible, using UI trigger fallback")
         end
     end
 
-    -- Trigger Mission Director harvesting cue via UI event
-    local triggered = false
-    pcall(function()
-        if AddUITriggeredEvent then
-            AddUITriggeredEvent("X4_Request_Update", targetTable, "")
-            AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-            triggered = true
-        end
-        if C and C.AddUITriggeredEvent then
-            C.AddUITriggeredEvent("X4_Request_Update", targetTable, "")
-            C.AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-            triggered = true
-        end
-        if Helper and Helper.addUITriggeredEvent then
-            Helper.addUITriggeredEvent("X4_Request_Update", targetTable, "")
-            Helper.addUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-            triggered = true
-        end
-    end)
-    logBridge("Dispatched AddUITriggeredEvent for table: " .. targetTable .. " (success: " .. tostring(triggered) .. ")")
+    if not cmd or cmd.source ~= "md_post_load" then
+        -- Trigger Mission Director harvesting cue via UI event
+        local triggered = false
+        pcall(function()
+            if AddUITriggeredEvent then
+                AddUITriggeredEvent("X4_Request_Update", targetTable, "")
+                AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
+                triggered = true
+            end
+            if C and C.AddUITriggeredEvent then
+                C.AddUITriggeredEvent("X4_Request_Update", targetTable, "")
+                C.AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
+                triggered = true
+            end
+            if Helper and Helper.addUITriggeredEvent then
+                Helper.addUITriggeredEvent("X4_Request_Update", targetTable, "")
+                Helper.addUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
+                triggered = true
+            end
+        end)
+        logBridge("Dispatched AddUITriggeredEvent for table: " .. targetTable .. " (success: " .. tostring(triggered) .. ")")
+    end
 end
 
 local pollInFlightUntil = 0
@@ -1145,6 +1147,10 @@ if RegisterEvent then
     end)
     RegisterEvent("X4_MD_Log", function(eventName, text)
         logBridge("MD-SIGNAL: " .. tostring(text or eventName))
+    end)
+    RegisterEvent("X4_Request_All_Tables", function(eventName, text)
+        logBridge("MD-SIGNAL: [Companion Bridge] X4_Request_All_Tables event received: requesting All Tables global refresh...")
+        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "md_post_load" })
     end)
 end
 

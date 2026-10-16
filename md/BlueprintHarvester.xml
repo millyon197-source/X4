@@ -17,11 +17,10 @@
         <check_any>
           <event_cue_signalled cue="md.Setup.GameStart" />
           <event_cue_signalled cue="md.Setup.Start" />
-          <event_game_loaded />
         </check_any>
       </conditions>
       <actions>
-        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v12 triggered on game load!'" />
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v12 triggered on game start!'" />
         <raise_lua_event name="'X4_Game_Loaded'" />
         <raise_lua_event name="'X4_Reload_UI'" />
         <reset_cue cue="CompanionHeartbeat" />
@@ -41,18 +40,15 @@
         <raise_lua_event name="'X4_Reload_UI'" />
         <reset_cue cue="CompanionHeartbeat" />
         <signal_cue cue="HarvestPlayerStats" />
-        <signal_cue cue="HarvestBlueprints" />
       </actions>
       <cues>
-        <!-- Delayed post-load refresh to re-harvest complete universe encyclopedia & stats -->
+        <!-- Delayed post-load refresh to re-harvest complete universe encyclopedia & stats for All Tables -->
         <cue name="CompanionPostLoadSync">
           <delay exact="2s" />
           <actions>
             <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] Post-load sync: refreshing player stats and full encyclopedia...'" />
-            <signal_cue cue="HarvestPlayerStats" />
-            <signal_cue cue="HarvestBlueprints" />
-            <signal_cue cue="HarvestShips" />
-            <signal_cue cue="HarvestEquipment" />
+            <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
+            <signal_cue cue="CompanionOnUpdateRequest" param="'all'" />
           </actions>
         </cue>
       </cues>
@@ -62,6 +58,7 @@
     <cue name="CompanionOnUpdateRequest" version="11" instantiate="true">
       <conditions>
         <check_any>
+          <event_cue_signalled />
           <event_ui_triggered screen="'X4_Request_Update'" />
           <event_ui_triggered control="'X4_Request_Update'" />
           <event_ui_triggered screen="'x4_companion_bridge'" />
@@ -69,7 +66,12 @@
       </conditions>
       <actions>
         <set_value name="$TargetTable" exact="'modules'" />
-        <do_if value="event.param == 'X4_Request_Update'">
+        <do_if value="event.name == 'event_cue_signalled'">
+          <do_if value="event.param? and event.param != ''">
+            <set_value name="$TargetTable" exact="event.param" />
+          </do_if>
+        </do_if>
+        <do_elseif value="event.param == 'X4_Request_Update'">
           <do_if value="event.param2? and event.param2 != ''">
             <set_value name="$TargetTable" exact="event.param2" />
           </do_if>
