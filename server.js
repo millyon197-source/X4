@@ -1037,6 +1037,42 @@ app.get('/api/dlcs', (req, res) => {
   return res.status(200).json(gameState.dlcs);
 });
 
+// Helper to verify whether a browser client is connected to the Companion Dashboard at :3000
+let dlcBrowserCheckTimer = null;
+
+function isSocketFromPort3000(socket) {
+  const headers = socket?.handshake?.headers || {};
+  const origin = String(headers.origin || '');
+  const referer = String(headers.referer || '');
+  const host = String(headers.host || '');
+  if (origin.includes(':3000') || referer.includes(':3000')) {
+    return true;
+  }
+  if (!origin && !referer && host.includes(':3000')) {
+    return true;
+  }
+  return false;
+}
+
+function isPort3000BrowserOpen() {
+  for (const socket of io.sockets.sockets.values()) {
+    if (socket.connected && isSocketFromPort3000(socket)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function checkPort3000BrowserAfterDlcUpdate() {
+  if (dlcBrowserCheckTimer) {
+    clearTimeout(dlcBrowserCheckTimer);
+    dlcBrowserCheckTimer = null;
+  }
+  if (!isPort3000BrowserOpen()) {
+    console.warn('⚠️ Warning: Browser connection to http://localhost:3000 (Companion Dashboard) is not open.');
+  }
+}
+
 // Endpoint for in-game Lua to post active DLC status determined via GetExtensions()
 app.post('/api/dlcs', (req, res) => {
   recordLuaActivity();
@@ -1060,6 +1096,9 @@ app.post('/api/dlcs', (req, res) => {
       entry
     });
     notifyUpdateResolved('dlcs', entry);
+
+    if (dlcBrowserCheckTimer) clearTimeout(dlcBrowserCheckTimer);
+    dlcBrowserCheckTimer = setTimeout(checkPort3000BrowserAfterDlcUpdate, 250);
 
     return res.status(200).json({ status: 'success', dlcs: gameState.dlcs, entry });
   }
@@ -1147,6 +1186,9 @@ app.post('/api/debug-log', (req, res) => {
   luaDebugLogs.unshift(entry);
   if (luaDebugLogs.length > 100) luaDebugLogs.pop();
   console.log(`🎮 [X4-LUA] ${entry.message}`);
+  if (typeof entry.message === 'string' && entry.message.includes('Successfully transmitted isolated GetExtensions() DLC status')) {
+    checkPort3000BrowserAfterDlcUpdate();
+  }
   return res.status(200).json({ status: 'ok' });
 });
 
@@ -1236,6 +1278,7 @@ app.get('/api/poll-status', (req, res) => {
 
 
 // --- DASHBOARD WEBSOCKET MANAGEMENT ---
+let dashboardDisconnectCount = 0;
 
 io.on('connection', (socket) => {
   console.log(`🔌 Dashboard UI connected: ${socket.id}`);
@@ -1252,7 +1295,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`❌ Dashboard UI disconnected: ${socket.id}`);
+    dashboardDisconnectCount++;
+    console.log(`❌ Companion Dashboard UI disconnected: ${socket.id}`);
+    if (dashboardDisconnectCount >= 2 && !isLuaActive()) {
+      console.log(`⏳ Waiting for X4 to come online. Borderless Window helps keep connection alive.`);
+    }
   });
 });
 

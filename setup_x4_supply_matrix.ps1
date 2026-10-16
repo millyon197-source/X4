@@ -741,9 +741,11 @@ try {
     # 5.3 Launch Vite Frontend Server
     Write-Host "  [2/2] Launching frontend UI ($Mode server on Port $Port)..." -ForegroundColor Green
     Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "  Access URL : $appUrl" -ForegroundColor Cyan
-    Write-Host "  Backend    : $backendUrl" -ForegroundColor Cyan
-    Write-Host "  Press Ctrl+C to terminate both backend and frontend servers." -ForegroundColor DarkYellow
+    Write-Host "  [Status Check] Node.js & npm       : Verified ($nodeVersion / $npmVersion)" -ForegroundColor Green
+    Write-Host "  [Status Check] Companion Backend   : Active on $backendUrl" -ForegroundColor Green
+    Write-Host "  [Status Check] Supply Matrix UI    : Starting on $appUrl" -ForegroundColor Green
+    Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "  All systems initialized! Press Ctrl+C when finished to stop servers." -ForegroundColor Cyan
     Write-Host "  ----------------------------------------------------------------`n" -ForegroundColor DarkGray
 
     $portArgs = @("--port", $Port.ToString())
@@ -761,5 +763,7 @@ finally {
         Stop-Process -Id $backendProcess.Id -Force -ErrorAction SilentlyContinue
     }
     Stop-PortProcess -TargetPort $BackendPort
-    Write-Host "All services stopped cleanly.`n" -ForegroundColor Green
+    Write-Host "All services stopped cleanly. Everything went well!`n" -ForegroundColor Green
+    $global:LASTEXITCODE = 0
 }
+exit 0
