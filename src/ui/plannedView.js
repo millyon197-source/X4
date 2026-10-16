@@ -909,7 +909,7 @@ export function focusPlannedModule(wareId) {
         targetRow.scrollIntoView({ block: 'center', behavior: 'auto' });
       }
       const qtyInput = targetRow.querySelector('.macro-qty-input');
-      if (qtyInput) {
+      if (qtyInput && document.activeElement !== qtyInput) {
         try {
           qtyInput.focus({ preventScroll: true });
           qtyInput.select();
@@ -924,8 +924,9 @@ export function focusPlannedModule(wareId) {
     setTimeout(doScrollAndFocus, 40);
     setTimeout(doScrollAndFocus, 120);
 
+    const qtyInputEl = targetRow.querySelector('.macro-qty-input');
     if (!state.plannedScroll) state.plannedScroll = {};
-    state.plannedScroll.lastFocusedMacro = targetRow.getAttribute('data-macro');
+    state.plannedScroll.lastFocusedMacro = (qtyInputEl && qtyInputEl.dataset && qtyInputEl.dataset.macro) || targetRow.getAttribute('data-macro');
     state.plannedScroll.lastFocusedField = 'qty-input';
   } else {
     // Macro is not in the plan table: select and focus in dropdown only if no module is currently loaded,

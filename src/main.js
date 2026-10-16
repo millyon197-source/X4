@@ -277,8 +277,12 @@ if (isHostedMode()) {
   console.log("This build/server was explicitly started with hosted mode enabled (__IS_HOSTED__ = true). Multiple blueprints internal storage is disabled.");
 }
 
+let isRestoringPlannedFocus = false;
+let restoreFocusRaf = null;
+let restoreFocusTimer = null;
+
 export function savePlannedPositions() {
-  if (state.activeTab !== 'planned') return;
+  if (state.activeTab !== 'planned' || isRestoringPlannedFocus) return;
   if (!state.plannedScroll) {
     state.plannedScroll = {};
   }
@@ -305,8 +309,9 @@ export function savePlannedPositions() {
       state.plannedScroll.lastFocusedMacro = active.dataset.macro;
       if (active.classList.contains('macro-qty-input')) {
         state.plannedScroll.lastFocusedField = 'qty-input';
-        state.plannedScroll.cursorStart = active.selectionStart;
-        state.plannedScroll.cursorEnd = active.selectionEnd;
+        const valLen = String(active.value ?? '').length;
+        state.plannedScroll.cursorStart = active.selectionStart !== null && active.selectionStart !== undefined ? active.selectionStart : valLen;
+        state.plannedScroll.cursorEnd = active.selectionEnd !== null && active.selectionEnd !== undefined ? active.selectionEnd : valLen;
       } else if (active.classList.contains('btn-macro-inc')) {
         state.plannedScroll.lastFocusedField = 'btn-inc';
       } else if (active.classList.contains('btn-macro-dec')) {
@@ -356,6 +361,15 @@ export function restorePlannedPositions() {
   setTimeout(applyScroll, 40);
   setTimeout(applyScroll, 120);
 
+  if (restoreFocusRaf !== null && typeof cancelAnimationFrame === 'function') {
+    cancelAnimationFrame(restoreFocusRaf);
+    restoreFocusRaf = null;
+  }
+  if (restoreFocusTimer !== null) {
+    clearTimeout(restoreFocusTimer);
+    restoreFocusTimer = null;
+  }
+
   const restoreFocus = () => {
     let elToFocus = null;
     if (ps.lastFocusedField === 'searchInput') {
@@ -378,18 +392,29 @@ export function restorePlannedPositions() {
     }
 
     if (elToFocus && typeof elToFocus.focus === 'function') {
+      if (document.activeElement === elToFocus) return;
+      isRestoringPlannedFocus = true;
       try {
         elToFocus.focus({ preventScroll: true });
-        if (typeof elToFocus.setSelectionRange === 'function' && ps.cursorStart !== null && ps.cursorEnd !== null) {
+        if (elToFocus.classList && elToFocus.classList.contains('macro-qty-input')) {
+          // HTML5 input[type="number"] does not support setSelectionRange and defaults caret to index 0 on focus().
+          // Resetting .value while focused moves the caret to the end so multi-digit typing (e.g. 56) is not reversed.
+          const currentVal = elToFocus.value;
+          elToFocus.value = '';
+          elToFocus.value = currentVal;
+        } else if (typeof elToFocus.setSelectionRange === 'function' && ps.cursorStart !== null && ps.cursorEnd !== null) {
           elToFocus.setSelectionRange(ps.cursorStart, ps.cursorEnd);
         }
-      } catch (e) {}
+      } catch (e) {
+      } finally {
+        isRestoringPlannedFocus = false;
+      }
     }
   };
 
   restoreFocus();
-  requestAnimationFrame(restoreFocus);
-  setTimeout(restoreFocus, 40);
+  restoreFocusRaf = requestAnimationFrame(restoreFocus);
+  restoreFocusTimer = setTimeout(restoreFocus, 40);
 }
 
 export function saveCurrentPanelAsBlueprint() {
@@ -1622,7 +1647,12 @@ function setupEvents(searchFocusState = {}) {
         document.querySelectorAll('.macro-row.macro-row-focused').forEach(r => r.classList.remove('macro-row-focused'));
         row.classList.add('macro-row-focused');
         const qtyInput = row.querySelector('.macro-qty-input');
-        if (qtyInput) qtyInput.focus();
+        if (qtyInput) {
+          qtyInput.focus();
+          const currentVal = qtyInput.value;
+          qtyInput.value = '';
+          qtyInput.value = currentVal;
+        }
       });
     });
 
