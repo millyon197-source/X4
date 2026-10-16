@@ -615,7 +615,52 @@ app.post('/api/encyclopedia', (req, res) => {
   const incomingDlcs = (req.body && req.body.dlcs) ? normalizeDlcs(req.body.dlcs) : null;
   if (incomingDlcs) {
     gameState.dlcs = { ...gameState.dlcs, ...incomingDlcs };
+    gameState.lastUpdated = new Date().toISOString();
+    const dlcEntry = recordRequest('dlcs', gameState.dlcs, 'game_engine');
     io.emit('dlcs_updated', gameState.dlcs);
+    io.emit('table_updated', {
+      table: 'dlcs',
+      timestamp: gameState.lastUpdated,
+      summary: `Active DLCs synced for [${(table || 'all').toUpperCase()}]`,
+      entry: dlcEntry
+    });
+    notifyUpdateResolved('dlcs', dlcEntry);
+  }
+
+  if (req.body && req.body.player && typeof req.body.player === 'object') {
+    const p = req.body.player;
+    let resolvedName = p.name;
+    if (!resolvedName || resolvedName === 'Commander' || resolvedName === 'Unknown' || resolvedName.startsWith('cdata')) {
+      resolvedName = (gameState.player?.name && gameState.player.name !== 'Unknown') ? gameState.player.name : 'Commander';
+    }
+    let resolvedCredits = typeof p.credits === 'number' ? p.credits : gameState.player?.credits;
+    if ((resolvedCredits === 0 || isNaN(resolvedCredits)) && gameState.player?.credits > 0) {
+      resolvedCredits = gameState.player.credits;
+    }
+    let resolvedSector = p.sector;
+    if (resolvedSector) {
+      const fromMap = resolveSectorFromLocation(resolvedSector);
+      if (fromMap) resolvedSector = fromMap;
+    }
+    if (!resolvedSector || resolvedSector === 'Unknown' || resolvedSector === 'Deep Space' || resolvedSector.startsWith('cdata')) {
+      resolvedSector = (gameState.player?.sector && gameState.player.sector !== 'Unknown') ? gameState.player.sector : 'Deep Space';
+    }
+
+    gameState.player = {
+      name: resolvedName,
+      credits: resolvedCredits,
+      sector: resolvedSector
+    };
+    gameState.lastUpdated = new Date().toISOString();
+    const playerEntry = recordRequest('player', gameState.player, 'game_engine');
+    io.emit('game_state_changed', gameState);
+    io.emit('table_updated', {
+      table: 'player',
+      timestamp: gameState.lastUpdated,
+      summary: `${gameState.player.name} (${Number(gameState.player.credits || 0).toLocaleString()} Cr, Sector: ${gameState.player.sector})`,
+      entry: playerEntry
+    });
+    notifyUpdateResolved('player', playerEntry);
   }
 
   // Support direct owned wares list sent from in-game Lua via C.GetBlueprints

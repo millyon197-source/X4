@@ -459,35 +459,42 @@ local function RegisterPlayerListener()
     end)
 end
 
+local HarvestAllTablesMerged = nil
+
 local function RegisterGameLoadedListener()
     if not RegisterEvent then return end
 
     local function handleGameLoaded(eventName)
         logBridge("event_game_loaded caught from MD (" .. tostring(eventName) .. ")! Notifying companion server to reload app UI...")
         local req = getRequest()
-        if not req then return end
+        if req then
+            local payload = {
+                event = "game_loaded",
+                action = "reload_ui",
+                timestamp = os.time(),
+                message = "event_game_loaded triggered from Mission Director"
+            }
 
-        local payload = {
-            event = "game_loaded",
-            action = "reload_ui",
-            timestamp = os.time(),
-            message = "event_game_loaded triggered from Mission Director"
-        }
-
-        req.new('POST')
-            :setUrl("http://127.0.0.1:3000/api/game-loaded")
-            :setBody(JSON.encode(payload))
-            :addHeader("Content-Type", "application/json")
-            :send(function(response, err)
-                if err and DebugError then
-                    DebugError("[X4 Companion Bridge] Game loaded notify error: " .. tostring(err))
-                else
-                    logBridge("Successfully notified companion server of game_loaded.")
-                end
-            end)
+            req.new('POST')
+                :setUrl("http://127.0.0.1:3000/api/game-loaded")
+                :setBody(JSON.encode(payload))
+                :addHeader("Content-Type", "application/json")
+                :addHeader("Connection", "close")
+                :send(function(response, err)
+                    if err and DebugError then
+                        DebugError("[X4 Companion Bridge] Game loaded notify error: " .. tostring(err))
+                    else
+                        logBridge("Successfully notified companion server of game_loaded.")
+                    end
+                end)
+        end
 
         logBridge("MD-SIGNAL: [Companion Bridge] Game reload detected: requesting All Tables global refresh...")
-        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "game_loaded" })
+        if HarvestAllTablesMerged then
+            HarvestAllTablesMerged("game_loaded")
+        else
+            ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "game_loaded" })
+        end
     end
 
     RegisterEvent("X4_Game_Loaded", handleGameLoaded)
@@ -498,8 +505,12 @@ local function RegisterRequestAllTablesListener()
     if not RegisterEvent then return end
 
     RegisterEvent("X4_Request_All_Tables", function(eventName, text)
-        logBridge("MD-SIGNAL: [Companion Bridge] X4_Request_All_Tables event received: requesting All Tables global refresh...")
-        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "md_post_load" })
+        logBridge("MD-SIGNAL: [Companion Bridge] X4_Request_All_Tables event received (" .. tostring(eventName) .. "): requesting All Tables global refresh...")
+        if HarvestAllTablesMerged then
+            HarvestAllTablesMerged("md_request_all_tables")
+        else
+            ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "md_post_load" })
+        end
     end)
 end
 
@@ -945,6 +956,77 @@ local function QueryExtensionsOnly(requestContext, commandId)
 end
 
 -- =========================================================================
+-- Consolidated Global Table Retrieval (DLCs + Player + Full Blueprints)
+-- =========================================================================
+local globalRetrievalInFlightUntil = 0
+local lastGlobalRetrievalTime = 0
+local initialLoadSyncDone = false
+
+HarvestAllTablesMerged = function(sourceContext)
+    local now = (type(GetCurRealTime) == "function" and GetCurRealTime())
+             or (type(getElapsedTime) == "function" and getElapsedTime())
+             or os.clock()
+
+    -- Debounce: avoid duplicate simultaneous runs if triggered within 1.5 seconds or while in flight
+    if (now < globalRetrievalInFlightUntil) or (now - lastGlobalRetrievalTime < 1.5) then
+        return
+    end
+
+    globalRetrievalInFlightUntil = now + 6.0
+    lastGlobalRetrievalTime = now
+
+    logBridge("HarvestAllTablesMerged [" .. tostring(sourceContext or "unknown") .. "]: executing consolidated global retrieval for all tables (DLCs + Player + Blueprints)...")
+
+    local ok, err = pcall(function()
+        local currentDlcs = resolveInstalledDLCs("all")
+        local pName, pCredits, pSector = resolvePlayerTelemetry()
+        local ownedList = GetEnginePlayerBlueprints("all")
+        if not ownedList or #ownedList == 0 then
+            ownedList = GetEnginePlayerBlueprints(nil)
+        end
+        if not ownedList then ownedList = {} end
+
+        local mergedPayload = {
+            dataType = "engine_blueprints",
+            table = "all",
+            ownedWares = ownedList,
+            dlcs = currentDlcs,
+            player = {
+                name = pName,
+                credits = pCredits,
+                sector = pSector
+            },
+            source = "game_engine",
+            timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
+        }
+
+        local req = getRequest()
+        if req then
+            req.new('POST')
+                :setUrl("http://127.0.0.1:3000/api/encyclopedia")
+                :setBody(JSON.encode(mergedPayload))
+                :addHeader("Content-Type", "application/json")
+                :addHeader("Connection", "close")
+                :send(function(r, e)
+                    globalRetrievalInFlightUntil = 0
+                    if e then
+                        logBridge("HarvestAllTablesMerged error: " .. tostring(e))
+                    else
+                        logBridge("HarvestAllTablesMerged: Successfully synced ALL tables (" .. tostring(#ownedList) .. " blueprints, DLCs, player telemetry) in ONE atomic API call!")
+                    end
+                end)
+        else
+            globalRetrievalInFlightUntil = 0
+        end
+    end)
+
+    if not ok then
+        globalRetrievalInFlightUntil = 0
+        logBridge("HarvestAllTablesMerged pcall failed: " .. tostring(err))
+    end
+end
+
+-- =========================================================================
 -- Command Processing & Polling
 -- =========================================================================
 local function ProcessCommand(cmd)
@@ -953,43 +1035,25 @@ local function ProcessCommand(cmd)
     local targetAction = tostring(cmd.action or "HARVEST_TABLE")
     logBridge("Handling dashboard command [" .. targetAction .. "] for table: " .. targetTable)
 
-    -- Isolated GetExtensions() branch: fully separate from all global table retrieval
+    -- 1. Dedicated Isolated GetExtensions() branch: fully separate from all global table retrieval
     if targetAction == "GET_EXTENSIONS" or targetTable == "dlcs" or targetTable == "extensions" then
         QueryExtensionsOnly("on_demand_dlcs_query", cmd.id)
         return
     end
 
-    -- Call GetExtensions() specifically to determine active DLCs for the current request
-    local currentDlcs = resolveInstalledDLCs(targetTable)
+    -- 2. Consolidated Global Retrieval for 'all' (merges DLCs, player telemetry, and full blueprints)
+    if targetTable == "all" then
+        HarvestAllTablesMerged("dashboard_command_all")
+        return
+    end
 
-    -- Dispatch active DLCs to Companion Server to update Companion UI for this request
-    pcall(function()
-        local req = getRequest()
-        if req then
-            local dlcPayload = {
-                dlcs = currentDlcs,
-                requestTable = targetTable,
-                commandId = tostring(cmd.id or ""),
-                timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
-            }
-            req.new('POST')
-                :setUrl("http://127.0.0.1:3000/api/dlcs")
-                :setBody(JSON.encode(dlcPayload))
-                :addHeader("Content-Type", "application/json")
-                :send(function(r, err)
-                    if err then
-                        logBridge("Error sending request DLCs to /api/dlcs: " .. tostring(err))
-                    end
-                end)
-        end
-    end)
-
-    -- If player telemetry requested, export immediately via engine API
-    if targetTable == "player" or targetTable == "all" then
+    -- 3. Dedicated Player Telemetry branch
+    if targetTable == "player" then
         pcall(function()
             local pName, pCredits, pSector = resolvePlayerTelemetry()
             local req = getRequest()
             if req then
+                local currentDlcs = resolveInstalledDLCs("player")
                 local playerPayload = {
                     player = { name = pName, credits = pCredits, sector = pSector },
                     dlcs = currentDlcs
@@ -998,13 +1062,16 @@ local function ProcessCommand(cmd)
                     :setUrl("http://127.0.0.1:3000/api/update")
                     :setBody(JSON.encode(playerPayload))
                     :addHeader("Content-Type", "application/json")
+                    :addHeader("Connection", "close")
                     :send(function(r, e) end)
             end
         end)
+        return
     end
 
-    -- If blueprints / modules / ships / equipment requested, query live engine directly via C.GetBlueprints!
-    if targetTable == "modules" or targetTable == "ships" or targetTable == "equipment" or targetTable == "blueprints" or targetTable == "all" then
+    -- 4. Individual category blueprint tables (modules, ships, equipment, blueprints)
+    if targetTable == "modules" or targetTable == "ships" or targetTable == "equipment" or targetTable == "blueprints" then
+        local currentDlcs = resolveInstalledDLCs(targetTable)
         local ownedList = GetEnginePlayerBlueprints(targetTable)
         if not ownedList or #ownedList == 0 then
             ownedList = GetEnginePlayerBlueprints(nil)
@@ -1017,42 +1084,31 @@ local function ProcessCommand(cmd)
                     dataType = "engine_blueprints",
                     table = targetTable,
                     ownedWares = ownedList,
-                    dlcs = currentDlcs
+                    dlcs = currentDlcs,
+                    source = "game_engine"
                 }
                 req.new('POST')
                     :setUrl("http://127.0.0.1:3000/api/encyclopedia")
                     :setBody(JSON.encode(payload))
                     :addHeader("Content-Type", "application/json")
+                    :addHeader("Connection", "close")
                     :send(function(r, e)
-                        if e then logBridge("Error sending live blueprints: " .. tostring(e)) end
+                        if e then logBridge("Error sending live blueprints for [" .. targetTable .. "]: " .. tostring(e)) end
                     end)
             end
         else
-            logBridge("Direct C.GetBlueprints returned nil or not accessible, using UI trigger fallback")
+            logBridge("Direct C.GetBlueprints returned nil or not accessible, using UI trigger fallback for: " .. targetTable)
+            pcall(function()
+                if AddUITriggeredEvent then
+                    AddUITriggeredEvent("X4_Request_Update", targetTable, "")
+                elseif C and C.AddUITriggeredEvent then
+                    C.AddUITriggeredEvent("X4_Request_Update", targetTable, "")
+                elseif Helper and Helper.addUITriggeredEvent then
+                    Helper.addUITriggeredEvent("X4_Request_Update", targetTable, "")
+                end
+            end)
         end
-    end
-
-    if not cmd or cmd.source ~= "md_post_load" then
-        -- Trigger Mission Director harvesting cue via UI event
-        local triggered = false
-        pcall(function()
-            if AddUITriggeredEvent then
-                AddUITriggeredEvent("X4_Request_Update", targetTable, "")
-                AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-                triggered = true
-            end
-            if C and C.AddUITriggeredEvent then
-                C.AddUITriggeredEvent("X4_Request_Update", targetTable, "")
-                C.AddUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-                triggered = true
-            end
-            if Helper and Helper.addUITriggeredEvent then
-                Helper.addUITriggeredEvent("X4_Request_Update", targetTable, "")
-                Helper.addUITriggeredEvent("x4_companion_bridge", "X4_Request_Update", targetTable)
-                triggered = true
-            end
-        end)
-        logBridge("Dispatched AddUITriggeredEvent for table: " .. targetTable .. " (success: " .. tostring(triggered) .. ")")
+        return
     end
 end
 
@@ -1083,8 +1139,17 @@ local function PollBackendCommands()
     local req = getRequest()
     if not req then return end
 
+    -- 0. Immediate initial global tables retrieval (DLCs + Player + Full Blueprints) on first tick after script load
+    if not initialLoadSyncDone then
+        initialLoadSyncDone = true
+        HarvestAllTablesMerged("lua_initial_script_load")
+    end
+
+    local isGlobalBusy = (now < globalRetrievalInFlightUntil) or (now - lastGlobalRetrievalTime < 3.0)
+
     -- Send live pilot profile telemetry to server every 3 seconds (self-healing 4s timeout)
-    if (now - lastPlayerTelemetryTime) >= PLAYER_TELEMETRY_INTERVAL and now >= telemetryInFlightUntil then
+    -- Skip if global retrieval is in flight or recent
+    if (now - lastPlayerTelemetryTime) >= PLAYER_TELEMETRY_INTERVAL and now >= telemetryInFlightUntil and not isGlobalBusy then
         lastPlayerTelemetryTime = now
         telemetryInFlightUntil = now + 4.0
         pcall(function()
@@ -1108,7 +1173,8 @@ local function PollBackendCommands()
     end
 
     -- Query & broadcast DLC content using GetExtensions() every 10 seconds (self-healing 8s timeout)
-    if (now - lastDlcUpdateTime) >= DLC_UPDATE_INTERVAL and now >= dlcUpdateInFlightUntil then
+    -- Skip if global retrieval is in flight or recent, since global retrieval already syncs DLCs!
+    if (now - lastDlcUpdateTime) >= DLC_UPDATE_INTERVAL and now >= dlcUpdateInFlightUntil and not isGlobalBusy then
         lastDlcUpdateTime = now
         dlcUpdateInFlightUntil = now + 8.0
         pcall(function()
@@ -1160,10 +1226,6 @@ if RegisterEvent then
     end)
     RegisterEvent("X4_MD_Log", function(eventName, text)
         logBridge("MD-SIGNAL: " .. tostring(text or eventName))
-    end)
-    RegisterEvent("X4_Request_All_Tables", function(eventName, text)
-        logBridge("MD-SIGNAL: [Companion Bridge] X4_Request_All_Tables event received: requesting All Tables global refresh...")
-        ProcessCommand({ action = "HARVEST_TABLE", table = "all", source = "md_post_load" })
     end)
 end
 

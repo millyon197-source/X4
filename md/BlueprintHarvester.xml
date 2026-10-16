@@ -11,30 +11,34 @@
       </actions>
     </cue>
 
-    <!-- Initialization on game load / start with version upgrade -->
-    <cue name="CompanionHarvesterInit" version="13" instantiate="true">
+    <!-- Initialization on game start with version upgrade -->
+    <cue name="CompanionHarvesterInit" version="15" instantiate="true">
       <conditions>
         <check_any>
           <event_cue_signalled cue="md.Setup.GameStart" />
           <event_cue_signalled cue="md.Setup.Start" />
           <event_game_loaded />
+          <event_game_started />
         </check_any>
       </conditions>
       <actions>
-        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v13 triggered on game load/start!'" />
+        <raise_lua_event name="'X4_MD_Log'" param="'CompanionHarvesterInit v15 triggered!'" />
         <raise_lua_event name="'X4_Game_Loaded'" />
         <raise_lua_event name="'X4_Reload_UI'" />
         <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
         <reset_cue cue="CompanionHeartbeat" />
-        <signal_cue cue="HarvestPlayerStats" />
         <signal_cue cue="CompanionPostLoadSync" />
+        <reset_cue cue="this" />
       </actions>
     </cue>
 
     <!-- Dedicated Game Loaded Detection Cue: triggers on <event_game_loaded/> to reload the app UI -->
-    <cue name="CompanionOnGameLoaded" instantiate="true">
+    <cue name="CompanionOnGameLoaded" version="15" instantiate="true">
       <conditions>
-        <event_game_loaded />
+        <check_any>
+          <event_game_loaded />
+          <event_game_started />
+        </check_any>
       </conditions>
       <actions>
         <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] event_game_loaded detected! Reloading app UI and requesting All Tables...'" />
@@ -42,8 +46,8 @@
         <raise_lua_event name="'X4_Reload_UI'" />
         <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
         <reset_cue cue="CompanionHeartbeat" />
-        <signal_cue cue="HarvestPlayerStats" />
         <signal_cue cue="CompanionPostLoadSync" />
+        <reset_cue cue="this" />
       </actions>
     </cue>
 
@@ -56,7 +60,6 @@
       <actions>
         <raise_lua_event name="'X4_MD_Log'" param="'[Companion Bridge] Post-load sync: refreshing player stats and full encyclopedia...'" />
         <raise_lua_event name="'X4_Request_All_Tables'" param="'all'" />
-        <signal_cue cue="CompanionOnUpdateRequest" param="'all'" />
       </actions>
     </cue>
 
@@ -81,7 +84,7 @@
           <do_if value="event.param2? and event.param2 != ''">
             <set_value name="$TargetTable" exact="event.param2" />
           </do_if>
-        </do_if>
+        </do_elseif>
         <do_elseif value="event.param2 == 'X4_Request_Update'">
           <do_if value="event.param3? and event.param3 != ''">
             <set_value name="$TargetTable" exact="event.param3" />

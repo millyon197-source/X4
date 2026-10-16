@@ -1520,11 +1520,15 @@
                 pendingCommandTable = null;
             }
 
-            const isGameEngine = data.entry ? (data.entry.source === 'game_engine') : (data.source === 'game_engine');
-            if (isGameEngine) {
-                syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${data.table.toUpperCase()}</strong>]: ${data.summary || (data.count + ' records synced')}`;
-            } else {
-                syncStatusText.innerHTML = `💾 Synced [<strong>${data.table.toUpperCase()}</strong>] from savegame: ${data.summary || (data.count + ' records synced')}`;
+            // Only update syncStatusText if: no command is waiting, or this update matches the pending request, or it is a full 'all' update
+            const shouldUpdateStatus = !pendingTable || pendingTable === updatedTable || updatedTable === 'all';
+            if (shouldUpdateStatus) {
+                const isGameEngine = data.entry ? (data.entry.source === 'game_engine') : (data.source === 'game_engine');
+                if (isGameEngine) {
+                    syncStatusText.innerHTML = `✅ Received in-game response for [<strong>${data.table.toUpperCase()}</strong>]: ${data.summary || (data.count + ' records synced')}`;
+                } else {
+                    syncStatusText.innerHTML = `💾 Synced [<strong>${data.table.toUpperCase()}</strong>] from savegame: ${data.summary || (data.count + ' records synced')}`;
+                }
             }
 
             if (data.entry && typeof recentRequestsList !== 'undefined') {
