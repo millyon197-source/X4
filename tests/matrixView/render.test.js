@@ -4,7 +4,7 @@ import {
   renderMatrixTabHTML,
   renderConstructionBudgetInspectorHTML,
   renderBuildNeedsBudgetInspectorHTML,
-} from '../../src/ui/matrixView.js';
+} from '../../src/ui/matrixView/matrixView.js';
 
 describe('renderMatrixTabHTML', () => {
   it('renders the default state', () => {

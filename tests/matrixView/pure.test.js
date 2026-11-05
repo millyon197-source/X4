@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { WARES_DB, DEPENDENCIES } from '../../src/data/wares.js';
 import {
   getProductionMacroForWare, getDownstreamWares, formatWareName, SCRAP_WARE_IDS,
-} from '../../src/ui/matrixView.js';
+} from '../../src/ui/matrixView/matrixView.js';
 
 describe('getProductionMacroForWare', () => {
   it('returns null for unknown wares', () => {
