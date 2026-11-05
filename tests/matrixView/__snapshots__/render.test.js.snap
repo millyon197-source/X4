@@ -1,0 +1,2639 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`build-needs budget panel > renders with an empty state object 1`] = `""`;
+
+exports[`construction budget panel > renders expanded with no blueprint 1`] = `
+"
+      <div class="bp-level-panel construction-budget-panel bi-panel " data-bi-panel="construction-budget" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+        <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to collapse Plan Construction Budget">
+          <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-level-arrow bp-cb-arrow">▼</span>
+            <span style="font-size:0.9rem;">💰</span>
+            <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Plan Construction Budget</strong>
+          </div>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.2rem;">
+            <button type="button" class="btn-price-tier " data-price-tier="min" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#cbd5e1; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier active" data-price-tier="avg" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid #38bdf8; background:rgba(56, 189, 248, 0.25); color:#38bdf8; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier " data-price-tier="max" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#cbd5e1; cursor:pointer; font-weight:700;">Max</button>
+          </div>
+        </div>
+        <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:block;">
+          <p style="color:#94a3b8; font-style:italic; margin:0; font-size:0.75rem;">No construction resources required.</p>
+        </div>
+      </div>
+    "
+`;
+
+exports[`construction budget panel > renders with an empty state object 1`] = `
+"
+      <div class="bp-level-panel construction-budget-panel bi-panel " data-bi-panel="construction-budget" style="border-color: rgba(56, 189, 248, 0.35); flex-shrink: 0; width: 100%; box-sizing: border-box; margin-top: 0.65rem; margin-bottom: 0;">
+        <div class="bp-level-header bp-cb-header" style="background: rgba(15, 23, 42, 0.85); padding: 0.5rem 0.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem; cursor:pointer;" title="Click to expand Plan Construction Budget">
+          <div class="bp-level-title-group" style="display:flex; align-items:center; gap:6px;">
+            <span class="bp-level-arrow bp-cb-arrow">▶</span>
+            <span style="font-size:0.9rem;">💰</span>
+            <strong style="color:#38bdf8; font-size:0.8rem; font-family:var(--font-heading); text-transform:uppercase; letter-spacing:0.03em;">Plan Construction Budget</strong>
+          </div>
+          <div class="price-mode-toggles" style="display:flex; align-items:center; gap:0.2rem;">
+            <button type="button" class="btn-price-tier " data-price-tier="min" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#cbd5e1; cursor:pointer; font-weight:700;">Min</button>
+            <button type="button" class="btn-price-tier active" data-price-tier="avg" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid #38bdf8; background:rgba(56, 189, 248, 0.25); color:#38bdf8; cursor:pointer; font-weight:700;">Avg</button>
+            <button type="button" class="btn-price-tier " data-price-tier="max" style="padding:0.15rem 0.4rem; font-size:0.68rem; border-radius:3px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#cbd5e1; cursor:pointer; font-weight:700;">Max</button>
+          </div>
+        </div>
+        <div class="bp-cb-body" style="padding: 0.5rem 0.75rem; background: rgba(30, 41, 59, 0.4); display:none;">
+          <p style="color:#94a3b8; font-style:italic; margin:0; font-size:0.75rem;">No construction resources required.</p>
+        </div>
+      </div>
+    "
+`;
+
+exports[`renderMatrixTabHTML > renders the default state 1`] = `
+"
+    <div class="main-wrapper">
+      <div class="matrix-viewport" id="viewport">
+        <div class="layer-totals-banner cols-4">
+          <div class="layer-totals-card" style="overflow:hidden;">
+            <div class="layer-title" style="display:flex; justify-content:space-between; align-items:center; gap:0.35rem; overflow:hidden;">
+              <span style="white-space:nowrap; flex-shrink:0;">⚡ Solar Harvesting</span>
+              <div style="display:inline-flex; align-items:center; gap:3px; max-width:125px; overflow:hidden; flex-shrink:1;">
+                <svg id="needleIndicator" class="needle-indicator needle-flashing" width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" title="Sector not selected • Click to choose sector location">
+                  <!-- Needle Pin Shaft -->
+                  <line x1="10" y1="10" x2="3" y2="17" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+                  <!-- Needle Collar -->
+                  <path d="M8.5 8.5L11.5 11.5" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+                  <!-- Needle Head (Round Pin Head) -->
+                  <circle class="needle-head" cx="13" cy="7" r="4.5" />
+                  <!-- Specular shine on head -->
+                  <circle cx="11.8" cy="5.2" r="1.3" fill="#ffffff" opacity="0.75"/>
+                </svg>
+                <select id="sectorSelect" class="sector-select-badge unselected" title="Sector not selected • Click to choose sector location">
+                  <option value="" selected>-- Select Sector --</option>
+                  <option value="Adventures Promise (71%)" >71% — Adventures Promise</option><option value="Antigone Memorial (126%)" >126% — Antigone Memorial</option><option value="Argon Prime (100%)" >100% — Argon Prime</option><option value="Asteroid Belt (13%)" >13% — Asteroid Belt</option><option value="Atiyas Misfortune I (101%)" >101% — Atiyas Misfortune I</option><option value="Atiyas Misfortune III (101%)" >101% — Atiyas Misfortune III</option><option value="Atreus Clouds (41%)" >41% — Atreus Clouds</option><option value="Avarice I (1390%)" >1390% — Avarice I</option><option value="Avarice IV (1390%)" >1390% — Avarice IV</option><option value="Avarice V Dead End (1390%)" >1390% — Avarice V Dead End</option><option value="Barren Shores (83%)" >83% — Barren Shores</option><option value="Black Hole Sun IV (117.5%)" >117.5% — Black Hole Sun IV</option><option value="Black Hole Sun V (117.5%)" >117.5% — Black Hole Sun V</option><option value="Brennans Triumph (122%)" >122% — Brennans Triumph</option><option value="Bright Promise (204%)" >204% — Bright Promise</option><option value="Cardinals Domain (124%)" >124% — Cardinals Domain</option><option value="Cardinals Redress (88%)" >88% — Cardinals Redress</option><option value="CEOs Doubt (82%)" >82% — CEOs Doubt</option><option value="Circle of Deceit (142%)" >142% — Circle of Deceit</option><option value="Company Regard (83%)" >83% — Company Regard</option><option value="Earth (102.5%)" >102.5% — Earth</option><option value="Eighteen Billion (90%)" >90% — Eighteen Billion</option><option value="Eleventh Hour (118%)" >118% — Eleventh Hour</option><option value="Emperors Pride IV (68%)" >68% — Emperors Pride IV</option><option value="Emperors Pride VI (68%)" >68% — Emperors Pride VI</option><option value="Family Kritt (239%)" >239% — Family Kritt</option><option value="Family Nhuut (85%)" >85% — Family Nhuut</option><option value="Family Tkr (89%)" >89% — Family Tkr</option><option value="Family Zhin (71%)" >71% — Family Zhin</option><option value="Faulty Logic I (162%)" >162% — Faulty Logic I</option><option value="Faulty Logic VII (162%)" >162% — Faulty Logic VII</option><option value="Fires of Defeat (81%)" >81% — Fires of Defeat</option><option value="Freedoms Reach (221%)" >221% — Freedoms Reach</option><option value="Frontier Edge (172%)" >172% — Frontier Edge</option><option value="Gaian Prophecy (208%)" >208% — Gaian Prophecy</option><option value="Getsu Fune (93%)" >93% — Getsu Fune</option><option value="Grand Exchange I (129%)" >129% — Grand Exchange I</option><option value="Grand Exchange III (129%)" >129% — Grand Exchange III</option><option value="Grand Exchange IV (129%)" >129% — Grand Exchange IV</option><option value="Great Reef (128%)" >128% — Great Reef</option><option value="Guiding Star V (77%)" >77% — Guiding Star V</option><option value="Guiding Star VII (77%)" >77% — Guiding Star VII</option><option value="Hatikvahs Choice I (101.5%)" >101.5% — Hatikvahs Choice I</option><option value="Hatikvahs Choice III (101.5%)" >101.5% — Hatikvahs Choice III</option><option value="Hatikvahs Faith (88%)" >88% — Hatikvahs Faith</option><option value="Heart of Acrimony I The Boneyard (64%)" >64% — Heart of Acrimony I The Boneyard</option><option value="Heart of Acrimony II (245%)" >245% — Heart of Acrimony II</option><option value="Heretics End (181%)" >181% — Heretics End</option><option value="Hewas Twin I (109%)" >109% — Hewas Twin I</option><option value="Hewas Twin II (109%)" >109% — Hewas Twin II</option><option value="Hewas Twin III (88.5%)" >88.5% — Hewas Twin III</option><option value="Hewas Twin IV The Cove (88.5%)" >88.5% — Hewas Twin IV The Cove</option><option value="Hewas Twin V (82%)" >82% — Hewas Twin V</option><option value="Holy Vision (208%)" >208% — Holy Vision</option><option value="Ianamus Zura IV (124%)" >124% — Ianamus Zura IV</option><option value="Ianamus Zura VII (124%)" >124% — Ianamus Zura VII</option><option value="Jupiter (10%)" >10% — Jupiter</option><option value="Kingdom End I (118%)" >118% — Kingdom End I</option><option value="Lasting Vengeance (100%)" >100% — Lasting Vengeance</option><option value="Litany of Fury IX (37%)" >37% — Litany of Fury IX</option><option value="Litany of Fury XII (37%)" >37% — Litany of Fury XII</option><option value="Loomanckstrats Legacy (2%)" >2% — Loomanckstrats Legacy</option><option value="Mars (44%)" >44% — Mars</option><option value="Matrix #101 (408%)" >408% — Matrix #101</option><option value="Matrix #451 (201%)" >201% — Matrix #451</option><option value="Matrix #598 (77%)" >77% — Matrix #598</option><option value="Matrix #79B (239%)" >239% — Matrix #79B</option><option value="Matrix #9 (100%)" >100% — Matrix #9</option><option value="Memory of Profit IX (115%)" >115% — Memory of Profit IX</option><option value="Memory of Profit X (106%)" >106% — Memory of Profit X</option><option value="Menelaus Oasis (271%)" >271% — Menelaus Oasis</option><option value="Mercury (714%)" >714% — Mercury</option><option value="Mi Tons Refuge (53%)" >53% — Mi Tons Refuge</option><option value="Mists of Artemis (141%)" >141% — Mists of Artemis</option><option value="Mitsunos Defiance (111%)" >111% — Mitsunos Defiance</option><option value="Mitsunos Revelation (118%)" >118% — Mitsunos Revelation</option><option value="Mitsunos Sacrifice (106%)" >106% — Mitsunos Sacrifice</option><option value="Moo-Kyes Revenge (93%)" >93% — Moo-Kyes Revenge</option><option value="Morning Star III (76%)" >76% — Morning Star III</option><option value="Morning Star IV (65%)" >65% — Morning Star IV</option><option value="Neptune (6%)" >6% — Neptune</option><option value="Nopileos Fortune II (80%)" >80% — Nopileos Fortune II</option><option value="Nopileos Memorial (163%)" >163% — Nopileos Memorial</option><option value="Nopileos' Fortune VI / Duke's Awakening (78%)" >78% — Nopileos' Fortune VI / Duke's Awakening</option><option value="Ocean of Fantasy (12%)" >12% — Ocean of Fantasy</option><option value="Oort Cloud (2%)" >2% — Oort Cloud</option><option value="Open Market (88%)" >88% — Open Market</option><option value="Ore Belt (134%)" >134% — Ore Belt</option><option value="Path to Profit (143%)" >143% — Path to Profit</option><option value="Pious Mists II (136%)" >136% — Pious Mists II</option><option value="Pious Mists IV (89%)" >89% — Pious Mists IV</option><option value="Pious Mists XI (118%)" >118% — Pious Mists XI</option><option value="Pluto (5%)" >5% — Pluto</option><option value="Pontifexs Claim (194%)" >194% — Pontifexs Claim</option><option value="Presidents End (71%)" >71% — Presidents End</option><option value="Profit Center Alpha (79%)" >79% — Profit Center Alpha</option><option value="Reflected Stars (118%)" >118% — Reflected Stars</option><option value="Rhys Defiance (163%)" >163% — Rhys Defiance</option><option value="Rolks Demise (15%)" >15% — Rolks Demise</option><option value="Sacred Relic (71%)" >71% — Sacred Relic</option><option value="Sanctuary of Darkness (174%)" >174% — Sanctuary of Darkness</option><option value="Sanctum Verge (89%)" >89% — Sanctum Verge</option><option value="Saturn 1 (8%)" >8% — Saturn 1</option><option value="Saturn 2 (8%)" >8% — Saturn 2</option><option value="Savage Spur I (121%)" >121% — Savage Spur I</option><option value="Savage Spur II (121%)" >121% — Savage Spur II</option><option value="Scale Plate Green I (120.5%)" >120.5% — Scale Plate Green I</option><option value="Scale Plate Green VII (120.5%)" >120.5% — Scale Plate Green VII</option><option value="Scarlet Star (266%)" >266% — Scarlet Star</option><option value="Second Contact II Flashpoint (59%)" >59% — Second Contact II Flashpoint</option><option value="Second Contact VII (55%)" >55% — Second Contact VII</option><option value="Second Contact XI (47%)" >47% — Second Contact XI</option><option value="Segaris (187%)" >187% — Segaris</option><option value="Silent Witness I (98%)" >98% — Silent Witness I</option><option value="Silent Witness XI (118%)" >118% — Silent Witness XI</option><option value="Silent Witness XII (147%)" >147% — Silent Witness XII</option><option value="Tempting Fumes (166%)" >166% — Tempting Fumes</option><option value="Tharkas Cascade XV (135.5%)" >135.5% — Tharkas Cascade XV</option><option value="Tharkas Cascade XVII (135.5%)" >135.5% — Tharkas Cascade XVII</option><option value="Tharkas Ravine IV Tharkas Fall (131%)" >131% — Tharkas Ravine IV Tharkas Fall</option><option value="Tharkas Ravine VIII (126%)" >126% — Tharkas Ravine VIII</option><option value="Tharkas Ravine XVI (117%)" >117% — Tharkas Ravine XVI</option><option value="Tharkas Ravine XXIV (109%)" >109% — Tharkas Ravine XXIV</option><option value="The Moon (102.5%)" >102.5% — The Moon</option><option value="The Reach (367%)" >367% — The Reach</option><option value="The Void (164%)" >164% — The Void</option><option value="Third Redemption (100%)" >100% — Third Redemption</option><option value="Thuruks Demise II First Impact (65%)" >65% — Thuruks Demise II First Impact</option><option value="Thuruks Demise III (65%)" >65% — Thuruks Demise III</option><option value="Titan (8%)" >8% — Titan</option><option value="Towering Wave (118%)" >118% — Towering Wave</option><option value="Trinity Sanctum III (133%)" >133% — Trinity Sanctum III</option><option value="Trinity Sanctum VII (106%)" >106% — Trinity Sanctum VII</option><option value="True Sight (71%)" >71% — True Sight</option><option value="Turquoise Sea IX (134.5%)" >134.5% — Turquoise Sea IX</option><option value="Turquoise Sea X (134.5%)" >134.5% — Turquoise Sea X</option><option value="Two Grand (133%)" >133% — Two Grand</option><option value="Unholy Retribution (163%)" >163% — Unholy Retribution</option><option value="Unknown System (5%)" >5% — Unknown System</option><option value="Uranus (7%)" >7% — Uranus</option><option value="Venus (189%)" >189% — Venus</option><option value="Void of Opportunity (83%)" >83% — Void of Opportunity</option><option value="Watchful Gaze (41%)" >41% — Watchful Gaze</option><option value="Windfall I Union Summit (20%)" >20% — Windfall I Union Summit</option><option value="Windfall III The Hoard (16%)" >16% — Windfall III The Hoard</option><option value="Windfall IV Auroras Dream (11%)" >11% — Windfall IV Auroras Dream</option><option value="Wretched Skies IV Family Valka (130%)" >130% — Wretched Skies IV Family Valka</option><option value="Wretched Skies V Family Phi (123%)" >123% — Wretched Skies V Family Phi</option><option value="Wretched Skies X (108%)" >108% — Wretched Skies X</option><option value="Zyarths Dominion I (142%)" >142% — Zyarths Dominion I</option><option value="Zyarths Dominion IV (210%)" >210% — Zyarths Dominion IV</option><option value="Zyarths Dominion X (151%)" >151% — Zyarths Dominion X</option>
+                </select>
+              </div>
+            </div>
+            <div class="layer-stat" style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+              <span>Total Demand: <strong style="color:#fbbf24;">0 EC/hr</strong></span>
+              
+            </div>
+            <div class="layer-sub" style="margin-top:2px;">
+              Requires <strong style="color:#34d399;">0x</strong> <span style="font-size:0.68rem; color:#94a3b8;">(10,500/mod)</span>
+            </div>
+          </div>
+          <div class="layer-totals-card">
+            <div class="layer-title">
+              <span>Level 1: Refined Goods</span>
+            </div>
+            <div class="layer-stat">Output: <strong style="color:#34d399;">0 /hr</strong></div>
+            <div class="layer-sub">Layer EC: <strong style="color:#fbbf24;">0 EC/hr</strong></div>
+          </div>
+          <div class="layer-totals-card">
+            <div class="layer-title">
+              <span>Level 2: Intermediates</span>
+            </div>
+            <div class="layer-stat">Output: <strong style="color:#34d399;">0 /hr</strong></div>
+            <div class="layer-sub">Layer EC: <strong style="color:#fbbf24;">0 EC/hr</strong></div>
+          </div>
+          <div class="layer-totals-card">
+            <div class="layer-title">
+              <span>Level 3: High-Tech</span>
+            </div>
+            <div class="layer-stat">Output: <strong style="color:#34d399;">0 /hr</strong></div>
+            <div class="layer-sub">Layer EC: <strong style="color:#fbbf24;">0 EC/hr</strong></div>
+          </div>
+          
+        </div>
+
+        <svg class="svg-overlay" id="svgCanvas"></svg>
+
+        <div class="matrix-grid cols-4" id="matrixGrid">
+          
+              <div class="matrix-col col-0" data-level="0">
+                <div class="col-badge">
+                  <span>Level 0: Raw</span>
+                </div>
+                
+                    <div class="ware-card   " id="ware-EC" data-id="EC" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Energy Cells">Energy Cells</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);">
+                              15x Installed Solar
+                            </span>
+                            <span class="rate-badge-prod" title="Hourly production output in No Sector Selected">
+                              Output: 157,500 /hr
+                            </span>
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="rate-badge-cons" style="background:rgba(56,189,248,0.12); color:#38bdf8; border-color:rgba(56,189,248,0.25);" title="Solar panel generation efficiency in this sector">
+                              ⚡ 10,500 EC/mod (100%)
+                            </span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerEC" data-id="TerEC" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="TER Energy Cells">TER Energy Cells</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);">
+                              2x Installed TER Solar
+                            </span>
+                            <span class="rate-badge-prod" title="Hourly production output in No Sector Selected">
+                              Output: 6,000 /hr
+                            </span>
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="rate-badge-cons" style="background:rgba(56,189,248,0.12); color:#38bdf8; border-color:rgba(56,189,248,0.25);" title="Solar panel generation efficiency in this sector">
+                              ⚡ 3,000 EC/mod (100%)
+                            </span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Ore" data-id="Ore" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Ore">Ore</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Silicon" data-id="Silicon" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Silicon">Silicon</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Methane" data-id="Methane" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Methane">Methane</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Hydrogen" data-id="Hydrogen" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Hydrogen">Hydrogen</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Helium" data-id="Helium" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Helium">Helium</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Protectyon" data-id="Protectyon" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Protectyon (Condensate)">Protectyon (Condensate)</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Ice" data-id="Ice" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Ice">Ice</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Mining
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required raw extraction rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-RawScrap" data-id="RawScrap" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Raw Scrap">Raw Scrap</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Scrap
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required scrap collection rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-RawKhaakScrap" data-id="RawKhaakScrap" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Kha'ak Scrap">Kha'ak Scrap</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              Scrap
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly required scrap collection rate">0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  
+                
+                  <div id="scrapWarningPill" class="scrap-warning-pill" style="display:none;">
+                    Scrap calculations are confusing for Hull and Claytronics outputs. Do some research
+                  </div>
+                
+              </div>
+            
+              <div class="matrix-col col-1" data-level="1">
+                <div class="col-badge">
+                  <span>Level 1: Refined Goods</span>
+                </div>
+                
+                    <div class="ware-card   " id="ware-RefMet" data-id="RefMet" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Refined Metals">Refined Metals</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              24x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 50,688 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_refinedmetals_macro">prod_gen_refinedmetals_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="RefMet"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelMet" data-id="TelMet" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Teladianium">Teladianium</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 2,100 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_teladianium_macro">prod_tel_teladianium_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelMet"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Graph" data-id="Graph" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Graphene">Graphene</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              4x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 5,760 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_graphene_macro">prod_gen_graphene_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Graph"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SilWaf" data-id="SilWaf" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Silicon Wafers">Silicon Wafers</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              7x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 14,980 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_siliconwafers_macro">prod_gen_siliconwafers_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SilWaf"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AntiCell" data-id="AntiCell" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Antimatter Cells">Antimatter Cells</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 2,970 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_antimattercells_macro">prod_gen_antimattercells_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="AntiCell"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SupCool" data-id="SupCool" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Superfluid Coolant">Superfluid Coolant</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 4,275 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_superfluidcoolant_macro">prod_gen_superfluidcoolant_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SupCool"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerMetMicrolatt" data-id="TerMetMicrolatt" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Metallic Microlattice">Metallic Microlattice</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 3,800 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_metallicmicrolattice_macro">prod_ter_metallicmicrolattice_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TerMetMicrolatt"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ProtPaste" data-id="ProtPaste" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Protein Paste">Protein Paste</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 2,628 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_proteinpaste_macro">prod_ter_proteinpaste_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ProtPaste"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Stimulants" data-id="Stimulants" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Stimulants">Stimulants</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 2,352 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_stimulants_macro">prod_ter_stimulants_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Stimulants"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Water" data-id="Water" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Water">Water</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 28,950 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_water_macro">prod_gen_water_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Water"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ScrapProc" data-id="ScrapProc" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scrap Processor">Scrap Processor</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="proc_gen_scrapworks_macro">proc_gen_scrapworks_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   scrap-subset-card" id="ware-ScrapMetal" data-id="ScrapMetal" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scrap Metal">Scrap Metal</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 2,250 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_scrap_recycler_macro">prod_gen_scrap_recycler_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   scrap-subset-card" id="ware-TerScrapMetal" data-id="TerScrapMetal" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scrap Metal (TER)">Scrap Metal (TER)</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 22,500 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_scrap_recycler_macro">prod_ter_scrap_recycler_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-CompSubstrate" data-id="CompSubstrate" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Computronic Substrate">Computronic Substrate</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 0 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_computronicsubstrate_macro">prod_gen_computronicsubstrate_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="CompSubstrate"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerCompSubstrate" data-id="TerCompSubstrate" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Computronic Substrate (TER)">Computronic Substrate (TER)</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 1,764 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_computronicsubstrate_macro">prod_ter_computronicsubstrate_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AllographyneScrapProc" data-id="AllographyneScrapProc" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Allographyne Scrap Processor">Allographyne Scrap Processor</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod" title="Hourly production output">Output: 9,000 /hr</span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="proc_gen_scrapworkskhaak_macro">proc_gen_scrapworkskhaak_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                
+              </div>
+            
+              <div class="matrix-col col-2" data-level="2">
+                <div class="col-badge">
+                  <span>Level 2: Intermediates</span>
+                </div>
+                
+                    <div class="ware-card   " id="ware-HullParts" data-id="HullParts" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Hull Parts">Hull Parts</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              34x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="HullParts" value="39984" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_hullparts_macro">prod_gen_hullparts_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="HullParts"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ScrapHullParts" data-id="ScrapHullParts" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Hull Parts (Scrap)">Hull Parts (Scrap)</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ScrapHullParts" value="1200" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_scrap_recycler_macro">prod_gen_scrap_recycler_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelParts" data-id="TelParts" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Hull Parts TEL">Hull Parts TEL</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TelParts" value="1176" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_hullparts_macro">prod_tel_hullparts_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelParts"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-EngParts" data-id="EngParts" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Engine Parts">Engine Parts</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="EngParts" value="4160" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_engineparts_macro">prod_gen_engineparts_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="EngParts"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelEngParts" data-id="TelEngParts" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Engine Parts (TEL)">Engine Parts (TEL)</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TelEngParts" value="832" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_engineparts_macro">prod_tel_engineparts_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelEngParts"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AdvComp" data-id="AdvComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Advanced Composites">Advanced Composites</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="AdvComp" value="1296" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_advancedcomposites_macro">prod_gen_advancedcomposites_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="AdvComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelAdvComp" data-id="TelAdvComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Advanced Composites (TEL)">Advanced Composites (TEL)</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TelAdvComp" value="360" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_advancedcomposites_macro">prod_tel_advancedcomposites_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelAdvComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ScanArray" data-id="ScanArray" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scanning Arrays">Scanning Arrays</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ScanArray" value="648" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_scanningarrays_macro">prod_gen_scanningarrays_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ScanArray"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelArray" data-id="TelArray" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scanning Arrays (TEL)">Scanning Arrays (TEL)</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TelArray" value="216" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_scanningarrays_macro">prod_tel_scanningarrays_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelArray"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Microchips" data-id="Microchips" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Microchips">Microchips</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              9x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Microchips" value="3888" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_microchips_macro">prod_gen_microchips_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Microchips"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-QuanTubes" data-id="QuanTubes" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Quantum Tubes">Quantum Tubes</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="QuanTubes" value="2350" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_quantumtubes_macro">prod_gen_quantumtubes_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="QuanTubes"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-PlasmaCond" data-id="PlasmaCond" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Plasma Conductors">Plasma Conductors</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              4x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="PlasmaCond" value="704" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_plasmaconductors_macro">prod_gen_plasmaconductors_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="PlasmaCond"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SilCarbide" data-id="SilCarbide" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Silicon Carbide">Silicon Carbide</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SilCarbide" value="1152" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_siliconcarbide_macro">prod_gen_siliconcarbide_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SilCarbide"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerSilCarbide" data-id="TerSilCarbide" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Silicon Carbide (TER)">Silicon Carbide (TER)</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TerSilCarbide" value="1728" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_siliconcarbide_macro">prod_ter_siliconcarbide_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SmartChips" data-id="SmartChips" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Smart Chips">Smart Chips</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              8x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SmartChips" value="6864" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_smartchips_macro">prod_gen_smartchips_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SmartChips"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Meat" data-id="Meat" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Meat">Meat</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              4x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Meat" value="9280" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_arg_meat_macro">prod_arg_meat_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Meat"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-CheltMeat" data-id="CheltMeat" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Chelt Meat">Chelt Meat</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Split Vendetta</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="CheltMeat" value="1672" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_spl_cheltmeat_macro">prod_spl_cheltmeat_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="CheltMeat"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-BoGas" data-id="BoGas" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="BoGas">BoGas</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Kingdom End (🟣 Present), Tides of Avarice (🟣 Present), Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Kingdom End</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="BoGas" value="2640" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_bor_bogas_macro">prod_bor_bogas_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="BoGas"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Spices" data-id="Spices" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Spices">Spices</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Spices" value="15000" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_spices_macro">prod_gen_spices_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Spices"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Wheat" data-id="Wheat" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Wheat">Wheat</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              4x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Wheat" value="14880" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_arg_wheat_macro">prod_arg_wheat_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Wheat"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Plankton" data-id="Plankton" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Plankton">Plankton</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Kingdom End (🟣 Present), Tides of Avarice (🟣 Present), Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Kingdom End</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Plankton" value="4950" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_bor_plankton_macro">prod_bor_plankton_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Plankton"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-MajaSnails" data-id="MajaSnails" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Maja Snails">Maja Snails</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="MajaSnails" value="1168" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_par_majasnails_macro">prod_par_majasnails_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="MajaSnails"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SojaBeans" data-id="SojaBeans" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Soja Beans">Soja Beans</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SojaBeans" value="1248" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_par_sojabeans_macro">prod_par_sojabeans_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SojaBeans"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SunriseFlowers" data-id="SunriseFlowers" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Sunrise Flowers">Sunrise Flowers</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SunriseFlowers" value="1200" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_sunriseflowers_macro">prod_tel_sunriseflowers_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SunriseFlowers"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SwampPlant" data-id="SwampPlant" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Swamp Plant">Swamp Plant</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SwampPlant" value="960" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_swampplant_macro">prod_tel_swampplant_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SwampPlant"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ScruffinFruit" data-id="ScruffinFruit" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Scruffin Fruits">Scruffin Fruits</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Split Vendetta</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ScruffinFruit" value="3060" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_spl_scruffinfruit_macro">prod_spl_scruffinfruit_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ScruffinFruit"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerranMRE" data-id="TerranMRE" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Terran MRE">Terran MRE</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TerranMRE" value="2625" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_mre_macro">prod_ter_mre_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TerranMRE"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AllographyneFragments" data-id="AllographyneFragments" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Allographyne Scrap Recycler">Allographyne Scrap Recycler</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="AllographyneFragments" value="3600" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_scrap_recyclerkhaak_macro">prod_gen_scrap_recyclerkhaak_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="AllographyneFragments"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                
+              </div>
+            
+              <div class="matrix-col col-3" data-level="3">
+                <div class="col-badge">
+                  <span>Level 3: High-Tech</span>
+                </div>
+                
+                    <div class="ware-card   " id="ware-Claytronics" data-id="Claytronics" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Claytronics">Claytronics</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Claytronics" value="2160" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_claytronics_macro">prod_gen_claytronics_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Claytronics"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ScrapClaytronics" data-id="ScrapClaytronics" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Claytronics (Scrap)">Claytronics (Scrap)</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ScrapClaytronics" value="360" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_scrap_recycler_macro">prod_gen_scrap_recycler_macro</span>
+                          
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AntiConv" data-id="AntiConv" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Antimatter Converters">Antimatter Converters</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              5x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="AntiConv" value="7980" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_antimatterconverters_macro">prod_gen_antimatterconverters_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="AntiConv"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-AdvElec" data-id="AdvElec" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Advanced Electronics">Advanced Electronics</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              49x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="AdvElec" value="13230" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_advancedelectronics_macro">prod_gen_advancedelectronics_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="AdvElec"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-FieldCoils" data-id="FieldCoils" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Field Coils">Field Coils</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="FieldCoils" value="1050" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_fieldcoils_macro">prod_gen_fieldcoils_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="FieldCoils"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ShieldComp" data-id="ShieldComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Shield Components">Shield Components</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ShieldComp" value="1158" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_shieldcomponents_macro">prod_gen_shieldcomponents_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ShieldComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-DroneComp" data-id="DroneComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Drone Components">Drone Components</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="DroneComp" value="945" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_dronecomponents_macro">prod_gen_dronecomponents_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="DroneComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-WeapComp" data-id="WeapComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Weapon Components">Weapon Components</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              18x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="WeapComp" value="6120" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_weaponcomponents_macro">prod_gen_weaponcomponents_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="WeapComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TurrComp" data-id="TurrComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Turret Components">Turret Components</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              3x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TurrComp" value="1020" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_turretcomponents_macro">prod_gen_turretcomponents_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TurrComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-MissComp" data-id="MissComp" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Missile Components">Missile Components</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              2x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="MissComp" value="2248" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_missilecomponents_macro">prod_gen_missilecomponents_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="MissComp"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-FoodRations" data-id="FoodRations" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Food Rations">Food Rations</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              13x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="FoodRations" value="89700" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_arg_foodrations_macro">prod_arg_foodrations_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="FoodRations"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ArgMedicalSupplies" data-id="ArgMedicalSupplies" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="ARG Medical Supplies">ARG Medical Supplies</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              21x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ArgMedicalSupplies" value="52416" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_arg_medicalsupplies_macro">prod_arg_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ArgMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-BorMedicalSupplies" data-id="BorMedicalSupplies" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="BOR Medical Supplies">BOR Medical Supplies</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Kingdom End (🟣 Present), Tides of Avarice (🟣 Present), Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Kingdom End</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="BorMedicalSupplies" value="0" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_bor_medicalsupplies_macro">prod_bor_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="BorMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-ParMedicalSupplies" data-id="ParMedicalSupplies" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="PAR Medical Supplies">PAR Medical Supplies</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="ParMedicalSupplies" value="2496" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_par_medicalsupplies_macro">prod_par_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="ParMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SplMedicalSupplies" data-id="SplMedicalSupplies" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="SPL Medical Supplies">SPL Medical Supplies</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Split Vendetta DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Split Vendetta</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SplMedicalSupplies" value="2496" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_spl_medicalsupplies_macro">prod_spl_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SplMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TelMedicalSupplies" data-id="TelMedicalSupplies" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="TEL Medical Supplies">TEL Medical Supplies</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TelMedicalSupplies" value="2496" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_medicalsupplies_macro">prod_tel_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TelMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-TerMedicalSupplies" data-id="TerMedicalSupplies" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="TER Medical Supplies">TER Medical Supplies</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Cradle of Humanity DLC: 🟣 Present (Not Active in Current Save) • Blueprint Not Owned">Cradle of Humanity</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="TerMedicalSupplies" value="0" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_ter_medicalsupplies_macro">prod_ter_medicalsupplies_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="TerMedicalSupplies"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-BoFu" data-id="BoFu" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="BoFu">BoFu</div>
+                        <span class="not-owned-label not-owned-dlc-tag status-present" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Found in DLCs: Kingdom End (🟣 Present), Tides of Avarice (🟣 Present), Split Vendetta (🟣 Present), Cradle of Humanity (🟣 Present) • Blueprint Not Owned">Kingdom End</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="BoFu" value="1230" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_bor_bofu_macro">prod_bor_bofu_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="BoFu"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-SojaHusk" data-id="SojaHusk" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Soja Husk">Soja Husk</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="SojaHusk" value="4200" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_par_sojahusk_macro">prod_par_sojahusk_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="SojaHusk"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-NostropOil" data-id="NostropOil" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Nostrop Oil">Nostrop Oil</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="NostropOil" value="6000" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_nostropoil_macro">prod_tel_nostropoil_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="NostropOil"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-MajaDust" data-id="MajaDust" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Maja Dust">Maja Dust</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="MajaDust" value="384" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_par_majadust_macro">prod_par_majadust_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="MajaDust"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Spaceweed" data-id="Spaceweed" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Spaceweed">Spaceweed</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Spaceweed" value="1098" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_tel_spaceweed_macro">prod_tel_spaceweed_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Spaceweed"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Spacefuel" data-id="Spacefuel" data-omitted="false" style="">
+                      <div class="ware-header">
+                        <div class="ware-name ware-name-unowned" title="Spacefuel">Spacefuel</div>
+                        <span class="not-owned-label" style="font-size:0.56rem; padding:0.02rem 0.35rem;" title="Base Game — Blueprint Not Owned">Not Owned</span>
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              1x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Spacefuel" value="735" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_arg_spacefuel_macro">prod_arg_spacefuel_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Spacefuel"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                    <div class="ware-card   " id="ware-Allographyne" data-id="Allographyne" data-omitted="true" style="display:none;">
+                      <div class="ware-header">
+                        <div class="ware-name " title="Allographyne">Allographyne</div>
+                        
+                      </div>
+                      
+                        <div class="card-calc-info">
+                          
+                            <span class="module-badge" style="" title="">
+                              0x Modules
+                            </span>
+                            
+                              <span class="rate-badge-prod " title="Hourly production output">
+                                Output: <input type="number" class="pill-output-input " data-ware-id="Allographyne" value="0" min="0" step="1" title="Enter required hourly output to re-evaluate upstream supply" onclick="event.stopPropagation();" onkeydown="if(event.key==='Enter') this.blur();" /> /hr
+                              </span>
+                            
+                          
+                        </div>
+                      
+                      
+                        <div class="card-bottom-pill-panel">
+                          
+                            <span class="macro-badge" title="prod_gen_allographyne_macro">prod_gen_allographyne_macro</span>
+                          
+                          
+                            <label class="pp-checkbox-label" title="Pause Production" onclick="event.stopPropagation();">
+                              <input type="checkbox" class="pp-checkbox" data-id="Allographyne"  onclick="event.stopPropagation();" title="Pause Production" />
+                              <span class="pp-text" style="color: #ffffff;" title="Pause Production">PP</span>
+                            </label>
+                          
+                        </div>
+                      
+                    </div>
+                  
+                
+              </div>
+            
+        </div>
+      </div>
+
+      <aside class="inspector-panel" id="inspectorPanel">
+        <div class="inspector-header">
+          <div class="inspector-title" style="flex:1; min-width:0; margin-right:0.5rem;">
+            <h2 id="insTitle">Blueprint Inspector</h2>
+            <span id="insSub">Prod Max</span>
+          </div>
+          <button class="btn-close" id="btnCloseIns">&times;</button>
+        </div>
+        <div class="inspector-body" id="insBody"></div>
+      </aside>
+    </div>
+  "
+`;

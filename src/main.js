@@ -4,7 +4,7 @@ import { state, store, saveActiveBlueprintToStorage, isHostedMode, clearBlueprin
 import { calculateFactoryRequirements, getPrimaryMacroForWare } from './engine/calculator.js';
 import { applyMatchNeeds } from './engine/matchNeeds.js';
 import { parseXMLBlueprint, removeActiveBlueprint, rebuildBlueprintFromMacros, reloadActiveBlueprint, switchLoadedBlueprint, removeLoadedBlueprint } from './engine/xmlParser.js';
-import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId, showNoBlueprintPopup, alignSubdueLevel4, updateModuleCountFromDiff } from './ui/matrixView.js';
+import { renderMatrixTabHTML, drawLines, highlightGraph, filterWares, selectWare, updateInspector, centerOnWare, getCenteredWareId, showNoBlueprintPopup, alignSubdueLevel4, updateModuleCountFromDiff } from './ui/matrixView/index.js';
 import { renderPlannedTabHTML, filterPlannedModules, setupCumulativeMacroDropdown, alignAddMacroDropdown, focusPlannedModule, getKnownMacrosList } from './ui/plannedView.js';
 import { isWorkforceStructure, hasWorkforceStructures, autoSupportWorkforceWithFoodAndMedicine, calculateBlueprintWorkforce, applySupportWorkforce, getMostProminentFaction, getLargestOwnedHabitatMacro, isWorkforceFullySupported } from './engine/workforce.js';
 import { version as appVersion } from '../package.json';

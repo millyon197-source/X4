@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`matrixView public surface > keeps the full export list (snapshot of all current names) 1`] = `
+[
+  "FACTION_WARE_MAP",
+  "NO_PP_WARES",
+  "SCRAP_WARE_IDS",
+  "alignSubdueLevel4",
+  "bindBiPanelFocusListeners",
+  "bindCrbListeners",
+  "bindNeedsCrbListeners",
+  "centerOnWare",
+  "destroyMatrixView",
+  "drawLines",
+  "filterWares",
+  "formatWareName",
+  "getBuildNeedsModules",
+  "getCenteredWareId",
+  "getDownstreamWares",
+  "getProductionMacroForWare",
+  "highlightGraph",
+  "initMatrixView",
+  "isFactionWarePresent",
+  "refreshBothBudgetPanels",
+  "renderBuildNeedsBudgetInspectorHTML",
+  "renderConstructionBudgetInspectorHTML",
+  "renderMatrixTabHTML",
+  "selectWare",
+  "showNoBlueprintPopup",
+  "updateInspector",
+  "updateModuleCountFromDiff",
+  "updateScrapWarningPill",
+]
+`;

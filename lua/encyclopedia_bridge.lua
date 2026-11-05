@@ -256,6 +256,23 @@ end
 -- HTTP Request Module Resolver
 -- =========================================================================
 local Request = nil
+-- X4's sandboxed Lua has no `os` library, so os.time()/os.clock() raise
+-- "attempt to index global 'os'". Use the game's own clocks instead.
+local function nowSeconds()
+    return (type(GetCurRealTime) == "function" and GetCurRealTime())
+        or (type(getElapsedTime) == "function" and getElapsedTime())
+        or 0
+end
+
+-- TEMP: step markers to pin down the "Invalid number of arguments (1, expected >= 4)"
+-- log error. Set TRACE_TELEMETRY = false (or delete the trace() lines) once fixed.
+local TRACE_TELEMETRY = false
+local function trace(step)
+    if TRACE_TELEMETRY and DebugError then
+        DebugError("[X4 Companion Bridge][TRACE] " .. step)
+    end
+end
+
 local function getRequest()
     if Request then return Request end
     local ok, mod = pcall(require, "djfhe.http.request")
@@ -471,7 +488,7 @@ local function RegisterGameLoadedListener()
             local payload = {
                 event = "game_loaded",
                 action = "reload_ui",
-                timestamp = os.time(),
+                timestamp = nowSeconds(),
                 message = "event_game_loaded triggered from Mission Director"
             }
 
@@ -573,28 +590,35 @@ local function resolvePlayerTelemetry()
     local pName = cachedPlayerName
     local pCredits = 0
     local pSector = cachedPlayerSector or "Deep Space"
+    trace("telemetry start")
 
     -- 1. Try resolving Player Name via standard X4 C-API / Lua
     pcall(function()
         if GetPlayerID and GetComponentName then
+            trace("name: GetPlayerID")
             local pid = GetPlayerID()
             if pid then
+                trace("name: GetComponentName")
                 local str = cdataOrStringToLua(GetComponentName(pid))
                 if str and str ~= "" then pName = str end
             end
         end
         if (not pName or pName == "") and C and C.GetPlayerID and C.GetComponentName then
+            trace("name: C.GetPlayerID")
             local pid = C.GetPlayerID()
             if pid then
+                trace("name: C.GetComponentName")
                 local str = cdataOrStringToLua(C.GetComponentName(pid))
                 if str and str ~= "" then pName = str end
             end
         end
         if (not pName or pName == "") and GetPlayerName then
+            trace("name: GetPlayerName")
             local str = cdataOrStringToLua(GetPlayerName())
             if str and str ~= "" then pName = str end
         end
         if (not pName or pName == "") and C and C.GetPlayerName then
+            trace("name: C.GetPlayerName")
             local str = cdataOrStringToLua(C.GetPlayerName())
             if str and str ~= "" then pName = str end
         end
@@ -607,19 +631,24 @@ local function resolvePlayerTelemetry()
     end
 
     -- 2. Try resolving Player Money / Credits
+    trace("money start")
     pcall(function()
         if GetPlayerMoney then
+            trace("money: GetPlayerMoney")
             pCredits = tonumber(GetPlayerMoney()) or 0
         elseif C and C.GetPlayerMoney then
+            trace("money: C.GetPlayerMoney")
             pCredits = tonumber(C.GetPlayerMoney()) or 0
         end
     end)
 
     -- 3. Try resolving Player Sector via Component Hierarchy
+    trace("sector start")
     pcall(function()
         local function to64(val)
             if not val or val == 0 then return nil end
             if ConvertStringTo64Bit then
+                trace("to64: ConvertStringTo64Bit")
                 local ok, res = pcall(ConvertStringTo64Bit, tostring(val))
                 if ok and res and res ~= 0 then return res end
             end
@@ -628,24 +657,28 @@ local function resolvePlayerTelemetry()
 
         local pid = nil
         pcall(function()
+            trace("id: player")
             if C and C.GetPlayerID then pid = C.GetPlayerID() end
             if not pid and GetPlayerID then pid = GetPlayerID() end
         end)
 
         local shipId = nil
         pcall(function()
+            trace("id: ship")
             if C and C.GetPlayerOccupiedShipID then shipId = C.GetPlayerOccupiedShipID() end
             if not shipId and GetPlayerOccupiedShipID then shipId = GetPlayerOccupiedShipID() end
         end)
 
         local stationId = nil
         pcall(function()
+            trace("id: station")
             if C and C.GetPlayerOccupiedStationID then stationId = C.GetPlayerOccupiedStationID() end
             if not stationId and GetPlayerOccupiedStationID then stationId = GetPlayerOccupiedStationID() end
         end)
 
         local zoneId = nil
         pcall(function()
+            trace("id: zone")
             if C and C.GetPlayerZone then zoneId = C.GetPlayerZone() end
             if not zoneId and GetPlayerZone then zoneId = GetPlayerZone() end
         end)
@@ -672,42 +705,55 @@ local function resolvePlayerTelemetry()
             if z64 and z64 ~= zoneId then table.insert(candidates, z64) end
         end
 
+        trace("candidates: " .. #candidates)
         local secId = nil
         local getCtx = (C and C.GetContextByClass) or GetContextByClass
         if getCtx then
             for _, cid in ipairs(candidates) do
+                trace("ctx: sector,false cid=" .. tostring(cid))
                 local ok, res = pcall(getCtx, cid, "sector", false)
                 if ok and res and res ~= 0 then secId = res; break end
+                trace("ctx: sector cid=" .. tostring(cid))
                 local ok2, res2 = pcall(getCtx, cid, "sector")
                 if ok2 and res2 and res2 ~= 0 then secId = res2; break end
+                trace("ctx: cluster,false cid=" .. tostring(cid))
                 local ok3, res3 = pcall(getCtx, cid, "cluster", false)
                 if ok3 and res3 and res3 ~= 0 then secId = res3; break end
             end
         end
 
+        trace("secId=" .. tostring(secId))
         if secId then
             local secName = nil
-            if not secName and GetComponentName then
-                local ok, res = pcall(GetComponentName, secId)
-                if ok and res then secName = cdataOrStringToLua(res) end
-            end
-            if (not secName or secName == "" or secName:find("^cdata:")) and C and C.GetComponentName then
+            -- C.GetComponentName first: the global GetComponentName rejects a
+            -- single-argument call here ("Invalid number of arguments (1, expected >= 4)").
+            if C and C.GetComponentName then
+                trace("secname: C.GetComponentName")
                 local ok, res = pcall(C.GetComponentName, secId)
                 if ok and res then secName = cdataOrStringToLua(res) end
             end
+            if (not secName or secName == "" or secName:find("^cdata:")) and GetComponentName then
+                trace("secname: GetComponentName")
+                local ok, res = pcall(GetComponentName, secId)
+                if ok and res then secName = cdataOrStringToLua(res) end
+            end
             if (not secName or secName == "" or secName:find("^cdata:")) and GetComponentData then
+                trace("secname: GetComponentData name")
                 local ok, res = pcall(GetComponentData, secId, "name")
                 if ok and res then secName = cdataOrStringToLua(res) end
             end
             if (not secName or secName == "" or secName:find("^cdata:")) and GetComponentData then
+                trace("secname: GetComponentData knownname")
                 local ok, res = pcall(GetComponentData, secId, "knownname")
                 if ok and res then secName = cdataOrStringToLua(res) end
             end
             if (not secName or secName == "" or secName:find("^cdata:")) and C and C.GetComponentData then
+                trace("secname: C.GetComponentData name")
                 local ok, res = pcall(C.GetComponentData, secId, "name")
                 if ok and res then secName = cdataOrStringToLua(res) end
             end
             if (not secName or secName == "" or secName:find("^cdata:")) and C and C.GetComponentData then
+                trace("secname: C.GetComponentData knownname")
                 local ok, res = pcall(C.GetComponentData, secId, "knownname")
                 if ok and res then secName = cdataOrStringToLua(res) end
             end
@@ -715,10 +761,12 @@ local function resolvePlayerTelemetry()
             if secName and secName:sub(1,1) == "{" then
                 local p, id = secName:match("^{%s*(%d+)%s*,%s*(%d+)%s*}")
                 if p and id and ReadText then
+                    trace("secname: ReadText")
                     local ok, txt = pcall(ReadText, tonumber(p), tonumber(id))
                     if ok and txt and txt ~= "" then secName = txt end
                 end
                 if secName:sub(1,1) == "{" and GetText then
+                    trace("secname: GetText")
                     local ok, txt = pcall(GetText, secName)
                     if ok and txt and txt ~= "" then secName = txt end
                 end
@@ -740,6 +788,7 @@ local function resolvePlayerTelemetry()
         pSector = cachedPlayerSector
     end
 
+    trace("telemetry end")
     return pName, pCredits, pSector
 end
 
@@ -937,7 +986,7 @@ local function QueryExtensionsOnly(requestContext, commandId)
             dlcs = dlcs,
             valid = isValid,
             method = calledMethod,
-            timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
+            timestamp = nowSeconds()
         }
         req.new('POST')
             :setUrl("http://127.0.0.1:3000/api/dlcs")
@@ -963,9 +1012,7 @@ local lastGlobalRetrievalTime = 0
 local initialLoadSyncDone = false
 
 HarvestAllTablesMerged = function(sourceContext)
-    local now = (type(GetCurRealTime) == "function" and GetCurRealTime())
-             or (type(getElapsedTime) == "function" and getElapsedTime())
-             or os.clock()
+    local now = nowSeconds()
 
     -- Debounce: avoid duplicate simultaneous runs if triggered within 1.5 seconds or while in flight
     if (now < globalRetrievalInFlightUntil) or (now - lastGlobalRetrievalTime < 1.5) then
@@ -997,7 +1044,7 @@ HarvestAllTablesMerged = function(sourceContext)
                 sector = pSector
             },
             source = "game_engine",
-            timestamp = (type(GetCurRealTime) == "function" and GetCurRealTime()) or os.time()
+            timestamp = nowSeconds()
         }
 
         local req = getRequest()
@@ -1126,9 +1173,7 @@ local lastDlcUpdateTime = 0
 local DLC_UPDATE_INTERVAL = 10.0
 
 local function PollBackendCommands()
-    local now = (type(GetCurRealTime) == "function" and GetCurRealTime())
-             or (type(getElapsedTime) == "function" and getElapsedTime())
-             or os.clock()
+    local now = nowSeconds()
 
     -- Flush any open HTTP requests in djfhe client stack
     pcall(function()
